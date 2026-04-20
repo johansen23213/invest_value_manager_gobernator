@@ -7,6 +7,7 @@ No API key or registration required.
 import json
 import sys
 import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -191,6 +192,403 @@ def print_squad(team_data: dict[str, Any]) -> None:
             number = m.get("shirtNumber", "")
             prefix = f"#{number}" if number else "  "
             print(f"    {prefix:>4} {name} {f'({role})' if role else ''}")
+
+
+# ──────────────────────────────────────────────
+# 2b. Multi-competition analysis & rotation
+# ──────────────────────────────────────────────
+
+COMPETITION_PRIORITY = {
+    "champions league": 5,
+    "ucl": 5,
+    "uefa champions league": 5,
+    "europa league": 4,
+    "uel": 4,
+    "uefa europa league": 4,
+    "conference league": 3,
+    "uecl": 3,
+    "copa del rey": 3,
+    "supercopa": 2,
+    "laliga": 4,
+    "la liga": 4,
+    "league": 4,
+}
+
+COMPETITION_STAGE_WEIGHT = {
+    "final": 10,
+    "semi-final": 9, "semifinal": 9, "semi final": 9,
+    "quarter-final": 8, "quarterfinal": 8, "quarter final": 8,
+    "round of 16": 7,
+    "round of 32": 5,
+    "knockout": 7,
+    "group": 3,
+    "league stage": 4,
+}
+
+
+def _parse_date(date_str: str) -> datetime | None:
+    if not date_str:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%fZ",
+                "%Y-%m-%d", "%d/%m/%Y", "%Y%m%d"):
+        try:
+            return datetime.strptime(date_str[:19], fmt)
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+def _competition_base_priority(name: str) -> int:
+    name_lower = name.lower()
+    for key, prio in COMPETITION_PRIORITY.items():
+        if key in name_lower:
+            return prio
+    return 2
+
+
+def _stage_weight(stage_or_round: str) -> int:
+    stage_lower = str(stage_or_round).lower()
+    for key, weight in COMPETITION_STAGE_WEIGHT.items():
+        if key in stage_lower:
+            return weight
+    return 3
+
+
+def _extract_fixtures_from_team(team_data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract all fixtures (past + future) from team data, across all competitions."""
+    fixtures = []
+
+    fixtures_data = team_data.get("fixtures", team_data.get("schedule", {}))
+    if not fixtures_data:
+        return fixtures
+
+    all_fixtures = []
+    if isinstance(fixtures_data, dict):
+        all_fixtures = fixtures_data.get("allFixtures", fixtures_data.get("fixtures", []))
+        if isinstance(all_fixtures, dict):
+            all_fixtures = all_fixtures.get("fixtures", all_fixtures.get("matches", []))
+    elif isinstance(fixtures_data, list):
+        all_fixtures = fixtures_data
+
+    for f in all_fixtures:
+        if not isinstance(f, dict):
+            continue
+
+        opponent = f.get("opponent", {})
+        if isinstance(opponent, dict):
+            opp_name = opponent.get("name", opponent.get("shortName", "?"))
+            opp_id = opponent.get("id", "")
+        else:
+            opp_name = str(opponent)
+            opp_id = ""
+
+        status = f.get("status", {})
+        if isinstance(status, dict):
+            utc = status.get("utcTime", "")
+            finished = status.get("finished", False)
+            started = status.get("started", False)
+            score = status.get("scoreStr", "")
+            result_str = status.get("reason", {}).get("short", "") if isinstance(status.get("reason"), dict) else ""
+        else:
+            utc = f.get("utcTime", f.get("matchDate", ""))
+            finished = f.get("finished", False)
+            started = f.get("started", False)
+            score = f.get("scoreStr", f.get("score", ""))
+            result_str = ""
+
+        # Competition info
+        tournament = f.get("tournament", f.get("league", {}))
+        if isinstance(tournament, dict):
+            comp_name = tournament.get("name", tournament.get("leagueName", "?"))
+            comp_id = tournament.get("leagueId", tournament.get("id", ""))
+        else:
+            comp_name = str(tournament) if tournament else "?"
+            comp_id = ""
+
+        round_info = f.get("round", f.get("roundName", f.get("stage", "")))
+        home_away = "H" if f.get("home", f.get("isHome")) else "A"
+        match_id = f.get("id", f.get("matchId", ""))
+
+        fixtures.append({
+            "date": utc,
+            "date_parsed": _parse_date(utc),
+            "opponent": opp_name,
+            "opponent_id": opp_id,
+            "competition": comp_name,
+            "competition_id": comp_id,
+            "round": str(round_info),
+            "home_away": home_away,
+            "finished": finished,
+            "started": started,
+            "score": score,
+            "result": result_str,
+            "match_id": match_id,
+        })
+
+    fixtures.sort(key=lambda x: x["date"] or "")
+    return fixtures
+
+
+def print_competition_analysis(team_data: dict[str, Any]) -> None:
+    name = team_data.get("details", {}).get("name", "Unknown")
+    team_id = team_data.get("details", {}).get("id", "?")
+
+    print(f"\n{'=' * 80}")
+    print(f"  ANÁLISIS MULTI-COMPETICIÓN — {name}")
+    print(f"{'=' * 80}")
+
+    fixtures = _extract_fixtures_from_team(team_data)
+    if not fixtures:
+        print("  No fixture data available.")
+        return
+
+    now = datetime.now()
+
+    # ── Split by competition ──
+    by_comp: dict[str, list] = defaultdict(list)
+    for f in fixtures:
+        by_comp[f["competition"]].append(f)
+
+    # ── 1. Competitions overview ──
+    print(f"\n  {'─' * 75}")
+    print(f"  COMPETICIONES EN JUEGO")
+    print(f"  {'─' * 75}")
+
+    comp_summaries = []
+    for comp_name, matches in by_comp.items():
+        played = [m for m in matches if m["finished"]]
+        upcoming = [m for m in matches if not m["finished"] and not m["started"]]
+        wins = sum(1 for m in played if m["result"] and m["result"][0].upper() in ("W", "V"))
+        draws = sum(1 for m in played if m["result"] and m["result"][0].upper() in ("D", "E"))
+        losses = sum(1 for m in played if m["result"] and m["result"][0].upper() in ("L", "P"))
+        is_laliga = "laliga" in comp_name.lower() or "la liga" in comp_name.lower() or comp_name == "League"
+
+        last_round = ""
+        next_round = ""
+        if played:
+            last_round = played[-1].get("round", "")
+        if upcoming:
+            next_round = upcoming[0].get("round", "")
+
+        base_prio = _competition_base_priority(comp_name)
+        stage_w = _stage_weight(next_round or last_round)
+        total_prio = base_prio + stage_w
+
+        comp_summaries.append({
+            "name": comp_name,
+            "played": len(played),
+            "upcoming": len(upcoming),
+            "wins": wins, "draws": draws, "losses": losses,
+            "is_laliga": is_laliga,
+            "last_round": last_round,
+            "next_round": next_round,
+            "priority_score": total_prio,
+            "base_prio": base_prio,
+            "next_match": upcoming[0] if upcoming else None,
+            "matches": matches,
+        })
+
+    comp_summaries.sort(key=lambda x: -x["priority_score"])
+
+    print(f"\n    {'Competición':<30} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'Pend':>5} {'Fase':>20} {'Prio':>5}")
+    print(f"    {'-' * 78}")
+
+    for cs in comp_summaries:
+        phase = cs["next_round"] or cs["last_round"] or "—"
+        print(
+            f"    {cs['name']:<30} "
+            f"{cs['played']:>3} "
+            f"{cs['wins']:>3} "
+            f"{cs['draws']:>3} "
+            f"{cs['losses']:>3} "
+            f"{cs['upcoming']:>5} "
+            f"{str(phase):>20} "
+            f"{cs['priority_score']:>5}"
+        )
+
+    # ── 2. Upcoming fixture density (next 30 days) ──
+    upcoming_all = [f for f in fixtures if not f["finished"] and f["date_parsed"]]
+    upcoming_30d = [f for f in upcoming_all if f["date_parsed"] and (f["date_parsed"] - now).days <= 30 and (f["date_parsed"] - now).days >= 0]
+
+    print(f"\n  {'─' * 75}")
+    print(f"  CALENDARIO PRÓXIMOS 30 DÍAS ({len(upcoming_30d)} partidos)")
+    print(f"  {'─' * 75}")
+
+    if upcoming_30d:
+        print(f"\n    {'Fecha':<20} {'Comp':<25} {'H/A':>3} {'Rival':<20} {'Ronda':<15}")
+        print(f"    {'-' * 85}")
+
+        prev_date = None
+        for f in upcoming_30d:
+            d = f["date_parsed"]
+            date_str = d.strftime("%Y-%m-%d %H:%M") if d else "TBD"
+            days_gap = ""
+            if prev_date and d:
+                gap = (d - prev_date).days
+                if gap <= 3:
+                    days_gap = f" ⚠️{gap}d"
+                elif gap <= 4:
+                    days_gap = f" ({gap}d)"
+            prev_date = d
+
+            print(
+                f"    {date_str:<20} "
+                f"{f['competition']:<25} "
+                f"{f['home_away']:>3} "
+                f"{f['opponent']:<20} "
+                f"{f['round']:<15}"
+                f"{days_gap}"
+            )
+
+        # Congestion analysis
+        if len(upcoming_30d) >= 2:
+            gaps = []
+            for i in range(1, len(upcoming_30d)):
+                d1 = upcoming_30d[i - 1]["date_parsed"]
+                d2 = upcoming_30d[i]["date_parsed"]
+                if d1 and d2:
+                    gaps.append((d2 - d1).days)
+
+            if gaps:
+                avg_gap = sum(gaps) / len(gaps)
+                min_gap = min(gaps)
+                congested_pairs = sum(1 for g in gaps if g <= 3)
+
+                print(f"\n    Densidad de partidos:")
+                print(f"      Partidos en 30 días:      {len(upcoming_30d)}")
+                print(f"      Media días entre partidos: {avg_gap:.1f}")
+                print(f"      Mínimo días entre partidos: {min_gap}")
+                print(f"      Pares con ≤3 días:         {congested_pairs}")
+
+                if avg_gap < 4:
+                    print(f"      ⚠️  CONGESTIÓN ALTA — rotación muy probable")
+                elif avg_gap < 5:
+                    print(f"      ⚠️  Congestión moderada — rotación esperada en copas")
+                else:
+                    print(f"      ✅ Calendario manejable")
+    else:
+        print("    No upcoming fixtures in next 30 days.")
+
+    # ── 3. Priority analysis: Liga vs other competitions ──
+    laliga_comp = [cs for cs in comp_summaries if cs["is_laliga"]]
+    other_comps = [cs for cs in comp_summaries if not cs["is_laliga"] and cs["upcoming"] > 0]
+
+    if laliga_comp and other_comps:
+        print(f"\n  {'─' * 75}")
+        print(f"  ANÁLISIS DE PRIORIDADES: LIGA vs OTRAS COMPETICIONES")
+        print(f"  {'─' * 75}")
+
+        liga = laliga_comp[0]
+        top_other = max(other_comps, key=lambda x: x["priority_score"])
+
+        print(f"\n    LaLiga:")
+        print(f"      Partidos jugados:  {liga['played']}")
+        print(f"      Partidos restantes: {liga['upcoming']}")
+        print(f"      Puntuación prio:   {liga['priority_score']}")
+
+        print(f"\n    Competición rival principal: {top_other['name']}")
+        print(f"      Fase actual:       {top_other['next_round'] or top_other['last_round'] or '?'}")
+        print(f"      Partidos restantes: {top_other['upcoming']}")
+        print(f"      Puntuación prio:   {top_other['priority_score']}")
+
+        # Determine which one they're likely prioritizing
+        if top_other["priority_score"] > liga["priority_score"] + 2:
+            print(f"\n    📊 CONCLUSIÓN: {name} probablemente PRIORIZA {top_other['name']}")
+            print(f"       sobre LaLiga en las próximas jornadas.")
+            print(f"       → Esperar ROTACIÓN en partidos de Liga")
+            print(f"       → Titulares reservados para {top_other['name']}")
+        elif liga["priority_score"] > top_other["priority_score"] + 2:
+            print(f"\n    📊 CONCLUSIÓN: {name} probablemente PRIORIZA LaLiga")
+            print(f"       → Alineación fuerte en Liga")
+            print(f"       → Rotación en {top_other['name']}")
+        else:
+            print(f"\n    📊 CONCLUSIÓN: Prioridad EQUILIBRADA entre competiciones")
+            print(f"       → Rotación selectiva según calendario")
+            print(f"       → Gestión de minutos clave")
+
+        # Cross-check: interleaved fixtures
+        next_fixtures = upcoming_30d[:8]
+        if next_fixtures:
+            print(f"\n    Secuencia próximos partidos:")
+            liga_matches_upcoming = []
+            other_matches_upcoming = []
+            for i, f in enumerate(next_fixtures):
+                is_liga = "laliga" in f["competition"].lower() or "la liga" in f["competition"].lower() or f["competition"] == "League"
+                marker = "⚽ LIGA" if is_liga else f"🏆 {f['competition']}"
+                d = f["date_parsed"]
+                date_s = d.strftime("%a %d/%m") if d else "TBD"
+                print(f"      {i+1}. {date_s}  {marker:<30} vs {f['opponent']} ({f['home_away']})")
+                if is_liga:
+                    liga_matches_upcoming.append(f)
+                else:
+                    other_matches_upcoming.append(f)
+
+            # Rotation prediction
+            if liga_matches_upcoming and other_matches_upcoming:
+                print(f"\n    🔄 PREDICCIÓN DE ROTACIÓN:")
+                for lm in liga_matches_upcoming[:3]:
+                    ld = lm["date_parsed"]
+                    if not ld:
+                        continue
+                    near_other = [om for om in other_matches_upcoming
+                                  if om["date_parsed"] and abs((om["date_parsed"] - ld).days) <= 4]
+                    if near_other:
+                        om = near_other[0]
+                        gap = abs((om["date_parsed"] - ld).days) if om["date_parsed"] else "?"
+                        om_prio = _competition_base_priority(om["competition"]) + _stage_weight(om["round"])
+                        liga_prio = _competition_base_priority("laliga") + _stage_weight(lm["round"])
+
+                        lm_date = ld.strftime("%d/%m")
+                        if om_prio > liga_prio:
+                            print(f"       Liga {lm_date} vs {lm['opponent']}: ROTACIÓN PROBABLE")
+                            print(f"         → Solo {gap}d antes/después de {om['competition']} ({om['round']})")
+                            print(f"         → Titulares reservados para {om['competition']}")
+                        elif gap <= 3:
+                            print(f"       Liga {lm_date} vs {lm['opponent']}: ROTACIÓN POSIBLE")
+                            print(f"         → {gap}d de {om['competition']} — fatiga acumulada")
+                        else:
+                            print(f"       Liga {lm_date} vs {lm['opponent']}: Alineación normal esperada")
+                            print(f"         → {gap}d de margen desde {om['competition']}")
+
+    elif laliga_comp and not other_comps:
+        print(f"\n  {'─' * 75}")
+        print(f"  ANÁLISIS DE PRIORIDADES")
+        print(f"  {'─' * 75}")
+        print(f"\n    ✅ {name} solo compite en LaLiga (o ya eliminado de copas)")
+        print(f"       → Sin rotación por otras competiciones")
+        print(f"       → Alineación tipo esperada cada jornada")
+
+    # ── 4. Recent results across all competitions ──
+    recent_all = [f for f in fixtures if f["finished"]]
+    if recent_all:
+        last_10 = recent_all[-10:]
+        print(f"\n  {'─' * 75}")
+        print(f"  ÚLTIMOS 10 PARTIDOS (TODAS LAS COMPETICIONES)")
+        print(f"  {'─' * 75}")
+
+        print(f"\n    {'Fecha':<12} {'Comp':<22} {'H/A':>3} {'Rival':<20} {'Score':<7} {'Res':>3}")
+        print(f"    {'-' * 72}")
+
+        for f in last_10:
+            d = f["date_parsed"]
+            date_s = d.strftime("%Y-%m-%d") if d else "?"
+            comp_short = f["competition"][:21]
+            res = f["result"][:1].upper() if f["result"] else "—"
+            print(
+                f"    {date_s:<12} "
+                f"{comp_short:<22} "
+                f"{f['home_away']:>3} "
+                f"{f['opponent']:<20} "
+                f"{f['score']:<7} "
+                f"{res:>3}"
+            )
+
+        # Cross-competition form
+        results_all = [f["result"][:1].upper() for f in last_10 if f["result"]]
+        w = sum(1 for r in results_all if r in ("W", "V"))
+        d_count = sum(1 for r in results_all if r in ("D", "E"))
+        l_count = sum(1 for r in results_all if r in ("L", "P"))
+        print(f"\n    Forma global: {w}W {d_count}D {l_count}L")
 
 
 # ──────────────────────────────────────────────
@@ -966,6 +1364,7 @@ Commands:
   assisters              Top assisters
   fixtures               Recent results & upcoming matches
   team <team_id>         Team overview + squad
+  team-competitions <id> Multi-competition analysis, rotation & priority
   match <match_id>       Match details
   player <player_id>     Full player profile & all stats
   player-json <id>       Raw JSON dump of player data (for debugging)
@@ -978,6 +1377,7 @@ Commands:
 Examples:
   python laliga_stats.py standings
   python laliga_stats.py team 8633
+  python laliga_stats.py team-competitions 8633
   python laliga_stats.py player 194165
   python laliga_stats.py player-json 194165
   python laliga_stats.py squad-stats 8633
@@ -1019,6 +1419,15 @@ def main():
             data = get_team_data(team_id)
             print_team_overview(data)
             print_squad(data)
+
+        elif cmd == "team-competitions":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py team-competitions <team_id>")
+                print("Use 'python laliga_stats.py teams' to list team IDs.")
+                return
+            team_id = int(sys.argv[2])
+            data = get_team_data(team_id)
+            print_competition_analysis(data)
 
         elif cmd == "match":
             if len(sys.argv) < 3:
