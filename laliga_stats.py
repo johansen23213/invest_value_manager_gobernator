@@ -484,22 +484,165 @@ def print_player_profile(player: dict[str, Any]) -> None:
                 else:
                     print(f"      - {t}")
 
-    # ── Recent form / match ratings ──
+    # ── Recent form / match ratings — ESTADO DE FORMA ──
     recent = player.get("recentMatches", player.get("matchesWithRating", []))
     if recent and isinstance(recent, list):
-        _print_section("PARTIDOS RECIENTES (rating)")
-        print(f"    {'Fecha':<12} {'Rival':<20} {'Rating':>7} {'Mins':>5} {'G':>3} {'A':>3}")
-        print(f"    {'-'*55}")
-        for m in recent[:15]:
-            date = m.get("matchDate", m.get("date", "?"))
-            opponent = m.get("opponentTeamName", m.get("opponent", "?"))
-            rating = m.get("rating", m.get("ratingValue", "?"))
-            mins = m.get("minutesPlayed", m.get("minutes", "?"))
-            goals = m.get("goals", m.get("g", ""))
-            assists = m.get("assists", m.get("a", ""))
-            if isinstance(rating, float):
-                rating = f"{rating:.2f}"
-            print(f"    {str(date):<12} {str(opponent):<20} {str(rating):>7} {str(mins):>5} {str(goals):>3} {str(assists):>3}")
+        _print_section("ESTADO DE FORMA — ÚLTIMOS PARTIDOS")
+
+        # Parse all match data
+        parsed = []
+        for m in recent[:20]:
+            entry = {
+                "date": m.get("matchDate", m.get("date", m.get("utcTime", "?"))),
+                "opponent": m.get("opponentTeamName", m.get("opponent", m.get("opponentName", "?"))),
+                "home_away": "🏠" if m.get("isHome", m.get("homeAway") == "home") else "✈️" if m.get("isHome") is False or m.get("homeAway") == "away" else "?",
+                "result": m.get("result", m.get("matchResult", "")),
+                "score": m.get("score", m.get("scoreStr", m.get("matchScore", ""))),
+                "rating": m.get("rating", m.get("ratingValue", m.get("playerRating", None))),
+                "mins": m.get("minutesPlayed", m.get("minutes", m.get("playedMinutes", "?"))),
+                "starter": m.get("isStarting", m.get("isStarter", m.get("starter", None))),
+                "sub_on": m.get("subOn", m.get("subbedOn", m.get("substituteIn", None))),
+                "sub_off": m.get("subOff", m.get("subbedOff", m.get("substituteOut", None))),
+                "goals": m.get("goals", m.get("g", 0)) or 0,
+                "assists": m.get("assists", m.get("a", 0)) or 0,
+                "yellow": m.get("yellowCards", m.get("yellowCard", m.get("yc", 0))) or 0,
+                "red": m.get("redCards", m.get("redCard", m.get("rc", 0))) or 0,
+                "motm": m.get("isManOfTheMatch", m.get("manOfTheMatch", m.get("motm", False))),
+                "competition": m.get("leagueName", m.get("tournamentName", m.get("competition", ""))),
+                "match_id": m.get("matchId", m.get("id", "")),
+            }
+            parsed.append(entry)
+
+        # ── Individual match lines ──
+        print(f"\n    {'Fecha':<12} {'H/A':>3} {'Rival':<20} {'Score':<7} {'Res':>3} {'Rat':>5} {'Min':>4} {'G':>2} {'A':>2} {'TC':>3} {'Notas'}")
+        print(f"    {'-' * 90}")
+
+        for m in parsed:
+            rating_str = f"{m['rating']:.1f}" if isinstance(m['rating'], (int, float)) else str(m['rating'] or "—")
+            result_str = str(m['result'])[:1].upper() if m['result'] else "—"
+            notes = []
+            if m['starter'] is True:
+                notes.append("TIT")
+            elif m['starter'] is False:
+                notes.append("SUP")
+            if m['sub_on'] is not None and m['sub_on'] is not False:
+                sub_min = f"{m['sub_on']}'" if isinstance(m['sub_on'], (int, float)) else ""
+                notes.append(f"↑{sub_min}")
+            if m['sub_off'] is not None and m['sub_off'] is not False:
+                sub_min = f"{m['sub_off']}'" if isinstance(m['sub_off'], (int, float)) else ""
+                notes.append(f"↓{sub_min}")
+            if m['motm']:
+                notes.append("⭐MOTM")
+            if m['red']:
+                notes.append("🟥")
+            cards = ""
+            if m['yellow']:
+                cards = "🟨" * int(m['yellow'])
+            if m['red']:
+                cards += "🟥" * int(m['red'])
+            if not cards:
+                cards = "—"
+
+            print(
+                f"    {str(m['date']):<12} "
+                f"{m['home_away']:>3} "
+                f"{str(m['opponent']):<20} "
+                f"{str(m['score']):<7} "
+                f"{result_str:>3} "
+                f"{rating_str:>5} "
+                f"{str(m['mins']):>4} "
+                f"{m['goals']:>2} "
+                f"{m['assists']:>2} "
+                f"{cards:>3} "
+                f"{' '.join(notes)}"
+            )
+
+        # ── Form summary / analysis ──
+        ratings = [m['rating'] for m in parsed if isinstance(m['rating'], (int, float))]
+        total_goals = sum(m['goals'] for m in parsed)
+        total_assists = sum(m['assists'] for m in parsed)
+        total_yellows = sum(int(m['yellow']) for m in parsed if m['yellow'])
+        total_reds = sum(int(m['red']) for m in parsed if m['red'])
+        total_motm = sum(1 for m in parsed if m['motm'])
+        starts = sum(1 for m in parsed if m['starter'] is True)
+        subs = sum(1 for m in parsed if m['starter'] is False)
+        mins_list = [m['mins'] for m in parsed if isinstance(m['mins'], (int, float))]
+        results = [str(m['result'])[:1].upper() for m in parsed if m['result']]
+
+        wins = results.count('W') + results.count('V')
+        draws = results.count('D') + results.count('E')
+        losses = results.count('L') + results.count('P')
+
+        _print_section("RESUMEN DE FORMA")
+
+        print(f"    Partidos analizados:   {len(parsed)}")
+        if starts or subs:
+            print(f"    Titular / Suplente:    {starts} / {subs}")
+        if mins_list:
+            print(f"    Minutos totales:       {sum(mins_list)}")
+            print(f"    Media minutos/partido: {sum(mins_list) / len(mins_list):.0f}")
+
+        if ratings:
+            avg_rating = sum(ratings) / len(ratings)
+            last_5 = ratings[:5]
+            first_5 = ratings[-5:] if len(ratings) >= 10 else ratings[:len(ratings)//2] if len(ratings) >= 4 else []
+            avg_last5 = sum(last_5) / len(last_5) if last_5 else 0
+            avg_first5 = sum(first_5) / len(first_5) if first_5 else 0
+            best = max(ratings)
+            worst = min(ratings)
+
+            print(f"\n    Rating medio:          {avg_rating:.2f}")
+            print(f"    Mejor rating:          {best:.2f}")
+            print(f"    Peor rating:           {worst:.2f}")
+
+            if last_5:
+                print(f"    Media últ. 5 partidos: {avg_last5:.2f}")
+            if first_5 and avg_first5 > 0:
+                trend = avg_last5 - avg_first5
+                trend_arrow = "📈" if trend > 0.15 else "📉" if trend < -0.15 else "➡️"
+                print(f"    Tendencia:             {trend_arrow} {trend:+.2f} (últimos 5 vs anteriores)")
+
+            # Consistency
+            if len(ratings) >= 3:
+                variance = sum((r - avg_rating) ** 2 for r in ratings) / len(ratings)
+                std_dev = variance ** 0.5
+                consistency = "Alta" if std_dev < 0.4 else "Media" if std_dev < 0.8 else "Baja"
+                print(f"    Consistencia:          {consistency} (σ={std_dev:.2f})")
+
+            # Rating distribution
+            elite = sum(1 for r in ratings if r >= 8.0)
+            good = sum(1 for r in ratings if 7.0 <= r < 8.0)
+            avg = sum(1 for r in ratings if 6.0 <= r < 7.0)
+            poor = sum(1 for r in ratings if r < 6.0)
+            print(f"    Distribución ratings:  ⭐≥8.0:{elite}  ✅7-8:{good}  ➖6-7:{avg}  ❌<6:{poor}")
+
+        print(f"\n    Goles:                 {total_goals}")
+        print(f"    Asistencias:           {total_assists}")
+        print(f"    G+A:                   {total_goals + total_assists}")
+        if len(parsed) > 0:
+            print(f"    G+A por partido:       {(total_goals + total_assists) / len(parsed):.2f}")
+        if total_motm:
+            print(f"    Man of the Match:      {total_motm}x")
+        if total_yellows or total_reds:
+            print(f"    Tarjetas:              🟨{total_yellows}  🟥{total_reds}")
+
+        if wins or draws or losses:
+            total_res = wins + draws + losses
+            win_pct = (wins / total_res * 100) if total_res > 0 else 0
+            print(f"\n    Record con él:         {wins}W {draws}D {losses}L ({win_pct:.0f}% victorias)")
+
+        # ── Form streak ──
+        if results:
+            streak_char = results[0]
+            streak_count = 0
+            for r in results:
+                if r == streak_char:
+                    streak_count += 1
+                else:
+                    break
+            streak_labels = {"W": "victorias", "V": "victorias", "D": "empates", "E": "empates", "L": "derrotas", "P": "derrotas"}
+            streak_label = streak_labels.get(streak_char, streak_char)
+            print(f"    Racha actual:          {streak_count} {streak_label} consecutivas")
 
     # ── Shotmap ──
     shotmap = player.get("shotmap", [])
