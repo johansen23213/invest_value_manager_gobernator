@@ -242,38 +242,406 @@ def print_match_summary(match: dict[str, Any]) -> None:
 
 
 # ──────────────────────────────────────────────
-# 4. Player data
+# 4. Player data — FULL STATISTICS
 # ──────────────────────────────────────────────
 
 def get_player_data(player_id: int) -> dict[str, Any]:
     return _get("playerData", {"id": player_id})
 
 
+def _print_section(title: str, width: int = 70) -> None:
+    print(f"\n  {'─' * width}")
+    print(f"  {title}")
+    print(f"  {'─' * width}")
+
+
+def _extract_stat_items(stat_block: dict | list) -> list[tuple[str, Any]]:
+    """Extract (key, value) pairs from various FotMob stat structures."""
+    items = []
+    if isinstance(stat_block, dict):
+        for k, v in stat_block.items():
+            if k in ("fetchAllStatLinks", "type", "key"):
+                continue
+            if isinstance(v, (str, int, float, bool)):
+                items.append((k, v))
+            elif isinstance(v, dict):
+                val = v.get("value", v.get("stat", v.get("total")))
+                if val is not None:
+                    label = v.get("title", v.get("key", k))
+                    items.append((label, val))
+                else:
+                    for sk, sv in v.items():
+                        if isinstance(sv, (str, int, float)):
+                            items.append((f"{k}.{sk}", sv))
+            elif isinstance(v, list):
+                for i, elem in enumerate(v):
+                    if isinstance(elem, dict):
+                        title = elem.get("title", elem.get("key", f"{k}[{i}]"))
+                        value = elem.get("value", elem.get("stat", elem.get("total")))
+                        if value is not None:
+                            items.append((title, value))
+                        else:
+                            for ek, ev in elem.items():
+                                if isinstance(ev, (str, int, float)):
+                                    items.append((f"{title}.{ek}", ev))
+    elif isinstance(stat_block, list):
+        for elem in stat_block:
+            if isinstance(elem, dict):
+                title = elem.get("title", elem.get("key", "?"))
+                value = elem.get("value", elem.get("stat", elem.get("total")))
+                if value is not None:
+                    items.append((title, value))
+    return items
+
+
 def print_player_profile(player: dict[str, Any]) -> None:
     name = player.get("name", "Unknown")
     team = player.get("primaryTeam", {}).get("teamName", "?")
-    position = player.get("positionDescription", {}).get("primaryPosition", {}).get("label", "?")
+    team_id = player.get("primaryTeam", {}).get("teamId", "?")
+    pos_desc = player.get("positionDescription", {})
+    primary_pos = pos_desc.get("primaryPosition", {}).get("label", "?")
+    secondary_pos = pos_desc.get("nonPrimaryPositions", [])
+    player_id = player.get("id", "?")
 
-    print(f"\n{'─' * 50}")
-    print(f"  {name} — {team} ({position})")
-    print(f"{'─' * 50}")
+    print(f"\n{'=' * 70}")
+    print(f"  {name}")
+    print(f"{'=' * 70}")
 
-    # Season stats
+    # ── Bio / personal info ──
+    _print_section("INFORMACIÓN PERSONAL")
+    bio_fields = [
+        ("ID FotMob", player_id),
+        ("Equipo", f"{team} (ID: {team_id})"),
+        ("Posición principal", primary_pos),
+    ]
+    if secondary_pos:
+        sec_labels = [p.get("label", "?") for p in secondary_pos]
+        bio_fields.append(("Posiciones secundarias", ", ".join(sec_labels)))
+
+    meta = player.get("meta", {})
+    if isinstance(meta, dict):
+        for k in ("birthDate", "age", "height", "preferredFoot", "shirtNumber",
+                   "country", "countryCode", "teamJoinedDate", "contractUntil"):
+            val = meta.get(k)
+            if val is not None:
+                bio_fields.append((k, val))
+
+    personal = player.get("playerInformation", [])
+    if isinstance(personal, list):
+        for item in personal:
+            title = item.get("title", "")
+            value = item.get("value", {})
+            if isinstance(value, dict):
+                val_str = value.get("fallback", value.get("numberValue", str(value)))
+            else:
+                val_str = value
+            if title and val_str:
+                bio_fields.append((title, val_str))
+
+    for label, val in bio_fields:
+        print(f"    {label:<30} {val}")
+
+    # ── Performance score ──
+    perf = player.get("performanceScore", {})
+    if perf:
+        _print_section("PERFORMANCE SCORE")
+        score = perf.get("value", "?")
+        official = perf.get("officialRating", "?")
+        print(f"    Score: {score}")
+        if official and official != "?":
+            print(f"    Official rating: {official}")
+
+    # ── Main league season stats ──
     main_league = player.get("mainLeague", {})
+    league_name = main_league.get("leagueName", "Main League")
     stats = main_league.get("stats", [])
     if stats:
-        print("  Season stats:")
+        _print_section(f"STATS TEMPORADA — {league_name}")
         for s in stats:
             title = s.get("title", "")
             value = s.get("value", "")
             if title and value is not None:
-                print(f"    {title}: {value}")
+                print(f"    {title:<35} {value}")
 
-    # Performance summary
-    perf = player.get("performanceScore", {})
-    if perf:
-        score = perf.get("value", "?")
-        print(f"  Performance score: {score}")
+    # ── Detailed stat sections (shotmap, passing, defending, etc.) ──
+    stat_seasons = player.get("statSeasons", [])
+    if stat_seasons:
+        _print_section("TEMPORADAS DISPONIBLES")
+        for ss in stat_seasons:
+            sname = ss.get("seasonName", "?")
+            tournaments = ss.get("tournaments", [])
+            for t in tournaments:
+                tname = t.get("name", "?")
+                tid = t.get("tournamentId", "?")
+                print(f"    {sname} — {tname} (ID: {tid})")
+
+    # ── Per-season detailed stats ──
+    season_stats = player.get("seasonStatLinks", [])
+    if season_stats:
+        _print_section("LINKS STATS POR TEMPORADA")
+        for sl in season_stats:
+            print(f"    {sl}")
+
+    # ── Career stats / history ──
+    career = player.get("careerStatistics", player.get("careerHistory", {}))
+    if career:
+        _print_section("ESTADÍSTICAS DE CARRERA")
+        if isinstance(career, dict):
+            career_sections = career.get("sections", career.get("careerItems", {}))
+            if isinstance(career_sections, dict):
+                for section_name, section_data in career_sections.items():
+                    print(f"\n    [{section_name}]")
+                    items = _extract_stat_items(section_data)
+                    for label, val in items:
+                        print(f"      {label:<35} {val}")
+            elif isinstance(career_sections, list):
+                for section in career_sections:
+                    sec_title = section.get("title", section.get("name", "Section"))
+                    print(f"\n    [{sec_title}]")
+                    entries = section.get("entries", section.get("items", section.get("stats", [])))
+                    if isinstance(entries, list):
+                        for entry in entries:
+                            if isinstance(entry, dict):
+                                team_name = entry.get("teamName", entry.get("team", ""))
+                                comp = entry.get("tournamentName", entry.get("competition", ""))
+                                apps = entry.get("appearances", entry.get("matches", ""))
+                                goals = entry.get("goals", "")
+                                assists = entry.get("assists", "")
+                                line = f"      {team_name:<20} {comp:<20}"
+                                if apps != "":
+                                    line += f" Apps:{apps}"
+                                if goals != "":
+                                    line += f" G:{goals}"
+                                if assists != "":
+                                    line += f" A:{assists}"
+                                print(line)
+            else:
+                items = _extract_stat_items(career)
+                for label, val in items:
+                    print(f"      {label:<35} {val}")
+        elif isinstance(career, list):
+            for entry in career:
+                if isinstance(entry, dict):
+                    items = _extract_stat_items(entry)
+                    for label, val in items:
+                        print(f"      {label:<35} {val}")
+
+    # ── Career history (transfers / clubs) ──
+    history = player.get("careerHistory", {})
+    if history and history != career:
+        _print_section("HISTORIAL DE CARRERA")
+        if isinstance(history, dict):
+            items = history.get("careerItems", history.get("sections", []))
+            if isinstance(items, dict):
+                for section_name, section_data in items.items():
+                    print(f"\n    [{section_name}]")
+                    if isinstance(section_data, list):
+                        for entry in section_data:
+                            team = entry.get("teamName", entry.get("team", "?"))
+                            period = entry.get("period", "")
+                            print(f"      {team:<25} {period}")
+            elif isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict):
+                        team = item.get("teamName", item.get("team", "?"))
+                        period = item.get("period", "")
+                        apps = item.get("appearances", "")
+                        goals = item.get("goals", "")
+                        print(f"      {team:<25} {period}  Apps:{apps} G:{goals}")
+
+    # ── National team stats ──
+    national = player.get("nationalTeamStatistics", player.get("internationalStatistics", {}))
+    if national:
+        _print_section("SELECCIÓN NACIONAL")
+        if isinstance(national, dict):
+            items = _extract_stat_items(national)
+            for label, val in items:
+                print(f"    {label:<35} {val}")
+        elif isinstance(national, list):
+            for entry in national:
+                items = _extract_stat_items(entry)
+                for label, val in items:
+                    print(f"    {label:<35} {val}")
+
+    # ── Traits / strengths / weaknesses ──
+    traits = player.get("traits", {})
+    if traits:
+        _print_section("CARACTERÍSTICAS")
+        strengths = traits.get("strengths", [])
+        weaknesses = traits.get("weaknesses", [])
+        if strengths:
+            print("    Fortalezas:")
+            for t in strengths:
+                if isinstance(t, dict):
+                    print(f"      + {t.get('title', t.get('name', '?'))}: {t.get('value', '')}")
+                else:
+                    print(f"      + {t}")
+        if weaknesses:
+            print("    Debilidades:")
+            for t in weaknesses:
+                if isinstance(t, dict):
+                    print(f"      - {t.get('title', t.get('name', '?'))}: {t.get('value', '')}")
+                else:
+                    print(f"      - {t}")
+
+    # ── Recent form / match ratings ──
+    recent = player.get("recentMatches", player.get("matchesWithRating", []))
+    if recent and isinstance(recent, list):
+        _print_section("PARTIDOS RECIENTES (rating)")
+        print(f"    {'Fecha':<12} {'Rival':<20} {'Rating':>7} {'Mins':>5} {'G':>3} {'A':>3}")
+        print(f"    {'-'*55}")
+        for m in recent[:15]:
+            date = m.get("matchDate", m.get("date", "?"))
+            opponent = m.get("opponentTeamName", m.get("opponent", "?"))
+            rating = m.get("rating", m.get("ratingValue", "?"))
+            mins = m.get("minutesPlayed", m.get("minutes", "?"))
+            goals = m.get("goals", m.get("g", ""))
+            assists = m.get("assists", m.get("a", ""))
+            if isinstance(rating, float):
+                rating = f"{rating:.2f}"
+            print(f"    {str(date):<12} {str(opponent):<20} {str(rating):>7} {str(mins):>5} {str(goals):>3} {str(assists):>3}")
+
+    # ── Shotmap ──
+    shotmap = player.get("shotmap", [])
+    if shotmap:
+        _print_section(f"SHOTMAP ({len(shotmap)} tiros)")
+        goals_sm = sum(1 for s in shotmap if s.get("eventType") == "Goal" or s.get("isGoal"))
+        on_target = sum(1 for s in shotmap if s.get("onTarget") or s.get("eventType") in ("Goal", "SavedShot", "AttemptSaved"))
+        blocked = sum(1 for s in shotmap if s.get("isBlocked") or s.get("eventType") == "BlockedShot")
+        total_xg = sum(s.get("expectedGoals", s.get("xG", 0)) or 0 for s in shotmap)
+        print(f"    Total tiros:      {len(shotmap)}")
+        print(f"    Goles:            {goals_sm}")
+        print(f"    A puerta:         {on_target}")
+        print(f"    Bloqueados:       {blocked}")
+        print(f"    xG total:         {total_xg:.2f}")
+        if len(shotmap) > 0:
+            print(f"    xG/tiro:          {total_xg / len(shotmap):.3f}")
+
+        # Breakdown by situation
+        situations = {}
+        for s in shotmap:
+            sit = s.get("situation", s.get("shotType", "Unknown"))
+            situations[sit] = situations.get(sit, 0) + 1
+        if situations:
+            print("    Por situación:")
+            for sit, count in sorted(situations.items(), key=lambda x: -x[1]):
+                print(f"      {sit:<25} {count}")
+
+        # Breakdown by body part
+        body_parts = {}
+        for s in shotmap:
+            bp = s.get("bodyPart", "Unknown")
+            body_parts[bp] = body_parts.get(bp, 0) + 1
+        if body_parts:
+            print("    Por parte del cuerpo:")
+            for bp, count in sorted(body_parts.items(), key=lambda x: -x[1]):
+                print(f"      {bp:<25} {count}")
+
+    # ── Catch-all: dump any remaining top-level stat keys ──
+    KNOWN_KEYS = {
+        "name", "id", "primaryTeam", "positionDescription", "meta",
+        "playerInformation", "performanceScore", "mainLeague", "statSeasons",
+        "seasonStatLinks", "careerStatistics", "careerHistory",
+        "nationalTeamStatistics", "internationalStatistics", "traits",
+        "recentMatches", "matchesWithRating", "shotmap", "isCoach",
+        "origin", "injuryHistory", "coachStats", "trophies",
+    }
+    extra_keys = set(player.keys()) - KNOWN_KEYS
+    stat_extras = {k: player[k] for k in extra_keys
+                   if isinstance(player[k], (dict, list)) and player[k]}
+    if stat_extras:
+        _print_section("DATOS ADICIONALES")
+        for key, data in stat_extras.items():
+            print(f"\n    [{key}]")
+            if isinstance(data, dict):
+                items = _extract_stat_items(data)
+                if items:
+                    for label, val in items[:30]:
+                        print(f"      {label:<35} {val}")
+                else:
+                    sub_keys = list(data.keys())[:10]
+                    print(f"      Sub-keys: {', '.join(sub_keys)}")
+            elif isinstance(data, list) and len(data) > 0:
+                if isinstance(data[0], dict):
+                    items = _extract_stat_items(data[:10])
+                    for label, val in items:
+                        print(f"      {label:<35} {val}")
+                else:
+                    for item in data[:10]:
+                        print(f"      {item}")
+
+    # ── Injury history ──
+    injuries = player.get("injuryHistory", [])
+    if injuries:
+        _print_section("HISTORIAL DE LESIONES")
+        for inj in injuries:
+            if isinstance(inj, dict):
+                injury_type = inj.get("injury", inj.get("type", "?"))
+                date_from = inj.get("startDate", inj.get("from", "?"))
+                date_to = inj.get("endDate", inj.get("to", "ongoing"))
+                games_missed = inj.get("gamesMissed", "?")
+                print(f"    {str(injury_type):<30} {str(date_from):<12} → {str(date_to):<12} ({games_missed} partidos)")
+
+    # ── Trophies ──
+    trophies = player.get("trophies", [])
+    if trophies:
+        _print_section("PALMARÉS")
+        for trophy in trophies:
+            if isinstance(trophy, dict):
+                competitions = trophy.get("tournaments", trophy.get("items", []))
+                if isinstance(competitions, list):
+                    for comp in competitions:
+                        comp_name = comp.get("name", comp.get("tournamentName", "?"))
+                        seasons = comp.get("seasons", [])
+                        if isinstance(seasons, list):
+                            season_names = [s.get("name", s.get("season", "?")) if isinstance(s, dict) else str(s) for s in seasons]
+                            print(f"    {comp_name}: {', '.join(season_names)}")
+                        else:
+                            print(f"    {comp_name}")
+                elif isinstance(trophy, dict):
+                    name = trophy.get("name", trophy.get("title", "?"))
+                    year = trophy.get("year", trophy.get("season", ""))
+                    print(f"    {name} {year}")
+
+
+def dump_player_json(player: dict[str, Any]) -> None:
+    """Dump the full raw JSON response for debugging/exploration."""
+    print(json.dumps(player, indent=2, ensure_ascii=False, default=str))
+
+
+def print_squad_full_stats(team_id: int) -> None:
+    """Fetch team squad and then get full stats for every player."""
+    team_data = get_team_data(team_id)
+    name = team_data.get("details", {}).get("name", "Unknown")
+
+    print(f"\n{'=' * 70}")
+    print(f"  ESTADÍSTICAS COMPLETAS PLANTILLA — {name}")
+    print(f"{'=' * 70}")
+
+    squad = team_data.get("squad", [])
+    if not squad:
+        print("  No squad data available.")
+        return
+
+    player_ids = []
+    for group in squad:
+        for m in group.get("members", []):
+            pid = m.get("id")
+            pname = m.get("name", "???")
+            if pid:
+                player_ids.append((pid, pname))
+
+    print(f"\n  Total jugadores: {len(player_ids)}")
+    print(f"  Fetching individual stats (this may take a while)...\n")
+
+    for i, (pid, pname) in enumerate(player_ids, 1):
+        print(f"\n  [{i}/{len(player_ids)}] Fetching {pname} (ID: {pid})...")
+        try:
+            pdata = get_player_data(pid)
+            print_player_profile(pdata)
+        except Exception as e:
+            print(f"    ERROR fetching {pname}: {e}")
+        _delay()
 
 
 # ──────────────────────────────────────────────
@@ -456,7 +824,9 @@ Commands:
   fixtures               Recent results & upcoming matches
   team <team_id>         Team overview + squad
   match <match_id>       Match details
-  player <player_id>     Player profile & stats
+  player <player_id>     Full player profile & all stats
+  player-json <id>       Raw JSON dump of player data (for debugging)
+  squad-stats <team_id>  Full stats for every player in a team's squad
   date <YYYYMMDD>        LaLiga matches on a given date
   today                  Today's LaLiga matches
   full                   Full report (standings + scorers + assisters + fixtures)
@@ -466,6 +836,8 @@ Examples:
   python laliga_stats.py standings
   python laliga_stats.py team 8633
   python laliga_stats.py player 194165
+  python laliga_stats.py player-json 194165
+  python laliga_stats.py squad-stats 8633
   python laliga_stats.py date 20260418
   python laliga_stats.py full
 """)
@@ -520,6 +892,22 @@ def main():
             player_id = int(sys.argv[2])
             data = get_player_data(player_id)
             print_player_profile(data)
+
+        elif cmd == "player-json":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py player-json <player_id>")
+                return
+            player_id = int(sys.argv[2])
+            data = get_player_data(player_id)
+            dump_player_json(data)
+
+        elif cmd == "squad-stats":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py squad-stats <team_id>")
+                print("Use 'python laliga_stats.py teams' to list team IDs.")
+                return
+            team_id = int(sys.argv[2])
+            print_squad_full_stats(team_id)
 
         elif cmd == "date":
             if len(sys.argv) < 3:
