@@ -4,6 +4,8 @@ LaLiga EA Sports 2025/26 stats scraper using FotMob public API.
 No API key or registration required.
 """
 
+import csv
+import io
 import json
 import sys
 import time
@@ -39,6 +41,180 @@ def _get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
 
 def _delay():
     time.sleep(REQUEST_DELAY)
+
+
+def _normalize(text: str) -> str:
+    """Normalize text for fuzzy matching: lowercase, strip accents."""
+    import unicodedata
+    nfkd = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+# ──────────────────────────────────────────────
+# Export utilities (--json / --csv)
+# ──────────────────────────────────────────────
+
+def _export_json(data: Any, filename: str | None = None) -> None:
+    output = json.dumps(data, indent=2, ensure_ascii=False, default=str)
+    if filename:
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(output)
+        print(f"  Exported JSON → {filename}")
+    else:
+        print(output)
+
+
+def _export_csv(rows: list[dict], filename: str | None = None) -> None:
+    if not rows:
+        print("  No data to export.")
+        return
+    keys = list(rows[0].keys())
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=keys, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    output = buf.getvalue()
+    if filename:
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(output)
+        print(f"  Exported CSV → {filename}")
+    else:
+        print(output)
+
+
+def _standings_to_rows(league_data: dict[str, Any]) -> list[dict]:
+    """Extract standings as flat dicts for export."""
+    tables = league_data.get("table", [])
+    all_rows = _find_standings_rows(tables)
+    result = []
+    for row in all_rows:
+        result.append({
+            "position": row.get("idx", row.get("position", "")),
+            "team": row.get("name", row.get("shortName", "")),
+            "team_id": row.get("id", ""),
+            "played": row.get("played", 0),
+            "wins": row.get("wins", 0),
+            "draws": row.get("draws", 0),
+            "losses": row.get("losses", 0),
+            "goals_for": row.get("scoresStr", "0-0").split("-")[0].strip() if isinstance(row.get("scoresStr"), str) else row.get("goalsFor", 0),
+            "goals_against": row.get("scoresStr", "0-0").split("-")[1].strip() if isinstance(row.get("scoresStr"), str) else row.get("goalsAgainst", 0),
+            "goal_diff": row.get("goalConDiff", row.get("goalDifference", 0)),
+            "points": row.get("pts", 0),
+        })
+    return result
+
+
+def _find_standings_rows(tables) -> list:
+    """Helper to find the standings rows in various FotMob structures."""
+    all_rows = []
+    if isinstance(tables, list):
+        for t in tables:
+            data = t.get("data") or t if isinstance(t, dict) else t
+            if isinstance(data, dict):
+                table_all = data.get("table", data.get("tables", []))
+                if isinstance(table_all, dict):
+                    all_rows = table_all.get("all", [])
+                elif isinstance(table_all, list):
+                    for sub in table_all:
+                        if isinstance(sub, dict) and "all" in sub:
+                            all_rows = sub["all"]
+                            break
+            if all_rows:
+                break
+    elif isinstance(tables, dict):
+        all_rows = tables.get("all", [])
+    return all_rows
+
+
+def _parse_export_args(args: list[str]) -> tuple[str | None, str | None]:
+    """Parse --json/--csv and optional filename from CLI args."""
+    fmt = None
+    filename = None
+    for i, a in enumerate(args):
+        if a == "--json":
+            fmt = "json"
+            if i + 1 < len(args) and not args[i + 1].startswith("-"):
+                filename = args[i + 1]
+        elif a == "--csv":
+            fmt = "csv"
+            if i + 1 < len(args) and not args[i + 1].startswith("-"):
+                filename = args[i + 1]
+    return fmt, filename
+
+
+# ──────────────────────────────────────────────
+# 0. Search by name
+# ──────────────────────────────────────────────
+
+def search_team(query: str) -> list[dict[str, Any]]:
+    """Search for a team by name in LaLiga standings."""
+    league = get_league_data()
+    teams = extract_teams(league)
+    q = _normalize(query)
+    results = []
+    for t in teams:
+        name_norm = _normalize(t["name"])
+        if q in name_norm or name_norm in q:
+            results.append(t)
+    if not results:
+        for t in teams:
+            name_norm = _normalize(t["name"])
+            if any(w in name_norm for w in q.split()):
+                results.append(t)
+    return results
+
+
+def search_player(query: str) -> list[dict[str, Any]]:
+    """Search for a player by name across all LaLiga squads."""
+    league = get_league_data()
+    teams = extract_teams(league)
+    q = _normalize(query)
+    results = []
+
+    print(f"  Searching {len(teams)} teams for '{query}'...")
+    for t in teams:
+        try:
+            tdata = get_team_data(t["id"])
+        except Exception:
+            continue
+        squad = tdata.get("squad", [])
+        for group in squad:
+            for m in group.get("members", []):
+                pname = m.get("name", "")
+                if q in _normalize(pname):
+                    results.append({
+                        "id": m.get("id"),
+                        "name": pname,
+                        "team": t["name"],
+                        "team_id": t["id"],
+                        "number": m.get("shirtNumber", ""),
+                        "position": group.get("title", ""),
+                    })
+        _delay()
+    return results
+
+
+def print_search_results(query: str, kind: str) -> None:
+    if kind == "team":
+        results = search_team(query)
+        if not results:
+            print(f"  No teams found matching '{query}'.")
+            return
+        print(f"\n  Teams matching '{query}':")
+        print(f"    {'ID':>8}  {'Equipo':<30}")
+        print(f"    {'-' * 40}")
+        for t in results:
+            print(f"    {t['id']:>8}  {t['name']:<30}")
+    elif kind == "player":
+        results = search_player(query)
+        if not results:
+            print(f"  No players found matching '{query}'.")
+            return
+        print(f"\n  Players matching '{query}':")
+        print(f"    {'ID':>10}  {'Jugador':<25} {'Equipo':<20} {'#':>4} {'Pos':<15}")
+        print(f"    {'-' * 78}")
+        for p in results:
+            print(f"    {p['id']:>10}  {p['name']:<25} {p['team']:<20} {str(p['number']):>4} {p['position']:<15}")
 
 
 # ──────────────────────────────────────────────
@@ -603,25 +779,45 @@ def print_match_summary(match: dict[str, Any]) -> None:
     general = match.get("general", {})
     home = general.get("homeTeam", {})
     away = general.get("awayTeam", {})
+    content = match.get("content", {})
 
     home_name = home.get("name", "Home")
     away_name = away.get("name", "Away")
+    home_id = home.get("id", "")
+    away_id = away.get("id", "")
 
     header = match.get("header", {})
-    home_score = header.get("teams", [{}])[0].get("score", "?") if header.get("teams") else "?"
-    away_score = header.get("teams", [{}])[1].get("score", "?") if header.get("teams") and len(header.get("teams", [])) > 1 else "?"
+    teams_header = header.get("teams", [])
+    home_score = teams_header[0].get("score", "?") if len(teams_header) > 0 else "?"
+    away_score = teams_header[1].get("score", "?") if len(teams_header) > 1 else "?"
 
-    status = general.get("matchTimeUTCDate", "")
+    utc_date = general.get("matchTimeUTCDate", "")
     started = general.get("started", False)
     finished = general.get("finished", False)
+    state = "Finished" if finished else ("Live" if started else utc_date[:10] if utc_date else "Scheduled")
 
-    state = "Finished" if finished else ("Live" if started else status[:10] if status else "Scheduled")
+    league_name = general.get("leagueName", general.get("parentLeagueName", ""))
+    round_info = general.get("matchRound", general.get("round", ""))
+    stadium = general.get("stadiumName", general.get("venue", ""))
+    referee = general.get("referee", {})
+    ref_name = referee.get("text", referee.get("name", "")) if isinstance(referee, dict) else str(referee)
 
-    print(f"\n  {home_name} {home_score} - {away_score} {away_name}  [{state}]")
+    print(f"\n{'=' * 70}")
+    print(f"  {home_name} {home_score} - {away_score} {away_name}")
+    print(f"{'=' * 70}")
+    print(f"    Estado: {state}")
+    if league_name:
+        print(f"    Competición: {league_name} — {round_info}")
+    if utc_date:
+        print(f"    Fecha: {utc_date[:16]}")
+    if stadium:
+        print(f"    Estadio: {stadium}")
+    if ref_name:
+        print(f"    Árbitro: {ref_name}")
 
-    # Events (goals, cards)
-    content = match.get("content", {})
-    events = content.get("matchFacts", {}).get("events", {})
+    # ── Events (goals, cards, subs) ──
+    match_facts = content.get("matchFacts", {})
+    events = match_facts.get("events", {})
     if isinstance(events, dict):
         events_list = events.get("events", [])
     elif isinstance(events, list):
@@ -630,13 +826,329 @@ def print_match_summary(match: dict[str, Any]) -> None:
         events_list = []
 
     if events_list:
-        print("  Events:")
+        print(f"\n  {'─' * 65}")
+        print(f"  EVENTOS")
+        print(f"  {'─' * 65}")
+
+        event_icons = {
+            "Goal": "⚽", "OwnGoal": "⚽🔴", "Penalty": "⚽(P)",
+            "MissedPenalty": "❌(P)", "YellowCard": "🟨", "RedCard": "🟥",
+            "SecondYellow": "🟨🟥", "Substitution": "🔄",
+        }
+
         for ev in events_list:
-            minute = ev.get("time", ev.get("timeStr", "?"))
-            etype = ev.get("type", "")
-            player = ev.get("nameStr", ev.get("player", ""))
-            if player and etype:
-                print(f"    {minute}' - {etype}: {player}")
+            time_val = ev.get("time", ev.get("timeStr", ev.get("min", "?")))
+            etype = ev.get("type", ev.get("eventType", ""))
+            player = ev.get("nameStr", ev.get("playerName", ev.get("player", "")))
+            team_side = ev.get("isHome", None)
+            side_str = f"[{home_name[:3]}]" if team_side is True else f"[{away_name[:3]}]" if team_side is False else ""
+            icon = event_icons.get(etype, etype)
+            assist = ev.get("assistStr", ev.get("assist", ""))
+            assist_str = f" (asist: {assist})" if assist else ""
+            swap = ev.get("swap", ev.get("substitutedPlayer", ""))
+            swap_str = f" ↓ {swap}" if swap else ""
+
+            if player or etype:
+                print(f"    {str(time_val):>5}'  {icon:<8} {player}{assist_str}{swap_str}  {side_str}")
+
+    # ── Lineups ──
+    lineups = content.get("lineup", content.get("lineups", {}))
+    if isinstance(lineups, dict):
+        lineup_list = [lineups.get("homeTeam", lineups.get("lineup", [None]))]
+        away_lineup = lineups.get("awayTeam")
+        if away_lineup:
+            lineup_list.append(away_lineup)
+    elif isinstance(lineups, list):
+        lineup_list = lineups
+    else:
+        lineup_list = []
+
+    if lineup_list:
+        print(f"\n  {'─' * 65}")
+        print(f"  ALINEACIONES")
+        print(f"  {'─' * 65}")
+
+        team_names = [home_name, away_name]
+        for idx, lineup in enumerate(lineup_list[:2]):
+            if not lineup or not isinstance(lineup, dict):
+                continue
+            t_name = team_names[idx] if idx < len(team_names) else f"Team {idx+1}"
+            formation = lineup.get("formation", lineup.get("lineup", ""))
+            coach = lineup.get("coach", lineup.get("manager", {}))
+            coach_name = coach.get("name", "") if isinstance(coach, dict) else str(coach)
+
+            print(f"\n    {t_name} ({formation})")
+            if coach_name:
+                print(f"    Entrenador: {coach_name}")
+
+            # Starters
+            starters = lineup.get("players", lineup.get("starters", []))
+            if isinstance(starters, list):
+                # FotMob sometimes nests by position rows
+                flat_starters = []
+                for item in starters:
+                    if isinstance(item, list):
+                        flat_starters.extend(item)
+                    elif isinstance(item, dict):
+                        if "players" in item:
+                            flat_starters.extend(item["players"])
+                        else:
+                            flat_starters.append(item)
+
+                if flat_starters:
+                    print(f"    Titulares:")
+                    for p in flat_starters:
+                        if not isinstance(p, dict):
+                            continue
+                        pname = p.get("name", p.get("shortName", "?"))
+                        number = p.get("shirt", p.get("shirtNumber", ""))
+                        rating = p.get("rating", p.get("performanceRating", ""))
+                        pos = p.get("position", p.get("role", ""))
+                        events_p = p.get("events", {})
+
+                        extras = []
+                        if isinstance(events_p, dict):
+                            if events_p.get("g", events_p.get("goals")):
+                                extras.append(f"⚽{events_p.get('g', events_p.get('goals'))}")
+                            if events_p.get("as", events_p.get("assists")):
+                                extras.append(f"🅰️{events_p.get('as', events_p.get('assists'))}")
+                            if events_p.get("yc", events_p.get("yellowCard")):
+                                extras.append("🟨")
+                            if events_p.get("rc", events_p.get("redCard")):
+                                extras.append("🟥")
+                            if events_p.get("sub", events_p.get("subbedOut")):
+                                sub_info = events_p.get("sub", events_p.get("subbedOut", {}))
+                                sub_min = sub_info.get("time", "") if isinstance(sub_info, dict) else ""
+                                extras.append(f"↓{sub_min}'")
+
+                        rating_str = f" [{rating}]" if rating else ""
+                        num_str = f"#{number}" if number else "  "
+                        extras_str = f"  {'  '.join(extras)}" if extras else ""
+                        print(f"      {num_str:>4} {pname:<25} {pos:<10}{rating_str}{extras_str}")
+
+            # Subs
+            bench = lineup.get("bench", lineup.get("subs", lineup.get("substitutes", [])))
+            if isinstance(bench, list) and bench:
+                print(f"    Suplentes:")
+                for p in bench:
+                    if not isinstance(p, dict):
+                        continue
+                    pname = p.get("name", p.get("shortName", "?"))
+                    number = p.get("shirt", p.get("shirtNumber", ""))
+                    rating = p.get("rating", p.get("performanceRating", ""))
+                    events_p = p.get("events", {})
+                    sub_in = ""
+                    if isinstance(events_p, dict) and events_p.get("sub", events_p.get("subbedIn")):
+                        sub_info = events_p.get("sub", events_p.get("subbedIn", {}))
+                        sub_min = sub_info.get("time", "") if isinstance(sub_info, dict) else ""
+                        sub_in = f" ↑{sub_min}'"
+
+                    num_str = f"#{number}" if number else "  "
+                    rating_str = f" [{rating}]" if rating else ""
+                    print(f"      {num_str:>4} {pname:<25}{sub_in}{rating_str}")
+
+    # ── Team stats comparison ──
+    stats_section = content.get("stats", content.get("matchStats", content.get("teamStats", {})))
+    stats_list = []
+    if isinstance(stats_section, dict):
+        stats_list = stats_section.get("stats", stats_section.get("Ede", []))
+        if not isinstance(stats_list, list):
+            stats_list = [stats_section]
+    elif isinstance(stats_section, list):
+        stats_list = stats_section
+
+    parsed_stats = []
+    for group in stats_list:
+        if isinstance(group, dict):
+            title = group.get("title", group.get("header", ""))
+            stat_items = group.get("stats", group.get("items", []))
+            if isinstance(stat_items, list):
+                for item in stat_items:
+                    if isinstance(item, dict):
+                        stat_name = item.get("title", item.get("key", item.get("name", "?")))
+                        stats_vals = item.get("stats", [item.get("home", "?"), item.get("away", "?")])
+                        if isinstance(stats_vals, list) and len(stats_vals) >= 2:
+                            home_val = stats_vals[0] if not isinstance(stats_vals[0], dict) else stats_vals[0].get("value", stats_vals[0].get("stat", "?"))
+                            away_val = stats_vals[1] if not isinstance(stats_vals[1], dict) else stats_vals[1].get("value", stats_vals[1].get("stat", "?"))
+                            parsed_stats.append((stat_name, home_val, away_val))
+                        elif isinstance(stats_vals, dict):
+                            parsed_stats.append((stat_name, stats_vals.get("home", "?"), stats_vals.get("away", "?")))
+
+    if parsed_stats:
+        print(f"\n  {'─' * 65}")
+        print(f"  ESTADÍSTICAS DEL PARTIDO")
+        print(f"  {'─' * 65}")
+        print(f"    {home_name:>25}  {'Stat':^20}  {away_name:<25}")
+        print(f"    {'-' * 65}")
+
+        for stat_name, h_val, a_val in parsed_stats:
+            h_str = str(h_val) if h_val is not None else "—"
+            a_str = str(a_val) if a_val is not None else "—"
+            print(f"    {h_str:>25}  {stat_name:^20}  {a_str:<25}")
+
+    # ── Man of the match ──
+    motm = match_facts.get("playerOfTheMatch", match_facts.get("manOfTheMatch", {}))
+    if isinstance(motm, dict) and motm:
+        motm_name = motm.get("name", motm.get("shortName", ""))
+        motm_rating = motm.get("rating", motm.get("performanceRating", ""))
+        motm_team = motm.get("teamName", "")
+        if motm_name:
+            print(f"\n    ⭐ Man of the Match: {motm_name} ({motm_team}) — Rating: {motm_rating}")
+
+    # ── Match momentum / xG timeline ──
+    momentum = content.get("momentum", {})
+    if isinstance(momentum, dict):
+        main_data = momentum.get("main", {})
+        if isinstance(main_data, dict):
+            data_points = main_data.get("data", [])
+            if data_points:
+                print(f"\n    Momentum: {len(data_points)} data points available (use match-json for raw data)")
+
+    # ── xG ──
+    xg = match_facts.get("xg", {})
+    if isinstance(xg, dict) and xg:
+        home_xg = xg.get("home", xg.get("homeXg", ""))
+        away_xg = xg.get("away", xg.get("awayXg", ""))
+        if home_xg or away_xg:
+            print(f"\n    xG:  {home_name} {home_xg} — {away_xg} {away_name}")
+
+    # ── Top performers (all player ratings) ──
+    player_ratings = []
+    if lineup_list:
+        for idx, lineup in enumerate(lineup_list[:2]):
+            if not lineup or not isinstance(lineup, dict):
+                continue
+            t_name = team_names[idx] if idx < len(team_names) else "?"
+            all_players = []
+            starters = lineup.get("players", lineup.get("starters", []))
+            bench = lineup.get("bench", lineup.get("subs", []))
+            if isinstance(starters, list):
+                for item in starters:
+                    if isinstance(item, list):
+                        all_players.extend(item)
+                    elif isinstance(item, dict):
+                        if "players" in item:
+                            all_players.extend(item["players"])
+                        else:
+                            all_players.append(item)
+            if isinstance(bench, list):
+                all_players.extend(bench)
+
+            for p in all_players:
+                if isinstance(p, dict):
+                    rating = p.get("rating", p.get("performanceRating"))
+                    if rating:
+                        try:
+                            player_ratings.append((float(str(rating).replace(",", ".")), p.get("name", "?"), t_name))
+                        except (ValueError, TypeError):
+                            pass
+
+    if player_ratings:
+        player_ratings.sort(key=lambda x: -x[0])
+        print(f"\n  {'─' * 65}")
+        print(f"  TOP RENDIMIENTO")
+        print(f"  {'─' * 65}")
+        for rating, pname, tname in player_ratings[:10]:
+            print(f"    {rating:>5.1f}  {pname:<25} ({tname})")
+
+
+def dump_match_json(match: dict[str, Any]) -> None:
+    print(json.dumps(match, indent=2, ensure_ascii=False, default=str))
+
+
+# ──────────────────────────────────────────────
+# 3b. Head-to-head
+# ──────────────────────────────────────────────
+
+def print_head_to_head(team1_id: int, team2_id: int) -> None:
+    """Show head-to-head history from both teams' fixture data."""
+    print(f"\n  Fetching team data...")
+    t1_data = get_team_data(team1_id)
+    _delay()
+    t2_data = get_team_data(team2_id)
+
+    t1_name = t1_data.get("details", {}).get("name", f"Team {team1_id}")
+    t2_name = t2_data.get("details", {}).get("name", f"Team {team2_id}")
+
+    print(f"\n{'=' * 70}")
+    print(f"  HEAD TO HEAD: {t1_name} vs {t2_name}")
+    print(f"{'=' * 70}")
+
+    # Get fixtures from team1 and find matches against team2
+    fixtures = _extract_fixtures_from_team(t1_data)
+    t2_norm = _normalize(t2_name)
+
+    h2h = []
+    for f in fixtures:
+        opp_norm = _normalize(f["opponent"])
+        if t2_norm in opp_norm or opp_norm in t2_norm:
+            h2h.append(f)
+        elif any(w in opp_norm for w in t2_norm.split() if len(w) > 3):
+            h2h.append(f)
+
+    if not h2h:
+        print(f"\n  No head-to-head matches found this season.")
+        print(f"  (Only current season fixtures are available)")
+        return
+
+    played = [m for m in h2h if m["finished"]]
+    upcoming = [m for m in h2h if not m["finished"]]
+
+    if played:
+        print(f"\n  {'─' * 65}")
+        print(f"  RESULTADOS ({len(played)} partidos)")
+        print(f"  {'─' * 65}")
+
+        t1_wins = 0
+        t2_wins = 0
+        draws = 0
+        t1_goals = 0
+        t2_goals = 0
+
+        print(f"\n    {'Fecha':<12} {'Comp':<22} {'H/A':>3} {'Score':<8} {'Res':>3}")
+        print(f"    {'-' * 55}")
+
+        for m in played:
+            d = m["date_parsed"]
+            date_s = d.strftime("%Y-%m-%d") if d else "?"
+            comp = m["competition"][:21]
+            res = m["result"][:1].upper() if m["result"] else "—"
+
+            if res in ("W", "V"):
+                t1_wins += 1
+            elif res in ("L", "P"):
+                t2_wins += 1
+            elif res in ("D", "E"):
+                draws += 1
+
+            # Parse score
+            if m["score"] and "-" in str(m["score"]):
+                parts = str(m["score"]).split("-")
+                try:
+                    if m["home_away"] == "H":
+                        t1_goals += int(parts[0].strip())
+                        t2_goals += int(parts[1].strip())
+                    else:
+                        t1_goals += int(parts[1].strip())
+                        t2_goals += int(parts[0].strip())
+                except (ValueError, IndexError):
+                    pass
+
+            print(f"    {date_s:<12} {comp:<22} {m['home_away']:>3} {str(m['score']):<8} {res:>3}")
+
+        print(f"\n    Resumen:")
+        print(f"      {t1_name}: {t1_wins} victorias, {t1_goals} goles")
+        print(f"      {t2_name}: {t2_wins} victorias, {t2_goals} goles")
+        print(f"      Empates: {draws}")
+
+    if upcoming:
+        print(f"\n  {'─' * 65}")
+        print(f"  PRÓXIMOS ENFRENTAMIENTOS")
+        print(f"  {'─' * 65}")
+        for m in upcoming:
+            d = m["date_parsed"]
+            date_s = d.strftime("%Y-%m-%d %H:%M") if d else "TBD"
+            print(f"    {date_s}  {m['competition']}  ({m['home_away']})")
 
 
 # ──────────────────────────────────────────────
@@ -1356,34 +1868,80 @@ def print_recent_and_upcoming(league_data: dict[str, Any]) -> None:
 def print_help():
     print("""
 LaLiga Stats — FotMob Scraper
-Usage: python laliga_stats.py [command] [args]
+Usage: python laliga_stats.py [command] [args] [--json [file]] [--csv [file]]
 
 Commands:
   standings              Show current LaLiga standings
   scorers                Top scorers
   assisters              Top assisters
   fixtures               Recent results & upcoming matches
-  team <team_id>         Team overview + squad
+  team <id|name>         Team overview + squad
   team-competitions <id> Multi-competition analysis, rotation & priority
-  match <match_id>       Match details
-  player <player_id>     Full player profile & all stats
-  player-json <id>       Raw JSON dump of player data (for debugging)
+  match <match_id>       Full match details (lineups, stats, events, xG)
+  match-json <match_id>  Raw JSON dump of match data
+  player <id|name>       Full player profile & all stats
+  player-json <id>       Raw JSON dump of player data
   squad-stats <team_id>  Full stats for every player in a team's squad
+  search-team <name>     Search team by name
+  search-player <name>   Search player by name across all squads
+  h2h <team1_id> <team2_id>  Head-to-head history
   date <YYYYMMDD>        LaLiga matches on a given date
   today                  Today's LaLiga matches
   full                   Full report (standings + scorers + assisters + fixtures)
   teams                  List all teams with IDs
 
+Export flags (append to any command):
+  --json [filename]      Export raw data as JSON
+  --csv [filename]       Export tabular data as CSV
+
 Examples:
   python laliga_stats.py standings
+  python laliga_stats.py standings --csv standings.csv
   python laliga_stats.py team 8633
+  python laliga_stats.py team "Real Betis"
   python laliga_stats.py team-competitions 8633
+  python laliga_stats.py match 4193456
   python laliga_stats.py player 194165
-  python laliga_stats.py player-json 194165
-  python laliga_stats.py squad-stats 8633
-  python laliga_stats.py date 20260418
+  python laliga_stats.py player "Pedri"
+  python laliga_stats.py search-player "Vinicius"
+  python laliga_stats.py h2h 8633 8634
+  python laliga_stats.py standings --json laliga.json
   python laliga_stats.py full
 """)
+
+
+def _resolve_team_arg(arg: str) -> int:
+    """Resolve a team argument: return int ID or search by name."""
+    try:
+        return int(arg)
+    except ValueError:
+        results = search_team(arg)
+        if not results:
+            print(f"  No team found matching '{arg}'.")
+            sys.exit(1)
+        if len(results) > 1:
+            print(f"  Multiple teams match '{arg}':")
+            for t in results:
+                print(f"    {t['id']:>8}  {t['name']}")
+            print(f"  Using first match: {results[0]['name']} (ID: {results[0]['id']})")
+        return results[0]["id"]
+
+
+def _resolve_player_arg(arg: str) -> int:
+    """Resolve a player argument: return int ID or search by name."""
+    try:
+        return int(arg)
+    except ValueError:
+        results = search_player(arg)
+        if not results:
+            print(f"  No player found matching '{arg}'.")
+            sys.exit(1)
+        if len(results) > 1:
+            print(f"  Multiple players match '{arg}':")
+            for p in results:
+                print(f"    {p['id']:>10}  {p['name']:<25} ({p['team']})")
+            print(f"  Using first match: {results[0]['name']} (ID: {results[0]['id']})")
+        return results[0]["id"]
 
 
 def main():
@@ -1392,42 +1950,62 @@ def main():
         return
 
     cmd = sys.argv[1].lower()
+    export_fmt, export_file = _parse_export_args(sys.argv[2:])
 
     try:
         if cmd == "standings":
             data = get_league_data()
-            print_standings(data)
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            elif export_fmt == "csv":
+                _export_csv(_standings_to_rows(data), export_file)
+            else:
+                print_standings(data)
 
         elif cmd == "scorers":
             data = get_league_data()
-            print_top_scorers(data)
+            if export_fmt == "json":
+                _export_json(data.get("stats", {}), export_file)
+            else:
+                print_top_scorers(data)
 
         elif cmd == "assisters":
             data = get_league_data()
-            print_top_assisters(data)
+            if export_fmt == "json":
+                _export_json(data.get("stats", {}), export_file)
+            else:
+                print_top_assisters(data)
 
         elif cmd == "fixtures":
             data = get_league_data()
-            print_recent_and_upcoming(data)
+            if export_fmt == "json":
+                _export_json(data.get("matches", {}), export_file)
+            else:
+                print_recent_and_upcoming(data)
 
         elif cmd == "team":
             if len(sys.argv) < 3:
-                print("Usage: python laliga_stats.py team <team_id>")
-                print("Use 'python laliga_stats.py teams' to list team IDs.")
+                print("Usage: python laliga_stats.py team <team_id|team_name>")
                 return
-            team_id = int(sys.argv[2])
+            team_id = _resolve_team_arg(sys.argv[2])
             data = get_team_data(team_id)
-            print_team_overview(data)
-            print_squad(data)
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_team_overview(data)
+                print_squad(data)
 
         elif cmd == "team-competitions":
             if len(sys.argv) < 3:
-                print("Usage: python laliga_stats.py team-competitions <team_id>")
-                print("Use 'python laliga_stats.py teams' to list team IDs.")
+                print("Usage: python laliga_stats.py team-competitions <team_id|name>")
                 return
-            team_id = int(sys.argv[2])
+            team_id = _resolve_team_arg(sys.argv[2])
             data = get_team_data(team_id)
-            print_competition_analysis(data)
+            if export_fmt == "json":
+                fixtures = _extract_fixtures_from_team(data)
+                _export_json(fixtures, export_file)
+            else:
+                print_competition_analysis(data)
 
         elif cmd == "match":
             if len(sys.argv) < 3:
@@ -1435,15 +2013,29 @@ def main():
                 return
             match_id = int(sys.argv[2])
             data = get_match_details(match_id)
-            print_match_summary(data)
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_match_summary(data)
+
+        elif cmd == "match-json":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py match-json <match_id>")
+                return
+            match_id = int(sys.argv[2])
+            data = get_match_details(match_id)
+            dump_match_json(data)
 
         elif cmd == "player":
             if len(sys.argv) < 3:
-                print("Usage: python laliga_stats.py player <player_id>")
+                print("Usage: python laliga_stats.py player <player_id|player_name>")
                 return
-            player_id = int(sys.argv[2])
+            player_id = _resolve_player_arg(sys.argv[2])
             data = get_player_data(player_id)
-            print_player_profile(data)
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_player_profile(data)
 
         elif cmd == "player-json":
             if len(sys.argv) < 3:
@@ -1455,11 +2047,30 @@ def main():
 
         elif cmd == "squad-stats":
             if len(sys.argv) < 3:
-                print("Usage: python laliga_stats.py squad-stats <team_id>")
-                print("Use 'python laliga_stats.py teams' to list team IDs.")
+                print("Usage: python laliga_stats.py squad-stats <team_id|name>")
                 return
-            team_id = int(sys.argv[2])
+            team_id = _resolve_team_arg(sys.argv[2])
             print_squad_full_stats(team_id)
+
+        elif cmd == "search-team":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py search-team <name>")
+                return
+            print_search_results(sys.argv[2], "team")
+
+        elif cmd == "search-player":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py search-player <name>")
+                return
+            print_search_results(sys.argv[2], "player")
+
+        elif cmd == "h2h":
+            if len(sys.argv) < 4:
+                print("Usage: python laliga_stats.py h2h <team1_id> <team2_id>")
+                return
+            t1 = _resolve_team_arg(sys.argv[2])
+            t2 = _resolve_team_arg(sys.argv[3])
+            print_head_to_head(t1, t2)
 
         elif cmd == "date":
             if len(sys.argv) < 3:
@@ -1467,31 +2078,45 @@ def main():
                 return
             date = sys.argv[2]
             data = get_matches_by_date(date)
-            print_matches_for_date(date, data)
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_matches_for_date(date, data)
 
         elif cmd == "today":
             today = datetime.now().strftime("%Y%m%d")
             data = get_matches_by_date(today)
-            print_matches_for_date(today, data)
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_matches_for_date(today, data)
 
         elif cmd == "teams":
             data = get_league_data()
             teams = extract_teams(data)
-            if teams:
-                print(f"\n  {'ID':>8}  {'Equipo':<30}")
-                print("  " + "-" * 40)
-                for t in teams:
-                    print(f"  {t['id']:>8}  {t['name']:<30}")
+            if export_fmt == "json":
+                _export_json(teams, export_file)
+            elif export_fmt == "csv":
+                _export_csv(teams, export_file)
             else:
-                print("  Could not extract teams from league data.")
+                if teams:
+                    print(f"\n  {'ID':>8}  {'Equipo':<30}")
+                    print("  " + "-" * 40)
+                    for t in teams:
+                        print(f"  {t['id']:>8}  {t['name']:<30}")
+                else:
+                    print("  Could not extract teams from league data.")
 
         elif cmd == "full":
             data = get_league_data()
-            print_standings(data)
-            print_top_scorers(data)
-            _delay()
-            print_top_assisters(data)
-            print_recent_and_upcoming(data)
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_standings(data)
+                print_top_scorers(data)
+                _delay()
+                print_top_assisters(data)
+                print_recent_and_upcoming(data)
 
         elif cmd in ("help", "-h", "--help"):
             print_help()
