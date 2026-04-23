@@ -7,10 +7,14 @@ No API key or registration required.
 import csv
 import io
 import json
+import logging
+import re
 import sys
 import time
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -31,6 +35,20 @@ HEADERS = {
 
 REQUEST_DELAY = 1.5  # seconds between requests to be respectful
 
+log = logging.getLogger("laliga_stats")
+
+SCORE_RE = re.compile(r"^(\d+)\s*-\s*(\d+)")
+
+
+def _parse_score(score_str: str | None) -> tuple[int | None, int | None]:
+    """Extract (home_goals, away_goals) from a score string. Handles AET/penalties."""
+    if not score_str:
+        return None, None
+    m = SCORE_RE.match(str(score_str).strip())
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    return None, None
+
 
 def _get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
     url = f"{BASE_URL}/{endpoint}"
@@ -45,7 +63,6 @@ def _delay():
 
 def _normalize(text: str) -> str:
     """Normalize text for fuzzy matching: lowercase, strip accents."""
-    import unicodedata
     nfkd = unicodedata.normalize("NFKD", text.lower())
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
@@ -54,12 +71,23 @@ def _normalize(text: str) -> str:
 # Export utilities (--json / --csv)
 # ──────────────────────────────────────────────
 
+def _safe_filename(filename: str) -> str:
+    """Sanitize export filename to prevent path traversal."""
+    p = Path(filename)
+    resolved = (Path.cwd() / p).resolve()
+    if not str(resolved).startswith(str(Path.cwd().resolve())):
+        print(f"  Warning: path '{filename}' escapes working directory. Using basename only.")
+        return p.name
+    return filename
+
+
 def _export_json(data: Any, filename: str | None = None) -> None:
     output = json.dumps(data, indent=2, ensure_ascii=False, default=str)
     if filename:
-        with open(filename, "w", encoding="utf-8") as f:
+        safe = _safe_filename(filename)
+        with open(safe, "w", encoding="utf-8") as f:
             f.write(output)
-        print(f"  Exported JSON → {filename}")
+        print(f"  Exported JSON → {safe}")
     else:
         print(output)
 
@@ -68,16 +96,17 @@ def _export_csv(rows: list[dict], filename: str | None = None) -> None:
     if not rows:
         print("  No data to export.")
         return
-    keys = list(rows[0].keys())
+    keys = list(dict.fromkeys(k for row in rows for k in row.keys()))
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=keys, extrasaction="ignore")
     writer.writeheader()
     writer.writerows(rows)
     output = buf.getvalue()
     if filename:
-        with open(filename, "w", encoding="utf-8") as f:
+        safe = _safe_filename(filename)
+        with open(safe, "w", encoding="utf-8") as f:
             f.write(output)
-        print(f"  Exported CSV → {filename}")
+        print(f"  Exported CSV → {safe}")
     else:
         print(output)
 
@@ -96,8 +125,8 @@ def _standings_to_rows(league_data: dict[str, Any]) -> list[dict]:
             "wins": row.get("wins", 0),
             "draws": row.get("draws", 0),
             "losses": row.get("losses", 0),
-            "goals_for": row.get("scoresStr", "0-0").split("-")[0].strip() if isinstance(row.get("scoresStr"), str) else row.get("goalsFor", 0),
-            "goals_against": row.get("scoresStr", "0-0").split("-")[1].strip() if isinstance(row.get("scoresStr"), str) else row.get("goalsAgainst", 0),
+            "goals_for": _parse_score(row.get("scoresStr"))[0] if row.get("scoresStr") else row.get("goalsFor", "?"),
+            "goals_against": _parse_score(row.get("scoresStr"))[1] if row.get("scoresStr") else row.get("goalsAgainst", "?"),
             "goal_diff": row.get("goalConDiff", row.get("goalDifference", 0)),
             "points": row.get("pts", 0),
         })
@@ -171,11 +200,14 @@ def search_player(query: str) -> list[dict[str, Any]]:
     q = _normalize(query)
     results = []
 
+    skipped = 0
     print(f"  Searching {len(teams)} teams for '{query}'...")
     for t in teams:
         try:
             tdata = get_team_data(t["id"])
-        except Exception:
+        except requests.exceptions.RequestException:
+            skipped += 1
+            log.warning("Failed to fetch team %s (%s)", t["name"], t["id"])
             continue
         squad = tdata.get("squad", [])
         for group in squad:
@@ -191,6 +223,8 @@ def search_player(query: str) -> list[dict[str, Any]]:
                         "position": group.get("title", ""),
                     })
         _delay()
+    if skipped:
+        print(f"  (Skipped {skipped}/{len(teams)} teams due to fetch errors)")
     return results
 
 
@@ -288,8 +322,9 @@ def print_standings(league_data: dict[str, Any]) -> None:
         wins = row.get("wins", 0)
         draws = row.get("draws", 0)
         losses = row.get("losses", 0)
-        gf = row.get("scoresStr", "0-0").split("-")[0].strip() if isinstance(row.get("scoresStr"), str) else row.get("goalsFor", 0)
-        gc = row.get("scoresStr", "0-0").split("-")[1].strip() if isinstance(row.get("scoresStr"), str) else row.get("goalsAgainst", 0)
+        gf_parsed, gc_parsed = _parse_score(row.get("scoresStr"))
+        gf = gf_parsed if gf_parsed is not None else row.get("goalsFor", "?")
+        gc = gc_parsed if gc_parsed is not None else row.get("goalsAgainst", "?")
         gd = row.get("goalConDiff", row.get("goalDifference", 0))
         pts = row.get("pts", 0)
 
@@ -405,12 +440,19 @@ COMPETITION_STAGE_WEIGHT = {
 def _parse_date(date_str: str) -> datetime | None:
     if not date_str:
         return None
-    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%fZ",
-                "%Y-%m-%d", "%d/%m/%Y", "%Y%m%d"):
+    s = str(date_str).strip()
+    # Try Python's fromisoformat first (handles timezone offsets on 3.11+)
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        return dt.replace(tzinfo=None)
+    except (ValueError, TypeError):
+        pass
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%d/%m/%Y", "%Y%m%d"):
         try:
-            return datetime.strptime(date_str[:19], fmt)
+            return datetime.strptime(s[:max(len(s), 19)], fmt)
         except (ValueError, TypeError):
             continue
+    log.warning("Could not parse date: %s", date_str)
     return None
 
 
@@ -482,7 +524,8 @@ def _extract_fixtures_from_team(team_data: dict[str, Any]) -> list[dict[str, Any
             comp_id = ""
 
         round_info = f.get("round", f.get("roundName", f.get("stage", "")))
-        home_away = "H" if f.get("home", f.get("isHome")) else "A"
+        home_val = f.get("home", f.get("isHome"))
+        home_away = "H" if home_val is True else ("A" if home_val is False else "?")
         match_id = f.get("id", f.get("matchId", ""))
 
         fixtures.append({
@@ -1122,17 +1165,14 @@ def print_head_to_head(team1_id: int, team2_id: int) -> None:
                 draws += 1
 
             # Parse score
-            if m["score"] and "-" in str(m["score"]):
-                parts = str(m["score"]).split("-")
-                try:
-                    if m["home_away"] == "H":
-                        t1_goals += int(parts[0].strip())
-                        t2_goals += int(parts[1].strip())
-                    else:
-                        t1_goals += int(parts[1].strip())
-                        t2_goals += int(parts[0].strip())
-                except (ValueError, IndexError):
-                    pass
+            sh, sa = _parse_score(m["score"])
+            if sh is not None and sa is not None and m["home_away"] != "?":
+                if m["home_away"] == "H":
+                    t1_goals += sh
+                    t2_goals += sa
+                else:
+                    t1_goals += sa
+                    t2_goals += sh
 
             print(f"    {date_s:<12} {comp:<22} {m['home_away']:>3} {str(m['score']):<8} {res:>3}")
 
@@ -1720,8 +1760,9 @@ def print_matches_for_date(date: str, data: dict[str, Any]) -> None:
                 home = match.get("home", {}).get("name", "?")
                 away = match.get("away", {}).get("name", "?")
                 status = match.get("status", {})
-                score_home = status.get("scoreStr", "? - ?").split(" - ")[0] if status.get("scoreStr") else "?"
-                score_away = status.get("scoreStr", "? - ?").split(" - ")[1] if status.get("scoreStr") else "?"
+                sh, sa = _parse_score(status.get("scoreStr"))
+                score_home = sh if sh is not None else "?"
+                score_away = sa if sa is not None else "?"
                 match_id = match.get("id", "")
                 state = "FT" if status.get("finished") else ("Live" if status.get("started") else status.get("liveTime", {}).get("short", "Sched."))
 
@@ -1945,6 +1986,12 @@ def _resolve_player_arg(arg: str) -> int:
 
 
 def main():
+    import os
+    logging.basicConfig(
+        level=getattr(logging, os.environ.get("LOGLEVEL", "WARNING").upper(), logging.WARNING),
+        format="%(levelname)s: %(message)s",
+    )
+
     if len(sys.argv) < 2:
         print_help()
         return
@@ -2114,7 +2161,6 @@ def main():
             else:
                 print_standings(data)
                 print_top_scorers(data)
-                _delay()
                 print_top_assisters(data)
                 print_recent_and_upcoming(data)
 
@@ -2126,13 +2172,26 @@ def main():
             print_help()
 
     except requests.exceptions.HTTPError as e:
-        print(f"HTTP Error: {e}")
-        print("FotMob may be rate-limiting or the endpoint structure may have changed.")
+        status_code = e.response.status_code if e.response is not None else "?"
+        if status_code == 429:
+            print(f"Rate limited (HTTP 429). Wait a minute and try again.")
+        elif status_code == 404:
+            print(f"Not found (HTTP 404). Check that the ID exists. Use 'teams' or 'search-team'/'search-player' to find valid IDs.")
+        else:
+            print(f"HTTP Error {status_code}: {e}")
     except requests.exceptions.ConnectionError:
         print("Connection error. Check your internet connection.")
+    except ValueError as e:
+        print(f"Invalid argument: {e}")
+        print("Expected a numeric ID or a valid name. Use 'search-team' or 'search-player' to find IDs.")
     except (KeyError, IndexError, TypeError) as e:
-        print(f"Error parsing response: {e}")
-        print("The FotMob API response structure may have changed.")
+        import traceback
+        print(f"Error parsing API response: {e}")
+        log.debug("Parsing error details:", exc_info=True)
+        if log.isEnabledFor(logging.DEBUG):
+            traceback.print_exc()
+        else:
+            print("Run with LOGLEVEL=DEBUG for details. The FotMob API structure may have changed.")
 
 
 if __name__ == "__main__":
