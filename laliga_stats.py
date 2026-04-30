@@ -52,17 +52,39 @@ def _parse_score(score_str: str | None) -> tuple[int | None, int | None]:
 
 _cache: dict[str, Any] = {}
 
+MAX_RETRIES = 3
+RETRY_BACKOFF = [2, 4, 8]
+
+
+class ResolveError(Exception):
+    """Raised when a team/player name cannot be resolved to an ID."""
+
 
 def _get(endpoint: str, params: dict | None = None, use_cache: bool = True) -> dict[str, Any]:
     cache_key = f"{endpoint}:{json.dumps(params, sort_keys=True)}" if params else endpoint
     if use_cache and cache_key in _cache:
         return _cache[cache_key]
     url = f"{BASE_URL}/{endpoint}"
-    resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
-    _cache[cache_key] = data
-    return data
+    last_exc = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
+            if resp.status_code == 429:
+                wait = RETRY_BACKOFF[min(attempt, len(RETRY_BACKOFF) - 1)]
+                log.warning("Rate limited (429). Retrying in %ds...", wait)
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            _cache[cache_key] = data
+            return data
+        except requests.exceptions.ConnectionError as e:
+            last_exc = e
+            if attempt < MAX_RETRIES:
+                wait = RETRY_BACKOFF[min(attempt, len(RETRY_BACKOFF) - 1)]
+                log.warning("Connection error. Retrying in %ds...", wait)
+                time.sleep(wait)
+    raise last_exc or requests.exceptions.ConnectionError("Max retries exceeded")
 
 
 def _delay():
@@ -1954,6 +1976,314 @@ def print_recent_and_upcoming(league_data: dict[str, Any]) -> None:
 
 
 # ──────────────────────────────────────────────
+# 8. Player comparison
+# ──────────────────────────────────────────────
+
+def print_player_comparison(id1: int, id2: int) -> None:
+    p1 = get_player_data(id1)
+    _delay()
+    p2 = get_player_data(id2)
+
+    n1 = p1.get("name", "Player 1")
+    n2 = p2.get("name", "Player 2")
+    t1 = p1.get("primaryTeam", {}).get("teamName", "?")
+    t2 = p2.get("primaryTeam", {}).get("teamName", "?")
+    pos1 = p1.get("positionDescription", {}).get("primaryPosition", {}).get("label", "?")
+    pos2 = p2.get("positionDescription", {}).get("primaryPosition", {}).get("label", "?")
+
+    print(f"\n{'=' * 75}")
+    print(f"  COMPARACIÓN DE JUGADORES")
+    print(f"{'=' * 75}")
+    print(f"  {'':>30}  {n1:>20}  {n2:>20}")
+    print(f"  {'Equipo':>30}  {t1:>20}  {t2:>20}")
+    print(f"  {'Posición':>30}  {pos1:>20}  {pos2:>20}")
+    print(f"  {'-' * 73}")
+
+    # Collect stats from both players
+    s1 = {s.get("title", ""): s.get("value", "") for s in p1.get("mainLeague", {}).get("stats", [])}
+    s2 = {s.get("title", ""): s.get("value", "") for s in p2.get("mainLeague", {}).get("stats", [])}
+
+    all_keys = list(dict.fromkeys(list(s1.keys()) + list(s2.keys())))
+    if all_keys:
+        print(f"\n  {'STATS TEMPORADA':>30}  {n1[:20]:>20}  {n2[:20]:>20}")
+        print(f"  {'-' * 73}")
+        for key in all_keys:
+            v1 = s1.get(key, "—")
+            v2 = s2.get(key, "—")
+            print(f"  {key:>30}  {str(v1):>20}  {str(v2):>20}")
+
+    # Per-90 comparison
+    def _get_minutes(player):
+        for s in player.get("mainLeague", {}).get("stats", []):
+            if "minut" in s.get("title", "").lower():
+                try:
+                    return int(str(s.get("value", 0)).replace(",", "").replace(".", ""))
+                except (ValueError, TypeError):
+                    pass
+        return None
+
+    m1, m2 = _get_minutes(p1), _get_minutes(p2)
+    if m1 and m2 and m1 > 0 and m2 > 0:
+        print(f"\n  {'PER-90':>30}  {n1[:20]:>20}  {n2[:20]:>20}")
+        print(f"  {'-' * 73}")
+        per90_words = ["goal", "gol", "assist", "shot", "tiro", "pass", "tackle", "dribble"]
+        for key in all_keys:
+            if any(w in key.lower() for w in per90_words):
+                try:
+                    v1_raw = float(str(s1.get(key, 0)).replace(",", ""))
+                    v2_raw = float(str(s2.get(key, 0)).replace(",", ""))
+                    v1_p90 = f"{v1_raw * 90 / m1:.2f}"
+                    v2_p90 = f"{v2_raw * 90 / m2:.2f}"
+                    print(f"  {key + '/90':>30}  {v1_p90:>20}  {v2_p90:>20}")
+                except (ValueError, TypeError):
+                    pass
+
+    # Ratings comparison
+    perf1 = p1.get("performanceScore", {}).get("value", "?")
+    perf2 = p2.get("performanceScore", {}).get("value", "?")
+    print(f"\n  {'Performance Score':>30}  {str(perf1):>20}  {str(perf2):>20}")
+
+
+# ──────────────────────────────────────────────
+# 9. Fixture difficulty ranking (FDR)
+# ──────────────────────────────────────────────
+
+def print_fixture_difficulty(league_data: dict[str, Any], num_matches: int = 6) -> None:
+    """Rank all teams by their next N opponents' strength."""
+    all_rows = _find_standings_rows(league_data.get("table", []))
+    if not all_rows:
+        print("  No standings data.")
+        return
+
+    team_positions = {}
+    for row in all_rows:
+        tid = row.get("id")
+        name = row.get("name", row.get("shortName", "?"))
+        pos = row.get("idx", row.get("position", 99))
+        if tid:
+            team_positions[tid] = {"name": name, "position": pos}
+
+    matches = league_data.get("matches", {})
+    all_matches = matches.get("allMatches", [])
+    upcoming = [m for m in all_matches if not m.get("status", {}).get("finished") and not m.get("status", {}).get("started")]
+
+    team_fdr: dict[int, list] = defaultdict(list)
+    for m in upcoming:
+        home_id = m.get("home", {}).get("id")
+        away_id = m.get("away", {}).get("id")
+        home_name = m.get("home", {}).get("name", "?")
+        away_name = m.get("away", {}).get("name", "?")
+        if home_id and away_id:
+            home_pos = team_positions.get(home_id, {}).get("position", 10)
+            away_pos = team_positions.get(away_id, {}).get("position", 10)
+            if len(team_fdr[home_id]) < num_matches:
+                difficulty = away_pos
+                venue = "H"
+                team_fdr[home_id].append({"opp": away_name, "opp_pos": away_pos, "venue": venue, "diff": difficulty})
+            if len(team_fdr[away_id]) < num_matches:
+                difficulty = home_pos
+                venue = "A"
+                team_fdr[away_id].append({"opp": home_name, "opp_pos": home_pos, "venue": venue, "diff": difficulty})
+
+    if not team_fdr:
+        print("  No upcoming fixtures found.")
+        return
+
+    # Calculate average difficulty (lower position = harder opponent)
+    rankings = []
+    for tid, fixtures in team_fdr.items():
+        avg_diff = sum(f["diff"] for f in fixtures) / len(fixtures) if fixtures else 0
+        name = team_positions.get(tid, {}).get("name", f"Team {tid}")
+        pos = team_positions.get(tid, {}).get("position", "?")
+        rankings.append({"team": name, "position": pos, "avg_diff": avg_diff, "fixtures": fixtures, "team_id": tid})
+
+    # Higher avg_diff = easier schedule (opponents ranked lower)
+    rankings.sort(key=lambda x: -x["avg_diff"])
+
+    print(f"\n{'=' * 80}")
+    print(f"  FIXTURE DIFFICULTY RANKING — Próximos {num_matches} partidos")
+    print(f"{'=' * 80}")
+    print(f"  {'#':>3}  {'Equipo':<22} {'Pos':>3} {'FDR':>5}  {'Próximos rivales'}")
+    print(f"  {'-' * 78}")
+
+    for i, r in enumerate(rankings, 1):
+        opp_str = "  ".join(
+            f"{f['opp'][:10]}({f['venue']}{f['opp_pos']})"
+            for f in r["fixtures"][:num_matches]
+        )
+        ease = "🟢" if r["avg_diff"] > 13 else "🟡" if r["avg_diff"] > 8 else "🔴"
+        print(f"  {i:>3}  {r['team']:<22} {r['position']:>3} {r['avg_diff']:>5.1f}  {ease} {opp_str}")
+
+    print(f"\n  FDR = media posición rivales (mayor = calendario más fácil)")
+    print(f"  🟢 Fácil (>13)  🟡 Medio (8-13)  🔴 Difícil (<8)")
+
+
+# ──────────────────────────────────────────────
+# 10. Home/Away standings + zone indicators
+# ──────────────────────────────────────────────
+
+def print_standings_split(league_data: dict[str, Any], split: str = "home") -> None:
+    """Print home-only or away-only standings."""
+    tables = league_data.get("table", [])
+    all_rows = []
+    if isinstance(tables, list):
+        for t in tables:
+            data = t.get("data") or t if isinstance(t, dict) else t
+            if isinstance(data, dict):
+                table_all = data.get("table", data.get("tables", []))
+                if isinstance(table_all, dict):
+                    all_rows = table_all.get(split, [])
+                elif isinstance(table_all, list):
+                    for sub in table_all:
+                        if isinstance(sub, dict) and split in sub:
+                            all_rows = sub[split]
+                            break
+            if all_rows:
+                break
+
+    if not all_rows:
+        print(f"  No {split} standings data available.")
+        return
+
+    label = "CASA" if split == "home" else "FUERA"
+    print(f"\n{'=' * 70}")
+    print(f"  CLASIFICACIÓN {label} — LaLiga {SEASON}")
+    print(f"{'=' * 70}")
+    print(f"  {'#':>3}  {'Equipo':<25} {'PJ':>3} {'G':>3} {'E':>3} {'P':>3} {'GF':>4} {'GC':>4} {'DG':>4} {'Pts':>4}")
+    print(f"  {'-' * 66}")
+
+    for row in all_rows:
+        pos = row.get("idx", row.get("position", ""))
+        name = row.get("name", row.get("shortName", "???"))
+        played = row.get("played", 0)
+        wins = row.get("wins", 0)
+        draws_count = row.get("draws", 0)
+        losses = row.get("losses", 0)
+        gf_p, gc_p = _parse_score(row.get("scoresStr"))
+        gf = gf_p if gf_p is not None else row.get("goalsFor", "?")
+        gc = gc_p if gc_p is not None else row.get("goalsAgainst", "?")
+        gd = row.get("goalConDiff", row.get("goalDifference", 0))
+        pts = row.get("pts", 0)
+        print(f"  {pos:>3}  {name:<25} {played:>3} {wins:>3} {draws_count:>3} {losses:>3} {gf:>4} {gc:>4} {gd:>4} {pts:>4}")
+
+
+# ──────────────────────────────────────────────
+# 11. Team form trend + team-compare
+# ──────────────────────────────────────────────
+
+def print_team_form_trend(team_data: dict[str, Any]) -> None:
+    """Show rolling points-per-game trend for LaLiga matches."""
+    name = team_data.get("details", {}).get("name", "Unknown")
+    fixtures = _extract_fixtures_from_team(team_data)
+
+    liga_finished = [f for f in fixtures if f["finished"] and (
+        "laliga" in f["competition"].lower() or "la liga" in f["competition"].lower()
+        or f["competition"] == "League"
+    )]
+
+    if not liga_finished:
+        print(f"  No LaLiga results found for {name}.")
+        return
+
+    print(f"\n{'=' * 70}")
+    print(f"  TENDENCIA DE FORMA — {name}")
+    print(f"{'=' * 70}")
+
+    # Compute PPG for each match
+    ppg_data = []
+    for f in liga_finished:
+        sh, sa = _parse_score(f["score"])
+        if sh is None or sa is None:
+            continue
+        if f["home_away"] == "H":
+            team_goals, opp_goals = sh, sa
+        elif f["home_away"] == "A":
+            team_goals, opp_goals = sa, sh
+        else:
+            continue
+        if team_goals > opp_goals:
+            pts = 3
+        elif team_goals == opp_goals:
+            pts = 1
+        else:
+            pts = 0
+        d = f["date_parsed"]
+        date_str = d.strftime("%m/%d") if d else "?"
+        ppg_data.append({"date": date_str, "pts": pts, "score": f["score"], "opp": f["opponent"], "venue": f["home_away"]})
+
+    if len(ppg_data) < 3:
+        print("  Not enough matches for trend analysis.")
+        return
+
+    # Rolling 5-match PPG
+    window = 5
+    print(f"\n  {'Jornada':<10} {'Rival':<20} {'H/A':>3} {'Score':<7} {'Pts':>3} {'PPG-{window}':>7}")
+    print(f"  {'-' * 55}")
+
+    for i, m in enumerate(ppg_data):
+        start = max(0, i - window + 1)
+        rolling = ppg_data[start:i + 1]
+        ppg = sum(r["pts"] for r in rolling) / len(rolling)
+        bar = "█" * int(ppg * 3) + "░" * (9 - int(ppg * 3))
+        print(f"  {m['date']:<10} {m['opp']:<20} {m['venue']:>3} {m['score']:<7} {m['pts']:>3} {ppg:>5.2f}  {bar}")
+
+    total_pts = sum(m["pts"] for m in ppg_data)
+    total_ppg = total_pts / len(ppg_data)
+    last5_pts = sum(m["pts"] for m in ppg_data[-5:])
+    last5_ppg = last5_pts / min(5, len(ppg_data))
+    print(f"\n  PPG temporada: {total_ppg:.2f}  |  PPG últimos 5: {last5_ppg:.2f}")
+    trend = last5_ppg - total_ppg
+    arrow = "📈" if trend > 0.3 else "📉" if trend < -0.3 else "➡️"
+    print(f"  Tendencia: {arrow} {trend:+.2f}")
+
+
+def print_team_comparison(t1_id: int, t2_id: int) -> None:
+    """Compare two teams side by side."""
+    t1 = get_team_data(t1_id)
+    _delay()
+    t2 = get_team_data(t2_id)
+
+    n1 = t1.get("details", {}).get("name", "Team 1")
+    n2 = t2.get("details", {}).get("name", "Team 2")
+
+    print(f"\n{'=' * 70}")
+    print(f"  COMPARACIÓN: {n1} vs {n2}")
+    print(f"{'=' * 70}")
+
+    # Get standings positions
+    league = get_league_data()
+    all_rows = _find_standings_rows(league.get("table", []))
+    pos1 = pos2 = "?"
+    pts1 = pts2 = "?"
+    for row in all_rows:
+        rid = row.get("id")
+        if rid == t1_id:
+            pos1 = row.get("idx", "?")
+            pts1 = row.get("pts", "?")
+        elif rid == t2_id:
+            pos2 = row.get("idx", "?")
+            pts2 = row.get("pts", "?")
+
+    print(f"\n  {'':>25}  {n1[:18]:>18}  {n2[:18]:>18}")
+    print(f"  {'-' * 63}")
+    print(f"  {'Posición':>25}  {str(pos1):>18}  {str(pos2):>18}")
+    print(f"  {'Puntos':>25}  {str(pts1):>18}  {str(pts2):>18}")
+
+    # Top players from overview
+    for data, name in [(t1, n1), (t2, n2)]:
+        overview = data.get("overview", {})
+        top = overview.get("topPlayers", {})
+        if top:
+            print(f"\n  Top jugadores — {name}:")
+            for cat, players in top.items():
+                if isinstance(players, list) and players:
+                    p = players[0]
+                    pname = p.get("name", "?")
+                    val = p.get("value", "?")
+                    print(f"    {cat}: {pname} ({val})")
+
+
+# ──────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────
 
@@ -1968,17 +2298,23 @@ League:
   assisters                Top assisters
   leaders                  All stat leader categories
   fixtures                 Recent results & upcoming matches (with match IDs)
+  fdr [N]                  Fixture difficulty ranking (next N matches, default 6)
+  standings-home           Home-only standings
+  standings-away           Away-only standings
   teams                    List all teams with IDs
   full                     Full report
 
 Team:
   team <id|name>           Team overview + squad
   team-competitions <id|name>  Multi-competition analysis & rotation prediction
+  team-form <id|name>      Rolling PPG trend across the season
+  team-compare <t1> <t2>   Side-by-side team comparison
   squad-stats <id|name>    Full stats for every player in squad
   h2h <team1> <team2>     Head-to-head history
 
 Player:
   player <id|name>         Full profile, per-90 stats, form, shotmap
+  compare <p1> <p2>        Side-by-side player comparison with per-90
   search-player <name>     Search player by name across all squads
   search-team <name>       Search team by name
 
@@ -2013,8 +2349,7 @@ def _resolve_team_arg(arg: str) -> int:
     except ValueError:
         results = search_team(arg)
         if not results:
-            print(f"  No team found matching '{arg}'.")
-            sys.exit(1)
+            raise ResolveError(f"No team found matching '{arg}'. Use 'teams' to list all.")
         if len(results) > 1:
             print(f"  Multiple teams match '{arg}':")
             for t in results:
@@ -2030,8 +2365,7 @@ def _resolve_player_arg(arg: str) -> int:
     except ValueError:
         results = search_player(arg)
         if not results:
-            print(f"  No player found matching '{arg}'.")
-            sys.exit(1)
+            raise ResolveError(f"No player found matching '{arg}'. Use 'search-player' to search.")
         if len(results) > 1:
             print(f"  Multiple players match '{arg}':")
             for p in results:
@@ -2204,11 +2538,48 @@ def main():
 
         elif cmd == "h2h":
             if len(sys.argv) < 4:
-                print("Usage: python laliga_stats.py h2h <team1_id> <team2_id>")
+                print("Usage: python laliga_stats.py h2h <team1> <team2>")
                 return
             t1 = _resolve_team_arg(sys.argv[2])
             t2 = _resolve_team_arg(sys.argv[3])
             print_head_to_head(t1, t2)
+
+        elif cmd == "compare":
+            if len(sys.argv) < 4:
+                print("Usage: python laliga_stats.py compare <player1> <player2>")
+                return
+            p1 = _resolve_player_arg(sys.argv[2])
+            p2 = _resolve_player_arg(sys.argv[3])
+            print_player_comparison(p1, p2)
+
+        elif cmd == "team-form":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py team-form <team_id|name>")
+                return
+            team_id = _resolve_team_arg(sys.argv[2])
+            data = get_team_data(team_id)
+            print_team_form_trend(data)
+
+        elif cmd == "team-compare":
+            if len(sys.argv) < 4:
+                print("Usage: python laliga_stats.py team-compare <team1> <team2>")
+                return
+            t1 = _resolve_team_arg(sys.argv[2])
+            t2 = _resolve_team_arg(sys.argv[3])
+            print_team_comparison(t1, t2)
+
+        elif cmd == "fdr":
+            n = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 6
+            data = get_league_data()
+            print_fixture_difficulty(data, num_matches=n)
+
+        elif cmd == "standings-home":
+            data = get_league_data()
+            print_standings_split(data, "home")
+
+        elif cmd == "standings-away":
+            data = get_league_data()
+            print_standings_split(data, "away")
 
         elif cmd == "date":
             if len(sys.argv) < 3:
@@ -2272,6 +2643,8 @@ def main():
             print(f"HTTP Error {status_code}: {e}")
     except requests.exceptions.ConnectionError:
         print("Connection error. Check your internet connection.")
+    except ResolveError as e:
+        print(f"  {e}")
     except ValueError as e:
         print(f"Invalid argument: {e}")
         print("Expected a numeric ID or a valid name. Use 'search-team' or 'search-player' to find IDs.")
