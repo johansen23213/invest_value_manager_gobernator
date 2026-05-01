@@ -19,10 +19,23 @@ from typing import Any
 
 import requests
 
-LALIGA_ID = 87
-SEASON = "2025/2026"
+DEFAULT_LEAGUE_ID = 87
+DEFAULT_SEASON = "2025/2026"
 BASE_URL = "https://www.fotmob.com/api"
 
+LEAGUE_ALIASES = {
+    "laliga": 87, "liga": 87, "spain": 87,
+    "premier": 47, "epl": 47, "england": 47,
+    "seriea": 55, "italy": 55,
+    "bundesliga": 35, "germany": 35,
+    "ligue1": 53, "france": 53,
+}
+
+LALIGA_ID = DEFAULT_LEAGUE_ID
+SEASON = DEFAULT_SEASON
+
+# Browser UA required by FotMob — honest UAs get 403.
+# This is a trade-off: FotMob has no public API program.
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -33,7 +46,18 @@ HEADERS = {
     "Referer": "https://www.fotmob.com/",
 }
 
-REQUEST_DELAY = 1.5  # seconds between requests to be respectful
+REQUEST_DELAY = 1.5
+MAX_RESPONSE_MB = 50
+
+# Form analysis thresholds
+TREND_THRESHOLD = 0.15
+CONSISTENCY_HIGH = 0.4
+CONSISTENCY_LOW = 0.8
+RATING_ELITE = 8.0
+RATING_GOOD = 7.0
+RATING_AVG = 6.0
+CONGESTION_HIGH_DAYS = 3
+CONGESTION_MODERATE_DAYS = 4
 
 log = logging.getLogger("laliga_stats")
 
@@ -75,6 +99,8 @@ def _get(endpoint: str, params: dict | None = None, use_cache: bool = True) -> d
                 time.sleep(wait)
                 continue
             resp.raise_for_status()
+            if len(resp.content) > MAX_RESPONSE_MB * 1024 * 1024:
+                raise ValueError(f"Response too large: {len(resp.content)} bytes")
             data = resp.json()
             _cache[cache_key] = data
             return data
@@ -87,8 +113,13 @@ def _get(endpoint: str, params: dict | None = None, use_cache: bool = True) -> d
     raise last_exc or requests.exceptions.ConnectionError("Max retries exceeded")
 
 
-def _delay():
+def _delay() -> None:
     time.sleep(REQUEST_DELAY)
+
+
+def _sanitize(text: str) -> str:
+    """Strip terminal control characters from API strings."""
+    return "".join(c for c in str(text) if c.isprintable() or c in "\n\t")
 
 
 def _normalize(text: str) -> str:
@@ -645,9 +676,9 @@ def print_competition_analysis(team_data: dict[str, Any]) -> None:
             days_gap = ""
             if prev_date and d:
                 gap = (d - prev_date).days
-                if gap <= 3:
+                if gap <= CONGESTION_HIGH_DAYS:
                     days_gap = f" ⚠️{gap}d"
-                elif gap <= 4:
+                elif gap <= CONGESTION_MODERATE_DAYS:
                     days_gap = f" ({gap}d)"
             prev_date = d
 
@@ -1090,7 +1121,7 @@ def print_match_summary(match: dict[str, Any]) -> None:
     if player_ratings:
         player_ratings.sort(key=lambda x: -x[0])
         print(f"\n  {'─' * 65}")
-        print(f"  TOP RENDIMIENTO")
+        print(f"  MEJORES RENDIMIENTOS")
         print(f"  {'─' * 65}")
         for rating, pname, tname in player_ratings[:10]:
             print(f"    {rating:>5.1f}  {pname:<25} ({tname})")
@@ -1299,7 +1330,7 @@ def print_player_profile(player: dict[str, Any]) -> None:
     # ── Performance score ──
     perf = player.get("performanceScore", {})
     if perf:
-        _print_section("PERFORMANCE SCORE")
+        _print_section("PUNTUACIÓN DE RENDIMIENTO")
         score = perf.get("value", "?")
         official = perf.get("officialRating", "?")
         print(f"    Score: {score}")
@@ -1584,22 +1615,22 @@ def print_player_profile(player: dict[str, Any]) -> None:
                 print(f"    Media últ. 5 partidos: {avg_last5:.2f}")
             if first_5 and avg_first5 > 0:
                 trend = avg_last5 - avg_first5
-                trend_arrow = "📈" if trend > 0.15 else "📉" if trend < -0.15 else "➡️"
+                trend_arrow = "📈" if trend > TREND_THRESHOLD else "📉" if trend < -TREND_THRESHOLD else "➡️"
                 print(f"    Tendencia:             {trend_arrow} {trend:+.2f} (últimos 5 vs anteriores)")
 
             # Consistency
             if len(ratings) >= 3:
                 variance = sum((r - avg_rating) ** 2 for r in ratings) / len(ratings)
                 std_dev = variance ** 0.5
-                consistency = "Alta" if std_dev < 0.4 else "Media" if std_dev < 0.8 else "Baja"
+                consistency = "Alta" if std_dev < CONSISTENCY_HIGH else "Media" if std_dev < CONSISTENCY_LOW else "Baja"
                 print(f"    Consistencia:          {consistency} (σ={std_dev:.2f})")
 
             # Rating distribution
-            elite = sum(1 for r in ratings if r >= 8.0)
-            good = sum(1 for r in ratings if 7.0 <= r < 8.0)
-            avg = sum(1 for r in ratings if 6.0 <= r < 7.0)
-            poor = sum(1 for r in ratings if r < 6.0)
-            print(f"    Distribución ratings:  ⭐≥8.0:{elite}  ✅7-8:{good}  ➖6-7:{avg}  ❌<6:{poor}")
+            elite = sum(1 for r in ratings if r >= RATING_ELITE)
+            good = sum(1 for r in ratings if RATING_GOOD <= r < RATING_ELITE)
+            avg = sum(1 for r in ratings if RATING_AVG <= r < RATING_GOOD)
+            poor = sum(1 for r in ratings if r < RATING_AVG)
+            print(f"    Distribución ratings:  ⭐≥{RATING_ELITE}:{elite}  ✅{RATING_GOOD}-{RATING_ELITE}:{good}  ➖{RATING_AVG}-{RATING_GOOD}:{avg}  ❌<{RATING_AVG}:{poor}")
 
         print(f"\n    Goles:                 {total_goals}")
         print(f"    Asistencias:           {total_assists}")
@@ -1822,8 +1853,6 @@ def print_matches_for_date(date: str, data: dict[str, Any]) -> None:
 
     for m in laliga_matches:
         print(f"  {m['home']:>25} {m['score_home']:>2} - {m['score_away']:<2} {m['away']:<25} [{m['state']}]  (ID: {m['id']})")
-
-    return laliga_matches
 
 
 # ──────────────────────────────────────────────
@@ -2284,10 +2313,87 @@ def print_team_comparison(t1_id: int, t2_id: int) -> None:
 
 
 # ──────────────────────────────────────────────
+# 12. League summary dashboard
+# ──────────────────────────────────────────────
+
+def print_dashboard(league_data: dict[str, Any]) -> None:
+    """Quick league overview: top 5, bottom 3, form, top scorer, next matchday."""
+    print(f"\n{'=' * 70}")
+    print(f"  DASHBOARD — LaLiga {SEASON}")
+    print(f"{'=' * 70}")
+
+    all_rows = _find_standings_rows(league_data.get("table", []))
+
+    # Top 5
+    if all_rows:
+        print(f"\n  CARRERA POR EL TÍTULO")
+        print(f"  {'#':>3}  {'Equipo':<25} {'Pts':>4} {'PJ':>3} {'DG':>4}")
+        print(f"  {'-' * 44}")
+        for row in all_rows[:5]:
+            pos = row.get("idx", "?")
+            name = row.get("name", "?")
+            pts = row.get("pts", 0)
+            played = row.get("played", 0)
+            gd = row.get("goalConDiff", row.get("goalDifference", 0))
+            print(f"  {pos:>3}  {name:<25} {pts:>4} {played:>3} {gd:>+4}")
+
+        # Gap analysis
+        if len(all_rows) >= 2:
+            gap = all_rows[0].get("pts", 0) - all_rows[1].get("pts", 0)
+            print(f"\n  Ventaja del líder: {gap} pts")
+
+    # Bottom 3
+    if len(all_rows) >= 3:
+        print(f"\n  ZONA DE DESCENSO")
+        print(f"  {'#':>3}  {'Equipo':<25} {'Pts':>4} {'PJ':>3}")
+        print(f"  {'-' * 38}")
+        for row in all_rows[-3:]:
+            pos = row.get("idx", "?")
+            name = row.get("name", "?")
+            pts = row.get("pts", 0)
+            played = row.get("played", 0)
+            print(f"  {pos:>3}  {name:<25} {pts:>4} {played:>3}")
+        if len(all_rows) >= 4:
+            safety_gap = all_rows[-4].get("pts", 0) - all_rows[-3].get("pts", 0)
+            print(f"\n  Colchón sobre descenso: {safety_gap} pts")
+
+    # Top scorer
+    stats = league_data.get("stats", {})
+    if isinstance(stats, dict):
+        players = stats.get("players", stats.get("topPlayers", []))
+        if isinstance(players, list):
+            for cat in players:
+                title = cat.get("header", cat.get("title", ""))
+                if "goal" in title.lower() or "gol" in title.lower():
+                    top = cat.get("topPlayers", cat.get("statsData", []))
+                    if top:
+                        p = top[0]
+                        print(f"\n  PICHICHI: {p.get('name', '?')} ({p.get('teamName', '?')}) — {p.get('value', '?')} goles")
+                    break
+
+    # Next matchday
+    matches = league_data.get("matches", {})
+    all_matches = matches.get("allMatches", [])
+    upcoming = [m for m in all_matches if not m.get("status", {}).get("finished") and not m.get("status", {}).get("started")]
+    if upcoming:
+        next_round = upcoming[0].get("round", "?")
+        next_matches = [m for m in upcoming if m.get("round") == next_round]
+        print(f"\n  PRÓXIMA JORNADA (J{next_round}) — {len(next_matches)} partidos")
+        for m in next_matches[:5]:
+            home = m.get("home", {}).get("name", "?")
+            away = m.get("away", {}).get("name", "?")
+            utc = m.get("status", {}).get("utcTime", "")
+            date_str = utc[:10] if utc else "TBD"
+            print(f"    {home:>25}  vs  {away:<25}  {date_str}")
+        if len(next_matches) > 5:
+            print(f"    ... y {len(next_matches) - 5} más")
+
+
+# ──────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────
 
-def print_help():
+def print_help() -> None:
     print("""
 LaLiga Stats — FotMob Scraper
 Usage: python laliga_stats.py [command] [args] [--json [file]] [--csv [file]]
@@ -2301,6 +2407,7 @@ League:
   fdr [N]                  Fixture difficulty ranking (next N matches, default 6)
   standings-home           Home-only standings
   standings-away           Away-only standings
+  dashboard                Quick overview (title race, relegation, pichichi, next matchday)
   teams                    List all teams with IDs
   full                     Full report
 
@@ -2337,7 +2444,8 @@ Quick Start:
   3. Deep-dive:     match <ID>           →  lineups, xG, events
   4. Compare:       h2h 8633 8634        →  head-to-head record
 
-Environment:
+Global flags:
+  --league <name|id>       Use another league (premier, seriea, bundesliga, ligue1)
   LOGLEVEL=DEBUG           Show detailed error traces
 """)
 
@@ -2396,7 +2504,7 @@ def _normalize_date_arg(arg: str) -> str:
     raise ValueError(f"Invalid date format: '{arg}'. Use YYYYMMDD, YYYY-MM-DD, yesterday, today, or tomorrow.")
 
 
-def main():
+def main() -> None:
     import os
     logging.basicConfig(
         level=getattr(logging, os.environ.get("LOGLEVEL", "WARNING").upper(), logging.WARNING),
@@ -2409,6 +2517,19 @@ def main():
 
     cmd = sys.argv[1].lower()
     export_fmt, export_file = _parse_export_args(sys.argv[2:])
+
+    # Parse --league flag
+    global LALIGA_ID
+    for i, a in enumerate(sys.argv):
+        if a == "--league" and i + 1 < len(sys.argv):
+            league_arg = sys.argv[i + 1].lower()
+            if league_arg in LEAGUE_ALIASES:
+                LALIGA_ID = LEAGUE_ALIASES[league_arg]
+            elif league_arg.isdigit():
+                LALIGA_ID = int(league_arg)
+            else:
+                print(f"  Unknown league '{league_arg}'. Available: {', '.join(LEAGUE_ALIASES.keys())}")
+                return
 
     try:
         if cmd == "standings":
@@ -2615,6 +2736,13 @@ def main():
                         print(f"  {t['id']:>8}  {t['name']:<30}")
                 else:
                     print("  Could not extract teams from league data.")
+
+        elif cmd == "dashboard":
+            data = get_league_data()
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_dashboard(data)
 
         elif cmd == "full":
             data = get_league_data()

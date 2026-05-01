@@ -1,37 +1,36 @@
 # Consensus Review — laliga_stats.py
-# 2026-04-23
+# 2026-04-23 (updated 2026-04-30)
 
-## Phase 0 — Immediate (6 items)
-1. CONS-001: Fix score parsing with regex; use None for missing scores (M)
-2. CONS-002: Narrow exception catching; add logging (M)
-3. CONS-008: Add try/except to all bare int() conversions (S)
-4. CONS-011: Fix _parse_date() timezone handling (S)
-5. CONS-012: Sanitize export filenames (S)
-6. CONS-026: Remove unnecessary _delay() in full command (S)
+## Phase 0 — Immediate ✅ (commit 112281e)
+## Phase 1 — Quick Wins ✅ (commit bbe874f)
+## Phase 2 — Core Improvements ✅ (commit d1c06c3)
 
-## Phase 1 — Quick Wins (20 items)
-1. CONS-003: Deduplicate standings parsing (S)
-2. CONS-043: Add form column to standings (S)
-3. CONS-044: Parse additional stat leader categories (S)
-4. CONS-045: Add per-90 stats to player profile (S)
-5. CONS-005: Add session-level request cache (M)
-6. CONS-004: Use cache + progress for search-player (M)
-7. CONS-007: Fall back to score-based W/D/L detection (M)
-8. CONS-009: Warn when --csv unsupported (S)
-9. CONS-014: Show match IDs in fixtures output (S)
-10. CONS-015: Accept multiple date formats + relative dates (S)
-11. CONS-016: Add --team filter to standings/fixtures (S)
-12. CONS-018: Improve help text with command groups (S)
-13. CONS-019: Add ETA to squad-stats progress (S)
-14. CONS-024: Sort recent matches by date before form analysis (S)
-15. CONS-027: Validate entity ID in API response (S)
-16. CONS-028: Collect all keys for CSV fieldnames (S)
-17. CONS-033: Validate date argument before API call (S)
-18. CONS-036: Create requirements.txt (S)
-19. CONS-041: Report skipped teams in player search (S)
-20. CONS-042: Validate date string length before slicing (S)
-
-## Phase 2 — Core Improvements (15 items)
 ## Phase 3 — Polish (21 items)
+1. CONS-013: Standardize language (Spanish) (M)
+2. CONS-017: Add color/visual hierarchy with ANSI codes (M)
+3. CONS-021: Standardize emoji usage (S)
+4. CONS-029: Move unicodedata import to top (S) ✅ (done in Phase 0)
+5. CONS-030: Make league configurable (M)
+6. CONS-031: Add type hints to all functions (S)
+7. CONS-032: Extract magic numbers to named constants (S)
+8. CONS-034: Strip control chars from API strings (M)
+9. CONS-035: Document User-Agent choice (S)
+10. CONS-037: Add response size limit (S)
+11. CONS-038: Fix inconsistent return in print_matches_for_date (S)
+12. CONS-039: Rename team-competitions to team-calendar (S)
+13. CONS-040: Add --limit flag for pagination (M)
+14. CONS-053: Expected points table (L)
+15. CONS-054: Player percentile rankings (XL)
+16. CONS-055: Season-over-season comparison (M)
+17. CONS-058: League summary dashboard (M)
+18. CONS-059: Shot map visualization (M)
+19. CONS-060: Advanced metrics (M)
+20. CONS-061: Set piece analysis (M)
+21. CONS-062: Investment manager integration (XL)
 
-Full report in agent memory. 78 original findings → 62 consolidated.
+## Phase 4 — Agent Pipeline Integration (new)
+1. scout-report <team_id>: Structured markdown output for scout agents
+2. Poisson Dixon-Coles: lambda_local/visitante from last 38 matches per team
+3. jornada <N>: Batch all matchday fixtures with auto scout reports
+4. --agent-json flag: Machine-readable output format for Claude SDK agents
+5. verificador-24h: Pre-kickoff check comparing scout data vs current state
