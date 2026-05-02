@@ -2390,6 +2390,361 @@ def print_dashboard(league_data: dict[str, Any]) -> None:
 
 
 # ──────────────────────────────────────────────
+# 13. Agent pipeline — scout reports, Poisson, jornada
+# ──────────────────────────────────────────────
+
+import math
+
+
+def _poisson_prob(lam: float, k: int) -> float:
+    return (lam ** k) * math.exp(-lam) / math.factorial(k)
+
+
+def compute_poisson_dixon_coles(
+    team_id: int,
+    opponent_id: int,
+    league_data: dict[str, Any],
+    rho: float = -0.10,
+) -> dict[str, Any]:
+    """Compute Poisson Dixon-Coles 1X2 probabilities from last 38 matches."""
+    matches_data = league_data.get("matches", {})
+    all_matches = matches_data.get("allMatches", [])
+    finished = [m for m in all_matches if m.get("status", {}).get("finished")]
+
+    # Compute league averages and per-team attack/defense strengths
+    team_goals_for: dict[int, list] = defaultdict(list)
+    team_goals_against: dict[int, list] = defaultdict(list)
+
+    for m in finished[-380:]:  # ~20 teams * 19 home matches
+        home_id = m.get("home", {}).get("id")
+        away_id = m.get("away", {}).get("id")
+        sh, sa = _parse_score(m.get("status", {}).get("scoreStr"))
+        if sh is None or sa is None or not home_id or not away_id:
+            continue
+        team_goals_for[home_id].append(sh)
+        team_goals_against[home_id].append(sa)
+        team_goals_for[away_id].append(sa)
+        team_goals_against[away_id].append(sh)
+
+    if not team_goals_for:
+        return {"error": "No match data for Poisson calculation"}
+
+    # League averages
+    all_home_goals = []
+    all_away_goals = []
+    for m in finished[-380:]:
+        sh, sa = _parse_score(m.get("status", {}).get("scoreStr"))
+        if sh is not None and sa is not None:
+            all_home_goals.append(sh)
+            all_away_goals.append(sa)
+
+    avg_home = sum(all_home_goals) / len(all_home_goals) if all_home_goals else 1.3
+    avg_away = sum(all_away_goals) / len(all_away_goals) if all_away_goals else 1.1
+
+    # Team strengths (last 38 matches or all available)
+    def _team_attack(tid: int) -> float:
+        gf = team_goals_for.get(tid, [])[-38:]
+        return (sum(gf) / len(gf)) / avg_home if gf else 1.0
+
+    def _team_defense(tid: int) -> float:
+        ga = team_goals_against.get(tid, [])[-38:]
+        return (sum(ga) / len(ga)) / avg_away if ga else 1.0
+
+    attack_home = _team_attack(team_id)
+    defense_home = _team_defense(team_id)
+    attack_away = _team_attack(opponent_id)
+    defense_away = _team_defense(opponent_id)
+
+    lambda_home = attack_home * defense_away * avg_home
+    lambda_away = attack_away * defense_home * avg_away
+
+    # Compute score matrix (0-6 goals each)
+    max_goals = 7
+    p1 = 0.0  # home win
+    px = 0.0  # draw
+    p2 = 0.0  # away win
+
+    for i in range(max_goals):
+        for j in range(max_goals):
+            p_ij = _poisson_prob(lambda_home, i) * _poisson_prob(lambda_away, j)
+            # Dixon-Coles correction for low scores
+            if i <= 1 and j <= 1:
+                if i == 0 and j == 0:
+                    p_ij *= (1 + lambda_home * lambda_away * rho)
+                elif i == 1 and j == 0:
+                    p_ij *= (1 - lambda_away * rho)
+                elif i == 0 and j == 1:
+                    p_ij *= (1 - lambda_home * rho)
+                elif i == 1 and j == 1:
+                    p_ij *= (1 - rho)
+                p_ij = max(p_ij, 0.0)
+
+            if i > j:
+                p1 += p_ij
+            elif i == j:
+                px += p_ij
+            else:
+                p2 += p_ij
+
+    # Normalize
+    total = p1 + px + p2
+    if total > 0:
+        p1, px, p2 = p1 / total, px / total, p2 / total
+
+    return {
+        "lambda_home": round(lambda_home, 3),
+        "lambda_away": round(lambda_away, 3),
+        "p1": round(p1, 4),
+        "px": round(px, 4),
+        "p2": round(p2, 4),
+        "attack_home": round(attack_home, 3),
+        "defense_home": round(defense_home, 3),
+        "attack_away": round(attack_away, 3),
+        "defense_away": round(defense_away, 3),
+        "avg_home_league": round(avg_home, 3),
+        "avg_away_league": round(avg_away, 3),
+        "rho": rho,
+    }
+
+
+def generate_scout_report(team_id: int, league_data: dict[str, Any]) -> str:
+    """Generate structured markdown scout report for agent consumption."""
+    team_data = get_team_data(team_id)
+    name = team_data.get("details", {}).get("name", "Unknown")
+    tid = team_data.get("details", {}).get("id", team_id)
+
+    lines = [f"# Scout Report: {name}", f"**Team ID**: {tid}", ""]
+
+    # Standings context
+    all_rows = _find_standings_rows(league_data.get("table", []))
+    for row in all_rows:
+        if row.get("id") == tid:
+            lines.append("## Clasificación")
+            lines.append(f"- Posición: {row.get('idx', '?')}")
+            lines.append(f"- Puntos: {row.get('pts', '?')}")
+            lines.append(f"- PJ: {row.get('played', '?')} | G:{row.get('wins', '?')} E:{row.get('draws', '?')} P:{row.get('losses', '?')}")
+            gf_p, gc_p = _parse_score(row.get("scoresStr"))
+            gf = gf_p if gf_p is not None else row.get("goalsFor", "?")
+            gc = gc_p if gc_p is not None else row.get("goalsAgainst", "?")
+            lines.append(f"- GF:{gf} GC:{gc} DG:{row.get('goalConDiff', '?')}")
+            form = row.get("form", row.get("recentForm", []))
+            if isinstance(form, list):
+                form_str = "".join(f.get("result", "?")[:1].upper() if isinstance(f, dict) else str(f)[:1] for f in form[-6:])
+                lines.append(f"- Forma (últ. 6): {form_str}")
+            lines.append("")
+            break
+
+    # Fixtures — multi-competition
+    fixtures = _extract_fixtures_from_team(team_data)
+    upcoming = [f for f in fixtures if not f["finished"] and f["date_parsed"]]
+    upcoming.sort(key=lambda x: x["date"] or "")
+    recent = [f for f in fixtures if f["finished"]]
+
+    if upcoming:
+        lines.append("## Próximos partidos")
+        for f in upcoming[:8]:
+            d = f["date_parsed"]
+            ds = d.strftime("%Y-%m-%d") if d else "TBD"
+            lines.append(f"- {ds} | {f['competition']} | {f['home_away']} vs {f['opponent']} | {f['round']}")
+        lines.append("")
+
+    if recent:
+        lines.append("## Últimos resultados")
+        for f in recent[-6:]:
+            d = f["date_parsed"]
+            ds = d.strftime("%Y-%m-%d") if d else "?"
+            res = f["result"][:1].upper() if f["result"] else "?"
+            lines.append(f"- {ds} | {f['competition']} | {f['home_away']} vs {f['opponent']} | {f['score']} ({res})")
+        lines.append("")
+
+    # Squad key players
+    overview = team_data.get("overview", {})
+    top_players = overview.get("topPlayers", {})
+    if top_players:
+        lines.append("## Jugadores clave")
+        for cat, players in top_players.items():
+            if isinstance(players, list):
+                for p in players[:3]:
+                    pname = p.get("name", "?")
+                    val = p.get("value", "?")
+                    lines.append(f"- {cat}: {pname} ({val})")
+        lines.append("")
+
+    # Squad list
+    squad = team_data.get("squad", [])
+    if squad:
+        lines.append("## Plantilla")
+        for group in squad:
+            title = group.get("title", "")
+            members = group.get("members", [])
+            for m in members:
+                mname = m.get("name", "?")
+                num = m.get("shirtNumber", "")
+                lines.append(f"- [{title}] #{num} {mname}")
+        lines.append("")
+
+    # Competition load
+    by_comp: dict[str, int] = defaultdict(int)
+    for f in upcoming[:15]:
+        by_comp[f["competition"]] += 1
+    if by_comp:
+        lines.append("## Carga competitiva (próximos 15 partidos)")
+        for comp, count in sorted(by_comp.items(), key=lambda x: -x[1]):
+            lines.append(f"- {comp}: {count} partidos")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def print_scout_report(team_id: int) -> None:
+    league_data = get_league_data()
+    report = generate_scout_report(team_id, league_data)
+    print(report)
+
+
+def print_jornada(league_data: dict[str, Any], matchday: int | None = None) -> None:
+    """Generate scout reports + Poisson for all matches in a matchday."""
+    matches_data = league_data.get("matches", {})
+    all_matches = matches_data.get("allMatches", [])
+
+    if matchday:
+        target = [m for m in all_matches if m.get("round") == matchday or str(m.get("round")) == str(matchday)]
+    else:
+        # Find next unplayed matchday
+        upcoming = [m for m in all_matches if not m.get("status", {}).get("finished")]
+        if not upcoming:
+            print("  No upcoming matches found.")
+            return
+        matchday = upcoming[0].get("round", "?")
+        target = [m for m in all_matches if m.get("round") == matchday or str(m.get("round")) == str(matchday)]
+
+    if not target:
+        print(f"  No matches found for matchday {matchday}.")
+        return
+
+    print(f"\n{'=' * 80}")
+    print(f"  JORNADA {matchday} — {len(target)} partidos")
+    print(f"{'=' * 80}")
+
+    results = []
+    for i, m in enumerate(target, 1):
+        home_name = m.get("home", {}).get("name", "?")
+        away_name = m.get("away", {}).get("name", "?")
+        home_id = m.get("home", {}).get("id")
+        away_id = m.get("away", {}).get("id")
+        utc = m.get("status", {}).get("utcTime", "")
+        date_str = utc[:16] if utc else "TBD"
+        finished = m.get("status", {}).get("finished", False)
+        score = m.get("status", {}).get("scoreStr", "")
+
+        print(f"\n  {'─' * 75}")
+        print(f"  [{i}/{len(target)}] {home_name} vs {away_name}")
+        print(f"  Fecha: {date_str}")
+        if finished:
+            print(f"  Resultado: {score}")
+
+        # Poisson
+        if home_id and away_id:
+            poisson = compute_poisson_dixon_coles(home_id, away_id, league_data)
+            if "error" not in poisson:
+                p1 = poisson["p1"] * 100
+                px = poisson["px"] * 100
+                p2 = poisson["p2"] * 100
+                print(f"  Poisson Dixon-Coles: 1={p1:.1f}%  X={px:.1f}%  2={p2:.1f}%")
+                print(f"  λ_home={poisson['lambda_home']}  λ_away={poisson['lambda_away']}")
+
+                result = {
+                    "match": f"{home_name} vs {away_name}",
+                    "home_id": home_id,
+                    "away_id": away_id,
+                    "date": date_str,
+                    "p1": poisson["p1"],
+                    "px": poisson["px"],
+                    "p2": poisson["p2"],
+                    "lambda_home": poisson["lambda_home"],
+                    "lambda_away": poisson["lambda_away"],
+                }
+                if finished:
+                    result["score"] = score
+                results.append(result)
+
+    # Summary table
+    if results:
+        print(f"\n{'=' * 80}")
+        print(f"  RESUMEN JORNADA {matchday}")
+        print(f"{'=' * 80}")
+        print(f"  {'Partido':<40} {'1':>7} {'X':>7} {'2':>7} {'Pronóstico':>12}")
+        print(f"  {'-' * 75}")
+        for r in results:
+            p1, px, p2 = r["p1"] * 100, r["px"] * 100, r["p2"] * 100
+            fav = "1" if p1 > px and p1 > p2 else ("X" if px > p1 and px > p2 else "2")
+            conf = max(p1, px, p2)
+            print(f"  {r['match']:<40} {p1:>6.1f}% {px:>6.1f}% {p2:>6.1f}% {fav:>5} ({conf:.0f}%)")
+
+
+def generate_agent_json(team_id: int, opponent_id: int, league_data: dict[str, Any]) -> dict[str, Any]:
+    """Generate machine-readable JSON for Claude SDK agents."""
+    team_data = get_team_data(team_id)
+    _delay()
+    opp_data = get_team_data(opponent_id)
+
+    team_name = team_data.get("details", {}).get("name", "?")
+    opp_name = opp_data.get("details", {}).get("name", "?")
+
+    # Standings
+    all_rows = _find_standings_rows(league_data.get("table", []))
+    team_standing = {}
+    opp_standing = {}
+    for row in all_rows:
+        rid = row.get("id")
+        entry = {
+            "position": row.get("idx"),
+            "points": row.get("pts"),
+            "played": row.get("played"),
+            "wins": row.get("wins"),
+            "draws": row.get("draws"),
+            "losses": row.get("losses"),
+            "goal_diff": row.get("goalConDiff", row.get("goalDifference")),
+        }
+        if rid == team_id:
+            team_standing = entry
+        elif rid == opponent_id:
+            opp_standing = entry
+
+    # Recent form
+    def _recent_form(tdata):
+        fixtures = _extract_fixtures_from_team(tdata)
+        recent = [f for f in fixtures if f["finished"]][-6:]
+        return [{
+            "date": f["date"],
+            "opponent": f["opponent"],
+            "score": f["score"],
+            "result": f["result"][:1].upper() if f["result"] else "?",
+            "competition": f["competition"],
+            "home_away": f["home_away"],
+        } for f in recent]
+
+    # Poisson
+    poisson = compute_poisson_dixon_coles(team_id, opponent_id, league_data)
+
+    return {
+        "home": {
+            "name": team_name,
+            "id": team_id,
+            "standing": team_standing,
+            "recent_form": _recent_form(team_data),
+        },
+        "away": {
+            "name": opp_name,
+            "id": opponent_id,
+            "standing": opp_standing,
+            "recent_form": _recent_form(opp_data),
+        },
+        "poisson_dixon_coles": poisson,
+    }
+
+
+# ──────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────
 
@@ -2433,6 +2788,12 @@ Match:
 Debug:
   player-json <id>         Raw JSON dump of player data
   match-json <match_id>    Raw JSON dump of match data
+
+Agent Pipeline:
+  scout <team_id|name>     Structured markdown scout report
+  jornada [N]              Full matchday analysis with Poisson Dixon-Coles
+  poisson <home> <away>    1X2 probabilities (Poisson Dixon-Coles model)
+  agent-json <home> <away> Machine-readable JSON for Claude SDK agents
 
 Export (append to any command):
   --json [filename]        Export as JSON (stdout or file)
@@ -2753,6 +3114,69 @@ def main() -> None:
                 print_top_scorers(data)
                 print_top_assisters(data)
                 print_recent_and_upcoming(data)
+
+        elif cmd == "scout":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py scout <team_id|name>")
+                return
+            team_id = _resolve_team_arg(sys.argv[2])
+            if export_fmt == "json":
+                league = get_league_data()
+                report = generate_scout_report(team_id, league)
+                _export_json({"report": report}, export_file)
+            else:
+                print_scout_report(team_id)
+
+        elif cmd == "jornada":
+            md = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else None
+            data = get_league_data()
+            if export_fmt == "json":
+                # Export raw jornada data
+                matches_data = data.get("matches", {}).get("allMatches", [])
+                target_round = md or (
+                    next((m.get("round") for m in matches_data if not m.get("status", {}).get("finished")), None)
+                )
+                target = [m for m in matches_data if str(m.get("round")) == str(target_round)]
+                _export_json(target, export_file)
+            else:
+                print_jornada(data, matchday=md)
+
+        elif cmd == "poisson":
+            if len(sys.argv) < 4:
+                print("Usage: python laliga_stats.py poisson <home_team> <away_team>")
+                return
+            home_id = _resolve_team_arg(sys.argv[2])
+            away_id = _resolve_team_arg(sys.argv[3])
+            league = get_league_data()
+            result = compute_poisson_dixon_coles(home_id, away_id, league)
+            if "error" in result:
+                print(f"  Error: {result['error']}")
+            else:
+                home_name = get_team_data(home_id).get("details", {}).get("name", "Home")
+                away_name = get_team_data(away_id).get("details", {}).get("name", "Away")
+                print(f"\n{'=' * 60}")
+                print(f"  POISSON DIXON-COLES: {home_name} vs {away_name}")
+                print(f"{'=' * 60}")
+                print(f"\n  λ_home (goles esperados local):    {result['lambda_home']}")
+                print(f"  λ_away (goles esperados visitante): {result['lambda_away']}")
+                print(f"\n  P(1) Victoria local:   {result['p1']*100:.1f}%")
+                print(f"  P(X) Empate:           {result['px']*100:.1f}%")
+                print(f"  P(2) Victoria visitante: {result['p2']*100:.1f}%")
+                print(f"\n  Ataque home: {result['attack_home']}  |  Defensa home: {result['defense_home']}")
+                print(f"  Ataque away: {result['attack_away']}  |  Defensa away: {result['defense_away']}")
+                print(f"  Media liga: home={result['avg_home_league']} away={result['avg_away_league']}  ρ={result['rho']}")
+                if export_fmt == "json":
+                    _export_json(result, export_file)
+
+        elif cmd == "agent-json":
+            if len(sys.argv) < 4:
+                print("Usage: python laliga_stats.py agent-json <home_team> <away_team>")
+                return
+            home_id = _resolve_team_arg(sys.argv[2])
+            away_id = _resolve_team_arg(sys.argv[3])
+            league = get_league_data()
+            result = generate_agent_json(home_id, away_id, league)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
 
         elif cmd in ("help", "-h", "--help"):
             print_help()
