@@ -1,28 +1,39 @@
 {
   "date": "2026-05-04",
   "matchday": 34,
-  "source": "WebSearch aggregation (realmadrid.com, Yahoo Sports, classementlaliga.com, Bolavip)",
+  "source": "WebSearch cross-referenced (laliga.com, tribuna.com, ESPN, StatMuse, classementlaliga.com)",
+  "data_quality": "VERIFIED — each player searched individually",
   "top_scorers": [
-    {"player": "Robert Lewandowski", "team": "Barcelona", "goals": 24, "note": "slowed in March"},
-    {"player": "Kylian Mbappé", "team": "Real Madrid", "goals": 23, "note": "leader by Feb, 22G in 28 games"},
-    {"player": "Vedat Muriqi", "team": "Mallorca", "goals": 18},
-    {"player": "Lamine Yamal", "team": "Barcelona", "goals": 14, "note": "late-season injury risk"}
+    {"player": "Kylian Mbappé", "team": "Real Madrid", "goals": 24, "assists": 4, "minutes": 2403, "matches": 28, "source": "laliga.com, tribuna.com"},
+    {"player": "Vedat Muriqi", "team": "Mallorca", "goals": 21, "assists": 1, "minutes": 2774, "source": "laliga.com, ESPN"},
+    {"player": "Lamine Yamal", "team": "Barcelona", "goals": 16, "assists": 11, "minutes": 2268, "matches": 28, "note": "late-season injury risk", "source": "tribuna.com, laliga.com"},
+    {"player": "Robert Lewandowski", "team": "Barcelona", "goals": 13, "source": "ESPN, tribuna.com"},
+    {"player": "Raphinha", "team": "Barcelona", "goals": 11, "assists": 3, "minutes": 1299, "matches": 20, "source": "fcbarcelona.com, tribuna.com"}
   ],
+  "corrections_from_previous": {
+    "Lewandowski": "Was 24 → corrected to 13. Previous data mixed up with 2024-25 season.",
+    "Muriqi": "Was 18 → corrected to 21. Previous data was from ~MD30.",
+    "Yamal": "Was 14 → corrected to 16.",
+    "Mbappé": "Was 23 → corrected to 24 (official laliga.com)."
+  },
   "key_insights": {
-    "title_race": "Barcelona leads by 11 pts (88 vs 77). Mathematically not sealed but effectively won.",
+    "title_race": "Barcelona leads by 11 pts (88 vs 77). Effectively won.",
     "ucl_zone": "Pos 1-4: Barcelona (88), Real Madrid (77), Villarreal (68), Atlético (63). Gap 4th-5th = 10 pts.",
     "europa_zone": "Pos 5-6: Betis (53), Celta (47). Athletic/Getafe (44) chasing.",
-    "relegation": "Sevilla (34), Levante, Oviedo in bottom 3. Alavés (36) just above cutoff.",
-    "mid_table_cluster": "Positions 12-17 separated by just 3 pts (36-39). 6 teams in danger zone proximity.",
-    "pichichi": "Lewandowski (24) vs Mbappé (23). Tight race for final weeks."
+    "relegation": "Sevilla (34), Levante, Oviedo in bottom 3. Alavés (36) just above.",
+    "mid_table_cluster": "Positions 12-17 separated by 3 pts (36-39). 6 teams in danger.",
+    "pichichi": "Mbappé (24) leads. Muriqi (21) surprise challenger. Yamal (16) third."
   },
-  "jornada_34_insights": {
-    "villarreal_5_1_levante": "Villarreal consolidates 3rd. Levante hammered — relegation confirmed?",
-    "osasuna_1_2_barcelona": "Barcelona continues winning even away. Title cruise.",
-    "espanyol_0_2_real_madrid": "Madrid keeps pace but gap too large for title.",
-    "alaves_2_4_athletic": "Athletic with statement away win. Alavés in trouble.",
-    "getafe_0_2_rayo": "Derby. Rayo wins away. Both safe mid-table.",
-    "betis_3_0_oviedo": "Betis strong. Oviedo looks relegated.",
-    "valencia_0_2_atletico": "Atlético clinical away. Valencia stays in danger zone."
-  }
+  "jornada_34_results": [
+    {"date": "2026-05-02", "home": "Girona", "away": "Mallorca", "score": "0-1"},
+    {"date": "2026-05-02", "home": "Villarreal", "away": "Levante", "score": "5-1"},
+    {"date": "2026-05-02", "home": "Valencia", "away": "Atlético Madrid", "score": "0-2"},
+    {"date": "2026-05-02", "home": "Alavés", "away": "Athletic Club", "score": "2-4"},
+    {"date": "2026-05-02", "home": "Osasuna", "away": "Barcelona", "score": "1-2"},
+    {"date": "2026-05-03", "home": "Celta", "away": "Elche", "score": "3-1"},
+    {"date": "2026-05-03", "home": "Getafe", "away": "Rayo Vallecano", "score": "0-2"},
+    {"date": "2026-05-03", "home": "Real Betis", "away": "Real Oviedo", "score": "3-0"},
+    {"date": "2026-05-03", "home": "Espanyol", "away": "Real Madrid", "score": "0-2"},
+    {"date": "2026-05-04", "home": "Sevilla", "away": "Real Sociedad", "score": "pending"}
+  ]
 }
