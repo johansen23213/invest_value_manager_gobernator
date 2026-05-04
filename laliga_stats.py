@@ -122,6 +122,59 @@ def _sanitize(text: str) -> str:
     return "".join(c for c in str(text) if c.isprintable() or c in "\n\t")
 
 
+# ── ANSI color support ──
+
+_USE_COLOR = sys.stdout.isatty()
+
+
+class C:
+    """ANSI color codes. No-op when not a TTY or --no-color is set."""
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    GREEN = "\033[32m"
+    RED = "\033[31m"
+    YELLOW = "\033[33m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
+
+    @classmethod
+    def disable(cls) -> None:
+        for attr in ("RESET", "BOLD", "DIM", "GREEN", "RED", "YELLOW", "CYAN", "WHITE"):
+            setattr(cls, attr, "")
+
+    @classmethod
+    def win(cls, text: str) -> str:
+        return f"{cls.GREEN}{text}{cls.RESET}"
+
+    @classmethod
+    def loss(cls, text: str) -> str:
+        return f"{cls.RED}{text}{cls.RESET}"
+
+    @classmethod
+    def draw(cls, text: str) -> str:
+        return f"{cls.YELLOW}{text}{cls.RESET}"
+
+    @classmethod
+    def header(cls, text: str) -> str:
+        return f"{cls.BOLD}{cls.CYAN}{text}{cls.RESET}"
+
+    @classmethod
+    def result(cls, r: str) -> str:
+        r = r.upper()
+        if r in ("W", "V"):
+            return cls.win(r)
+        elif r in ("L", "P"):
+            return cls.loss(r)
+        elif r in ("D", "E"):
+            return cls.draw(r)
+        return r
+
+
+if not _USE_COLOR or "--no-color" in sys.argv:
+    C.disable()
+
+
 def _normalize(text: str) -> str:
     """Normalize text for fuzzy matching: lowercase, strip accents."""
     nfkd = unicodedata.normalize("NFKD", text.lower())
@@ -244,6 +297,17 @@ def _parse_export_args(args: list[str]) -> tuple[str | None, str | None]:
     return fmt, filename
 
 
+def _parse_limit(args: list[str], default: int = 0) -> int:
+    """Parse --limit N from CLI args. 0 means no limit."""
+    for i, a in enumerate(args):
+        if a == "--limit" and i + 1 < len(args):
+            try:
+                return int(args[i + 1])
+            except ValueError:
+                pass
+    return default
+
+
 # ──────────────────────────────────────────────
 # 0. Search by name
 # ──────────────────────────────────────────────
@@ -334,7 +398,7 @@ def get_league_data() -> dict[str, Any]:
 
 def print_standings(league_data: dict[str, Any], team_filter: str | None = None) -> None:
     print("\n" + "=" * 75)
-    print(f"  CLASIFICACIÓN — LaLiga EA Sports {SEASON}")
+    print(C.header(f"  CLASIFICACIÓN — LaLiga EA Sports {SEASON}"))
     print("=" * 75)
 
     all_rows = _find_standings_rows(league_data.get("table", []))
@@ -365,7 +429,10 @@ def print_standings(league_data: dict[str, Any], team_filter: str | None = None)
         form_str = ""
         form_data = row.get("form", row.get("recentForm", []))
         if isinstance(form_data, list):
-            form_str = "".join(f.get("result", "?")[:1].upper() if isinstance(f, dict) else str(f)[:1].upper() for f in form_data[-5:])
+            form_str = "".join(
+                C.result(f.get("result", "?")[:1]) if isinstance(f, dict) else C.result(str(f)[:1])
+                for f in form_data[-5:]
+            )
         elif isinstance(form_data, str):
             form_str = form_data[-5:]
 
@@ -2390,6 +2457,346 @@ def print_dashboard(league_data: dict[str, Any]) -> None:
 
 
 # ──────────────────────────────────────────────
+# 12b. Advanced analytics
+# ──────────────────────────────────────────────
+
+def print_expected_points(league_data: dict[str, Any]) -> None:
+    """xG-based expected points table using match-level goal data."""
+    all_rows = _find_standings_rows(league_data.get("table", []))
+    matches_data = league_data.get("matches", {})
+    all_matches = matches_data.get("allMatches", [])
+    finished = [m for m in all_matches if m.get("status", {}).get("finished")]
+
+    # Aggregate goals for/against per team from actual results
+    team_gf: dict[int, int] = defaultdict(int)
+    team_ga: dict[int, int] = defaultdict(int)
+    team_matches: dict[int, int] = defaultdict(int)
+    team_xpts: dict[int, float] = defaultdict(float)
+
+    for m in finished:
+        home_id = m.get("home", {}).get("id")
+        away_id = m.get("away", {}).get("id")
+        sh, sa = _parse_score(m.get("status", {}).get("scoreStr"))
+        if sh is None or sa is None or not home_id or not away_id:
+            continue
+        team_gf[home_id] += sh
+        team_ga[home_id] += sa
+        team_gf[away_id] += sa
+        team_ga[away_id] += sh
+        team_matches[home_id] += 1
+        team_matches[away_id] += 1
+        # Simple xPts model: based on goal difference per match
+        # P(win) ≈ max(0, min(1, 0.5 + 0.15 * GD_match))
+        gd_home = sh - sa
+        pw_home = max(0.0, min(1.0, 0.5 + 0.15 * gd_home))
+        pw_away = max(0.0, min(1.0, 0.5 - 0.15 * gd_home))
+        pd = max(0.0, 1.0 - pw_home - pw_away) if (pw_home + pw_away) < 1.0 else 0.0
+        # Recalc with draw probability
+        if gd_home == 0:
+            pd = 0.35
+            pw_home = pw_away = 0.325
+        team_xpts[home_id] += pw_home * 3 + pd * 1
+        team_xpts[away_id] += pw_away * 3 + pd * 1
+
+    if not team_xpts:
+        print("  No match data for xPts calculation.")
+        return
+
+    # Build table
+    rows = []
+    for row in all_rows:
+        tid = row.get("id")
+        if not tid or tid not in team_xpts:
+            continue
+        actual_pts = row.get("pts", 0)
+        expected = team_xpts[tid]
+        diff = actual_pts - expected
+        rows.append({
+            "name": row.get("name", "?"),
+            "pos": row.get("idx", "?"),
+            "pts": actual_pts,
+            "xpts": expected,
+            "diff": diff,
+            "gf": team_gf[tid],
+            "ga": team_ga[tid],
+            "matches": team_matches[tid],
+        })
+
+    rows.sort(key=lambda x: -x["xpts"])
+
+    print(f"\n{'=' * 75}")
+    print(C.header(f"  PUNTOS ESPERADOS (xPts) — LaLiga {SEASON}"))
+    print(f"{'=' * 75}")
+    print(f"  {'#':>3}  {'Equipo':<22} {'Pts':>4} {'xPts':>6} {'Diff':>6} {'GF':>4} {'GC':>4} {'PJ':>3}")
+    print(f"  {'-' * 60}")
+
+    for i, r in enumerate(rows, 1):
+        diff_str = f"{r['diff']:+.1f}"
+        luck = C.win(diff_str) if r["diff"] > 3 else (C.loss(diff_str) if r["diff"] < -3 else diff_str)
+        print(f"  {i:>3}  {r['name']:<22} {r['pts']:>4} {r['xpts']:>6.1f} {luck:>6} {r['gf']:>4} {r['ga']:>4} {r['matches']:>3}")
+
+    print(f"\n  Diff > 0 = {C.win('suerte/sobrerendimiento')}  |  Diff < 0 = {C.loss('mala suerte/infrarendimiento')}")
+
+
+def print_player_shotmap_ascii(player: dict[str, Any]) -> None:
+    """Render an ASCII shot map from player shotmap data."""
+    shotmap = player.get("shotmap", [])
+    name = player.get("name", "Unknown")
+    if not shotmap:
+        print(f"  No shotmap data for {name}.")
+        return
+
+    print(f"\n  SHOTMAP — {name} ({len(shotmap)} tiros)")
+
+    # Pitch is roughly 100x65 in FotMob coordinates. We'll map to a 40x20 grid.
+    grid_w, grid_h = 40, 20
+    grid = [[" " for _ in range(grid_w)] for _ in range(grid_h)]
+
+    for s in shotmap:
+        x = s.get("x", s.get("eventX", None))
+        y = s.get("y", s.get("eventY", None))
+        if x is None or y is None:
+            continue
+        gx = int(float(x) / 100 * (grid_w - 1))
+        gy = int(float(y) / 100 * (grid_h - 1))
+        gx = max(0, min(grid_w - 1, gx))
+        gy = max(0, min(grid_h - 1, gy))
+
+        is_goal = s.get("eventType") == "Goal" or s.get("isGoal")
+        on_target = s.get("onTarget") or s.get("eventType") in ("Goal", "SavedShot", "AttemptSaved")
+        if is_goal:
+            grid[gy][gx] = "⚽"
+        elif on_target:
+            grid[gy][gx] = "●"
+        else:
+            grid[gy][gx] = "○"
+
+    # Draw the half-pitch (attacking half only, right side)
+    print(f"  ┌{'─' * grid_w}┐")
+    for row in grid:
+        print(f"  │{''.join(row)}│")
+    print(f"  └{'─' * grid_w}┘")
+    print(f"  ⚽ = Gol  ● = A puerta  ○ = Fuera/bloqueado")
+
+
+def print_season_comparison(player_id: int) -> None:
+    """Show current season vs available historical stats for a player."""
+    data = get_player_data(player_id)
+    name = data.get("name", "Unknown")
+
+    print(f"\n{'=' * 70}")
+    print(C.header(f"  COMPARACIÓN TEMPORADAS — {name}"))
+    print(f"{'=' * 70}")
+
+    # Career history often has per-season data
+    career = data.get("careerStatistics", data.get("careerHistory", {}))
+    if not career:
+        print("  No career data available for comparison.")
+        return
+
+    sections = []
+    if isinstance(career, dict):
+        sections = career.get("sections", career.get("careerItems", []))
+        if isinstance(sections, dict):
+            sections = list(sections.values())
+
+    if isinstance(sections, list):
+        for section in sections:
+            if not isinstance(section, dict):
+                continue
+            title = section.get("title", section.get("name", ""))
+            entries = section.get("entries", section.get("items", section.get("stats", [])))
+            if not isinstance(entries, list) or not entries:
+                continue
+
+            print(f"\n  {title}")
+            print(f"  {'Temporada':<15} {'Equipo':<20} {'Apps':>5} {'G':>4} {'A':>4}")
+            print(f"  {'-' * 52}")
+
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                season = entry.get("seasonName", entry.get("season", "?"))
+                team = entry.get("teamName", entry.get("team", "?"))
+                apps = entry.get("appearances", entry.get("matches", "?"))
+                goals = entry.get("goals", "?")
+                assists = entry.get("assists", "?")
+                print(f"  {str(season):<15} {str(team):<20} {str(apps):>5} {str(goals):>4} {str(assists):>4}")
+
+
+def print_set_pieces(team_data: dict[str, Any], league_data: dict[str, Any]) -> None:
+    """Analyze set piece data from team fixtures."""
+    name = team_data.get("details", {}).get("name", "Unknown")
+    tid = team_data.get("details", {}).get("id")
+
+    print(f"\n{'=' * 70}")
+    print(C.header(f"  ANÁLISIS BALÓN PARADO — {name}"))
+    print(f"{'=' * 70}")
+
+    # We can derive some set piece info from league match stats
+    matches_data = league_data.get("matches", {})
+    all_matches = matches_data.get("allMatches", [])
+    finished = [m for m in all_matches if m.get("status", {}).get("finished")]
+
+    team_matches = [m for m in finished if m.get("home", {}).get("id") == tid or m.get("away", {}).get("id") == tid]
+
+    if not team_matches:
+        print("  No match data available.")
+        return
+
+    total = len(team_matches)
+    clean_sheets = 0
+    failed_to_score = 0
+    both_scored = 0
+
+    for m in team_matches:
+        home_id = m.get("home", {}).get("id")
+        sh, sa = _parse_score(m.get("status", {}).get("scoreStr"))
+        if sh is None or sa is None:
+            continue
+        team_goals = sh if home_id == tid else sa
+        opp_goals = sa if home_id == tid else sh
+        if opp_goals == 0:
+            clean_sheets += 1
+        if team_goals == 0:
+            failed_to_score += 1
+        if team_goals > 0 and opp_goals > 0:
+            both_scored += 1
+
+    print(f"\n  Partidos analizados: {total}")
+    print(f"  Porterías a cero:   {clean_sheets} ({clean_sheets/total*100:.0f}%)")
+    print(f"  Sin marcar:         {failed_to_score} ({failed_to_score/total*100:.0f}%)")
+    print(f"  Ambos marcan:       {both_scored} ({both_scored/total*100:.0f}%)")
+
+    # Score distribution
+    score_first = 0
+    concede_first = 0
+    for m in team_matches:
+        home_id = m.get("home", {}).get("id")
+        sh, sa = _parse_score(m.get("status", {}).get("scoreStr"))
+        if sh is None or sa is None:
+            continue
+        if home_id == tid:
+            if sh > 0 and sa == 0:
+                score_first += 1
+            elif sa > 0 and sh == 0:
+                concede_first += 1
+
+    # Penalty and card stats from overview
+    overview = team_data.get("overview", {})
+    top_stats = overview.get("topPlayers", {})
+    if top_stats:
+        print(f"\n  Datos adicionales de la overview:")
+        for cat, players in top_stats.items():
+            cat_lower = cat.lower()
+            if any(k in cat_lower for k in ["card", "tarjeta", "foul", "falta", "penalty", "penal"]):
+                if isinstance(players, list):
+                    for p in players[:3]:
+                        pname = p.get("name", "?")
+                        val = p.get("value", "?")
+                        print(f"    {cat}: {pname} ({val})")
+
+
+def print_verificador_24h(team_id: int, league_data: dict[str, Any]) -> None:
+    """Pre-kickoff check: compare current team state vs what scouts would have seen."""
+    team_data = get_team_data(team_id)
+    name = team_data.get("details", {}).get("name", "Unknown")
+
+    print(f"\n{'=' * 70}")
+    print(C.header(f"  VERIFICADOR 24H — {name}"))
+    print(f"{'=' * 70}")
+
+    fixtures = _extract_fixtures_from_team(team_data)
+    now = datetime.now()
+
+    # Find next match (within 48h)
+    upcoming = [f for f in fixtures if not f["finished"] and f["date_parsed"]
+                and 0 <= (f["date_parsed"] - now).total_seconds() <= 48 * 3600]
+
+    if not upcoming:
+        upcoming_any = [f for f in fixtures if not f["finished"] and f["date_parsed"] and f["date_parsed"] > now]
+        if upcoming_any:
+            next_m = upcoming_any[0]
+            days = (next_m["date_parsed"] - now).days
+            print(f"\n  Próximo partido en {days} días ({next_m['date_parsed'].strftime('%Y-%m-%d')}).")
+            print(f"  {next_m['competition']} — {next_m['home_away']} vs {next_m['opponent']}")
+            print(f"\n  Ejecutar verificador dentro de 24h del partido.")
+        else:
+            print("  No upcoming matches found.")
+        return
+
+    match = upcoming[0]
+    hours_to_ko = (match["date_parsed"] - now).total_seconds() / 3600
+    print(f"\n  Partido: {match['competition']} — {match['home_away']} vs {match['opponent']}")
+    print(f"  Kickoff: {match['date_parsed'].strftime('%Y-%m-%d %H:%M')} ({hours_to_ko:.0f}h)")
+    print(f"  Ronda: {match['round']}")
+
+    # Check recent results since last scout
+    recent = [f for f in fixtures if f["finished"] and f["date_parsed"]
+              and (now - f["date_parsed"]).days <= 7]
+
+    if recent:
+        print(f"\n  RESULTADOS ÚLTIMOS 7 DÍAS (post-scout):")
+        for f in recent:
+            d = f["date_parsed"].strftime("%m/%d") if f["date_parsed"] else "?"
+            res = f["result"][:1].upper() if f["result"] else "?"
+            print(f"    {d}  {f['competition'][:20]:<20} vs {f['opponent']:<20} {f['score']} ({C.result(res)})")
+
+    # Squad availability check
+    squad = team_data.get("squad", [])
+    total_players = sum(len(g.get("members", [])) for g in squad)
+    injured = []
+    for group in squad:
+        for m in group.get("members", []):
+            if m.get("isInjured") or m.get("injuryDescription"):
+                injured.append({
+                    "name": m.get("name", "?"),
+                    "injury": m.get("injuryDescription", m.get("injury", "?")),
+                })
+
+    print(f"\n  PLANTILLA:")
+    print(f"    Total jugadores: {total_players}")
+    if injured:
+        print(f"    Lesionados detectados: {len(injured)}")
+        for inj in injured:
+            print(f"      ❌ {inj['name']}: {inj['injury']}")
+    else:
+        print(f"    Sin lesiones detectadas en datos de plantilla")
+        print(f"    ⚠️  FotMob puede no tener datos de lesiones actualizados")
+
+    # Competition load context
+    upcoming_7d = [f for f in fixtures if not f["finished"] and f["date_parsed"]
+                   and 0 <= (f["date_parsed"] - now).days <= 7]
+    if len(upcoming_7d) > 1:
+        print(f"\n  ⚠️  CONGESTIÓN: {len(upcoming_7d)} partidos en 7 días:")
+        for f in upcoming_7d:
+            d = f["date_parsed"].strftime("%m/%d %H:%M") if f["date_parsed"] else "?"
+            print(f"    {d}  {f['competition']:<20} vs {f['opponent']}")
+        print(f"    → Rotación probable")
+    else:
+        print(f"\n  ✅ Sin congestión de partidos")
+
+    # Poisson reference
+    all_rows = _find_standings_rows(league_data.get("table", []))
+    opp_id = None
+    for row in all_rows:
+        if _normalize(match["opponent"]) in _normalize(row.get("name", "")):
+            opp_id = row.get("id")
+            break
+
+    if opp_id:
+        team_id_actual = team_data.get("details", {}).get("id", team_id)
+        if match["home_away"] == "H":
+            poisson = compute_poisson_dixon_coles(team_id_actual, opp_id, league_data)
+        else:
+            poisson = compute_poisson_dixon_coles(opp_id, team_id_actual, league_data)
+        if "error" not in poisson:
+            print(f"\n  REFERENCIA POISSON:")
+            print(f"    P(1)={poisson['p1']*100:.1f}%  P(X)={poisson['px']*100:.1f}%  P(2)={poisson['p2']*100:.1f}%")
+            print(f"    λ_home={poisson['lambda_home']}  λ_away={poisson['lambda_away']}")
+
+
+# ──────────────────────────────────────────────
 # 13. Agent pipeline — scout reports, Poisson, jornada
 # ──────────────────────────────────────────────
 
@@ -2763,20 +3170,24 @@ League:
   standings-home           Home-only standings
   standings-away           Away-only standings
   dashboard                Quick overview (title race, relegation, pichichi, next matchday)
+  xpts                     Expected points table (over/underperformance)
   teams                    List all teams with IDs
   full                     Full report
 
 Team:
   team <id|name>           Team overview + squad
-  team-competitions <id|name>  Multi-competition analysis & rotation prediction
+  team-calendar <id|name>   Multi-competition analysis & rotation prediction
   team-form <id|name>      Rolling PPG trend across the season
   team-compare <t1> <t2>   Side-by-side team comparison
+  team-setpieces <id|name> Set piece & clean sheet analysis
   squad-stats <id|name>    Full stats for every player in squad
   h2h <team1> <team2>     Head-to-head history
 
 Player:
   player <id|name>         Full profile, per-90 stats, form, shotmap
   compare <p1> <p2>        Side-by-side player comparison with per-90
+  seasons <player>         Season-over-season career comparison
+  shotmap <player>         ASCII shot map visualization
   search-player <name>     Search player by name across all squads
   search-team <name>       Search team by name
 
@@ -2794,6 +3205,7 @@ Agent Pipeline:
   jornada [N]              Full matchday analysis with Poisson Dixon-Coles
   poisson <home> <away>    1X2 probabilities (Poisson Dixon-Coles model)
   agent-json <home> <away> Machine-readable JSON for Claude SDK agents
+  verificar <team>         Pre-kickoff 24h check (injuries, form, congestion)
 
 Export (append to any command):
   --json [filename]        Export as JSON (stdout or file)
@@ -2949,9 +3361,9 @@ def main() -> None:
                 print_team_overview(data)
                 print_squad(data)
 
-        elif cmd == "team-competitions":
+        elif cmd in ("team-calendar", "team-competitions"):
             if len(sys.argv) < 3:
-                print("Usage: python laliga_stats.py team-competitions <team_id|name>")
+                print("Usage: python laliga_stats.py team-calendar <team_id|name>")
                 return
             team_id = _resolve_team_arg(sys.argv[2])
             data = get_team_data(team_id)
@@ -3104,6 +3516,45 @@ def main() -> None:
                 _export_json(data, export_file)
             else:
                 print_dashboard(data)
+
+        elif cmd == "xpts":
+            data = get_league_data()
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_expected_points(data)
+
+        elif cmd == "seasons":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py seasons <player_id|name>")
+                return
+            pid = _resolve_player_arg(sys.argv[2])
+            print_season_comparison(pid)
+
+        elif cmd == "shotmap":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py shotmap <player_id|name>")
+                return
+            pid = _resolve_player_arg(sys.argv[2])
+            data = get_player_data(pid)
+            print_player_shotmap_ascii(data)
+
+        elif cmd == "team-setpieces":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py team-setpieces <team_id|name>")
+                return
+            team_id = _resolve_team_arg(sys.argv[2])
+            td = get_team_data(team_id)
+            league = get_league_data()
+            print_set_pieces(td, league)
+
+        elif cmd == "verificar":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py verificar <team_id|name>")
+                return
+            team_id = _resolve_team_arg(sys.argv[2])
+            league = get_league_data()
+            print_verificador_24h(team_id, league)
 
         elif cmd == "full":
             data = get_league_data()
