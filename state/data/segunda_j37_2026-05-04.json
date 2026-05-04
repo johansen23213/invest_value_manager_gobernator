@@ -3,9 +3,15 @@
   "season": "2025/2026",
   "date": "2026-05-04",
   "matchday": 37,
-  "source": "WebSearch (Wikipedia, AiScore, worldfootball.net, FOX Sports, dailysports.net)",
-  "data_quality": "PARTIAL — top 10 verified, bottom 12 estimated from fragments",
-  "note": "22 teams. Season ends May 31 2026. Playoffs June 2026.",
+  "source": "WebSearch (AiScore, Wikipedia, worldfootball.net, ESPN, FOX Sports)",
+  "data_quality": "MIXED — top 10 verified, 11-22 partial/estimated. NEEDS FULL AUDIT.",
+  "composition_notes": {
+    "from_2024_25_segunda": "15 teams stayed",
+    "relegated_from_primera": ["Valladolid", "Las Palmas", "Leganés"],
+    "promoted_from_1rfef": ["Ceuta AD", "Cultural Leonesa", "Andorra CF", "Real Sociedad B"],
+    "relegated_to_1rfef": ["Racing Ferrol", "Cartagena", "Tenerife", "Amorebieta"],
+    "total": 22
+  },
   "standings": [
     {"pos": 1,  "team": "Racing Santander",    "pj": 37, "pts": 69, "w": 21, "d": 6,  "l": 10, "verified": true},
     {"pos": 2,  "team": "Deportivo La Coruña", "pj": 38, "pts": 68, "w": 19, "d": 11, "l": 8,  "verified": true},
@@ -13,47 +19,36 @@
     {"pos": 4,  "team": "Castellón",           "pj": 37, "pts": 64, "w": 18, "d": 10, "l": 9,  "verified": true},
     {"pos": 5,  "team": "Las Palmas",          "pj": 37, "pts": 63, "w": 17, "d": 12, "l": 8,  "verified": true},
     {"pos": 6,  "team": "Burgos CF",           "pj": 37, "pts": 61, "w": 17, "d": 10, "l": 10, "verified": true},
-    {"pos": 7,  "team": "Eibar",               "pj": 37, "pts": 61, "w": 17, "d": 10, "l": 10, "verified": true, "note": "Same pts as Burgos, behind on H2H"},
+    {"pos": 7,  "team": "Eibar",               "pj": 37, "pts": 61, "w": 17, "d": 10, "l": 10, "verified": true},
     {"pos": 8,  "team": "Málaga",              "pj": 37, "pts": 60, "w": 17, "d": 9,  "l": 11, "verified": true},
     {"pos": 9,  "team": "Andorra CF",          "pj": 38, "pts": 55, "w": 15, "d": 10, "l": 13, "verified": true},
-    {"pos": 10, "team": "Córdoba",             "pj": 37, "pts": 54, "w": 15, "d": 9,  "l": 13, "verified": "partial"},
-    {"pos": 11, "team": "Sporting Gijón",      "pj": 37, "pts": 52, "verified": "estimated", "note": "11th per multiple sources"},
-    {"pos": 12, "team": "Cádiz CF",            "pj": 37, "pts": 50, "verified": "estimated"},
-    {"pos": 13, "team": "Tenerife",            "pj": 37, "pts": 48, "verified": "estimated"},
-    {"pos": 14, "team": "Granada CF",          "pj": 37, "pts": 46, "verified": "estimated"},
-    {"pos": 15, "team": "Ceuta AD",            "pj": 37, "pts": 45, "verified": "estimated", "note": "Newly promoted, beat Sporting 2-1 J37 away"},
-    {"pos": 16, "team": "Eldense",             "pj": 37, "pts": 43, "verified": "estimated"},
-    {"pos": 17, "team": "Cartagena",           "pj": 37, "pts": 42, "verified": "estimated"},
-    {"pos": 18, "team": "Albacete",            "pj": 37, "pts": 40, "verified": "estimated"},
-    {"pos": 19, "team": "Racing Ferrol",       "pj": 37, "pts": 38, "verified": "estimated", "note": "RELEGATION ZONE"},
-    {"pos": 20, "team": "Mirandés",            "pj": 37, "pts": 35, "verified": "estimated", "note": "RELEGATION ZONE"},
-    {"pos": 21, "team": "Huesca",              "pj": 37, "pts": 33, "verified": "estimated", "note": "RELEGATION ZONE"},
-    {"pos": 22, "team": "Real Zaragoza",       "pj": 37, "pts": 30, "verified": "estimated", "note": "RELEGATION ZONE. Cultural Leonesa also near bottom."}
+    {"pos": 10, "team": "Córdoba",             "pj": 37, "pts": 54, "verified": "partial"},
+    {"pos": 11, "team": "Sporting Gijón",      "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 12, "team": "Leganés",             "pts": null, "verified": false, "note": "NEEDS VERIFICATION — relegated from Primera"},
+    {"pos": 13, "team": "Cádiz CF",            "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 14, "team": "Granada CF",          "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 15, "team": "Ceuta AD",            "pts": null, "verified": false, "note": "Newly promoted. Beat Sporting 2-1 away J37"},
+    {"pos": 16, "team": "Valladolid",          "pts": null, "verified": false, "note": "NEEDS VERIFICATION — relegated from Primera"},
+    {"pos": 17, "team": "Eldense",             "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 18, "team": "Albacete",            "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 19, "team": "Mirandés",            "pts": null, "verified": false, "note": "RELEGATION ZONE — NEEDS VERIFICATION"},
+    {"pos": 20, "team": "Real Zaragoza",       "pts": 30, "verified": "partial", "note": "30 pts as of J30 (March). NEEDS UPDATE"},
+    {"pos": 21, "team": "Cultural Leonesa",    "pts": 28, "verified": "partial", "note": "28 pts as of J30 (March). NEEDS UPDATE"},
+    {"pos": 22, "team": "Real Sociedad B",     "pts": null, "verified": false, "note": "NEEDS VERIFICATION"}
   ],
   "zones": {
     "automatic_promotion": [1, 2],
     "playoff_promotion": [3, 4, 5, 6],
     "relegation": [19, 20, 21, 22]
   },
-  "quiniela_relevant": {
-    "note": "La Quiniela española incluye partidos de Segunda División (normalmente 4-5 de los 15 partidos)",
-    "key_teams_for_predictions": [
-      {"team": "Málaga", "context": "Playoff zone (8th, 60pts). Strong away — won 4-2 at Eibar in J60 quiniela"},
-      {"team": "Eibar", "context": "Playoff contention (7th, 61pts). Inconsistent at home."},
-      {"team": "Sporting Gijón", "context": "Mid-table (11th, ~52pts). Lost 1-2 at home to Ceuta in J60 quiniela"},
-      {"team": "Ceuta", "context": "Comfortable mid-table (~15th). Fearless away as newly promoted."},
-      {"team": "Racing Santander", "context": "LEADER (69pts). Automatic promotion likely."},
-      {"team": "Deportivo", "context": "2nd (68pts). Automatic promotion race with Racing."}
-    ]
-  },
-  "j60_quiniela_lessons": {
-    "P11_eibar_2_4_malaga": "Málaga (playoff zone, 8th) won away at Eibar (7th). LESSON: playoff-zone teams travel well because they have form + motivation.",
-    "P13_sporting_1_2_ceuta": "Ceuta (mid-table, ~15th) won away at Sporting (11th). LESSON: newly promoted teams with nothing to lose are unpredictable away."
-  },
-  "gaps_still_needed": [
-    "Exact points for positions 10-22 (currently estimated)",
-    "Full form data per team (last 6 results)",
-    "Home/Away splits for Segunda",
-    "Top scorers of Segunda"
-  ]
+  "errors_corrected": [
+    "REMOVED Cartagena — relegated to 1ªRFEF in 2024-25",
+    "REMOVED Tenerife — relegated to 1ªRFEF in 2024-25",
+    "REMOVED Racing Ferrol — relegated to 1ªRFEF in 2024-25",
+    "ADDED Andorra CF — promoted from 1ªRFEF",
+    "ADDED Real Sociedad B — promoted from 1ªRFEF playoff",
+    "ADDED Valladolid — relegated from Primera División",
+    "ADDED Leganés — relegated from Primera División"
+  ],
+  "remaining_gaps": "12 of 22 teams have unverified points. Positions 11-22 are estimated order only."
 }
