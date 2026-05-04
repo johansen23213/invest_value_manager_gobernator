@@ -1,0 +1,51 @@
+{
+  "league": "LaLiga EA Sports",
+  "season": "2025/2026",
+  "matchday": 34,
+  "date": "2026-05-04",
+  "source": "WebSearch aggregation (laliga.com, ESPN, Bolavip, Wikipedia)",
+  "standings": [
+    {"pos": 1,  "team": "Barcelona",       "pj": 34, "pts": 88, "gd": "+58"},
+    {"pos": 2,  "team": "Real Madrid",      "pj": 34, "pts": 77, "gd": "+39"},
+    {"pos": 3,  "team": "Villarreal",       "pj": 34, "pts": 68, "gd": "+25"},
+    {"pos": 4,  "team": "Atlético Madrid",  "pj": 34, "pts": 63, "gd": "+21"},
+    {"pos": 5,  "team": "Real Betis",       "pj": 34, "pts": 53, "gd": "+11"},
+    {"pos": 6,  "team": "Celta",            "pj": 34, "pts": 47, "gd": "+4"},
+    {"pos": 7,  "team": "Getafe",           "pj": 34, "pts": 44},
+    {"pos": 8,  "team": "Athletic Club",    "pj": 34, "pts": 44},
+    {"pos": 9,  "team": "Real Sociedad",    "pj": 33, "pts": 43},
+    {"pos": 10, "team": "Osasuna",          "pj": 34, "pts": 42},
+    {"pos": 11, "team": "Rayo Vallecano",   "pj": 34, "pts": 42},
+    {"pos": 12, "team": "Valencia",         "pj": 34, "pts": 39},
+    {"pos": 13, "team": "Espanyol",         "pj": 34, "pts": 39},
+    {"pos": 14, "team": "Elche",            "pj": 34, "pts": 38},
+    {"pos": 15, "team": "Mallorca",         "pj": 34, "pts": 38},
+    {"pos": 16, "team": "Girona",           "pj": 34, "pts": 38},
+    {"pos": 17, "team": "Alavés",           "pj": 34, "pts": 36},
+    {"pos": 18, "team": "Sevilla",          "pj": 33, "pts": 34},
+    {"pos": 19, "team": "Levante",          "pj": 34, "pts": null, "note": "incomplete data"},
+    {"pos": 20, "team": "Real Oviedo",      "pj": 34, "pts": null, "note": "incomplete data"}
+  ],
+  "matchday_34_results": [
+    {"date": "2026-05-02", "home": "Girona", "away": "Mallorca", "score": "0-1"},
+    {"date": "2026-05-02", "home": "Villarreal", "away": "Levante", "score": "5-1"},
+    {"date": "2026-05-02", "home": "Valencia", "away": "Atlético Madrid", "score": "0-2"},
+    {"date": "2026-05-02", "home": "Alavés", "away": "Athletic Club", "score": "2-4"},
+    {"date": "2026-05-02", "home": "Osasuna", "away": "Barcelona", "score": "1-2"},
+    {"date": "2026-05-03", "home": "Celta", "away": "Elche", "score": "3-1"},
+    {"date": "2026-05-03", "home": "Getafe", "away": "Rayo Vallecano", "score": "0-2"},
+    {"date": "2026-05-03", "home": "Real Betis", "away": "Real Oviedo", "score": "3-0"},
+    {"date": "2026-05-03", "home": "Espanyol", "away": "Real Madrid", "score": "0-2"},
+    {"date": "2026-05-04", "home": "Sevilla", "away": "Real Sociedad", "score": "pending"}
+  ],
+  "zones": {
+    "champions_league": [1, 2, 3, 4],
+    "europa_league": [5, 6],
+    "relegation": [18, 19, 20]
+  },
+  "key_gaps": {
+    "leader_gap": 11,
+    "ucl_cutoff_4_5": 10,
+    "relegation_cutoff_17_18": 2
+  }
+}

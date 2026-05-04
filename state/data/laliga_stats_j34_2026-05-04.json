@@ -1,0 +1,28 @@
+{
+  "date": "2026-05-04",
+  "matchday": 34,
+  "source": "WebSearch aggregation (realmadrid.com, Yahoo Sports, classementlaliga.com, Bolavip)",
+  "top_scorers": [
+    {"player": "Robert Lewandowski", "team": "Barcelona", "goals": 24, "note": "slowed in March"},
+    {"player": "Kylian Mbappé", "team": "Real Madrid", "goals": 23, "note": "leader by Feb, 22G in 28 games"},
+    {"player": "Vedat Muriqi", "team": "Mallorca", "goals": 18},
+    {"player": "Lamine Yamal", "team": "Barcelona", "goals": 14, "note": "late-season injury risk"}
+  ],
+  "key_insights": {
+    "title_race": "Barcelona leads by 11 pts (88 vs 77). Mathematically not sealed but effectively won.",
+    "ucl_zone": "Pos 1-4: Barcelona (88), Real Madrid (77), Villarreal (68), Atlético (63). Gap 4th-5th = 10 pts.",
+    "europa_zone": "Pos 5-6: Betis (53), Celta (47). Athletic/Getafe (44) chasing.",
+    "relegation": "Sevilla (34), Levante, Oviedo in bottom 3. Alavés (36) just above cutoff.",
+    "mid_table_cluster": "Positions 12-17 separated by just 3 pts (36-39). 6 teams in danger zone proximity.",
+    "pichichi": "Lewandowski (24) vs Mbappé (23). Tight race for final weeks."
+  },
+  "jornada_34_insights": {
+    "villarreal_5_1_levante": "Villarreal consolidates 3rd. Levante hammered — relegation confirmed?",
+    "osasuna_1_2_barcelona": "Barcelona continues winning even away. Title cruise.",
+    "espanyol_0_2_real_madrid": "Madrid keeps pace but gap too large for title.",
+    "alaves_2_4_athletic": "Athletic with statement away win. Alavés in trouble.",
+    "getafe_0_2_rayo": "Derby. Rayo wins away. Both safe mid-table.",
+    "betis_3_0_oviedo": "Betis strong. Oviedo looks relegated.",
+    "valencia_0_2_atletico": "Atlético clinical away. Valencia stays in danger zone."
+  }
+}
