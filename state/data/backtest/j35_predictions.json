@@ -1,0 +1,197 @@
+{
+  "jornada": 35,
+  "date": "2026-05-04T20:44:26.252348",
+  "predictions": [
+    {
+      "jornada": 35,
+      "match_number": 1,
+      "match": "Elche vs Alavés",
+      "home_team": "Elche",
+      "away_team": "Alavés",
+      "predictions": {
+        "p1": 0.4571,
+        "px": 0.3974,
+        "p2": 0.1455
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 39.5,
+        "context": "Partido directo por la salvación. Perdedor queda en zona de peligro."
+      },
+      "recorded_at": "2026-05-04T20:44:26.251987",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 2,
+      "match": "Sevilla vs Espanyol",
+      "home_team": "Sevilla",
+      "away_team": "Espanyol",
+      "predictions": {
+        "p1": 0.1701,
+        "px": 0.4375,
+        "p2": 0.3924
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 30.5,
+        "context": "Sevilla DEBE ganar para salir del descenso. Espanyol relativamente seguro."
+      },
+      "recorded_at": "2026-05-04T20:44:26.251993",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 3,
+      "match": "Atlético Madrid vs Celta",
+      "home_team": "Atlético Madrid",
+      "away_team": "Celta",
+      "predictions": {
+        "p1": 0.5441,
+        "px": 0.213,
+        "p2": 0.2429
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 35.0,
+        "context": "Atlético asegura UCL. Celta lucha por Europa League."
+      },
+      "recorded_at": "2026-05-04T20:44:26.251997",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 4,
+      "match": "Real Sociedad vs Real Betis",
+      "home_team": "Real Sociedad",
+      "away_team": "Real Betis",
+      "predictions": {
+        "p1": 0.3863,
+        "px": 0.2497,
+        "p2": 0.364
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 42.5,
+        "context": "Betis defiende 5ª plaza (Europa). Real Sociedad necesita puntos."
+      },
+      "recorded_at": "2026-05-04T20:44:26.252006",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 5,
+      "match": "Mallorca vs Villarreal",
+      "home_team": "Mallorca",
+      "away_team": "Villarreal",
+      "predictions": {
+        "p1": 0.171,
+        "px": 0.2511,
+        "p2": 0.5779
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 35.0,
+        "context": "Villarreal tiene 3ª plaza asegurada. Mallorca necesita puntos vs descenso."
+      },
+      "recorded_at": "2026-05-04T20:44:26.252009",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 6,
+      "match": "Athletic Club vs Valencia",
+      "home_team": "Athletic Club",
+      "away_team": "Valencia",
+      "predictions": {
+        "p1": 0.5601,
+        "px": 0.2524,
+        "p2": 0.1874
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 30.5,
+        "context": "Athletic busca Europa. Valencia necesita puntos para alejarse del descenso."
+      },
+      "recorded_at": "2026-05-04T20:44:26.252011",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 7,
+      "match": "Real Oviedo vs Getafe",
+      "home_team": "Real Oviedo",
+      "away_team": "Getafe",
+      "predictions": {
+        "p1": 0.0897,
+        "px": 0.3038,
+        "p2": 0.6065
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 30.5,
+        "context": "Oviedo (28 pts) lucha por la vida, 8 pts from safety. Getafe sin mucho en juego."
+      },
+      "recorded_at": "2026-05-04T20:44:26.252013",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 8,
+      "match": "Barcelona vs Real Madrid",
+      "home_team": "Barcelona",
+      "away_team": "Real Madrid",
+      "predictions": {
+        "p1": 0.5412,
+        "px": 0.1948,
+        "p2": 0.2641
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 30.5,
+        "context": "EL CLÁSICO. Barcelona campeón si gana (91 pts, inalcanzable). Madrid necesita ganar para mantener esperanza matemática."
+      },
+      "recorded_at": "2026-05-04T20:44:26.252019",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 9,
+      "match": "Levante vs Osasuna",
+      "home_team": "Levante",
+      "away_team": "Osasuna",
+      "predictions": {
+        "p1": 0.1127,
+        "px": 0.3693,
+        "p2": 0.518
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 30.5,
+        "context": "Levante (33 pts) desesperado tras 1-5 vs Villarreal, 3 pts from safety. Osasuna tranquilo."
+      },
+      "recorded_at": "2026-05-04T20:44:26.252022",
+      "result": null
+    },
+    {
+      "jornada": 35,
+      "match_number": 10,
+      "match": "Rayo Vallecano vs Girona",
+      "home_team": "Rayo Vallecano",
+      "away_team": "Girona",
+      "predictions": {
+        "p1": 0.558,
+        "px": 0.3078,
+        "p2": 0.1342
+      },
+      "source": "pipeline_v1",
+      "context": {
+        "surprise_risk": 39.5,
+        "context": "Girona necesita puntos (zona de peligro). Rayo seguro."
+      },
+      "recorded_at": "2026-05-04T20:44:26.252024",
+      "result": null
+    }
+  ],
+  "results_complete": false
+}
