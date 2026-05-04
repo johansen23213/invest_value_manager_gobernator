@@ -2538,6 +2538,256 @@ def print_expected_points(league_data: dict[str, Any]) -> None:
     print(f"\n  Diff > 0 = {C.win('suerte/sobrerendimiento')}  |  Diff < 0 = {C.loss('mala suerte/infrarendimiento')}")
 
 
+def print_advanced_metrics(player_id: int) -> None:
+    """Extract and display advanced metrics from player data if available."""
+    data = get_player_data(player_id)
+    name = data.get("name", "Unknown")
+    team = data.get("primaryTeam", {}).get("teamName", "?")
+
+    print(f"\n{'=' * 70}")
+    print(C.header(f"  MÉTRICAS AVANZADAS — {name} ({team})"))
+    print(f"{'=' * 70}")
+
+    # Main league stats — look for all available metrics
+    main_league = data.get("mainLeague", {})
+    stats = main_league.get("stats", [])
+
+    if stats:
+        # Categorize stats
+        attacking = []
+        passing_stats = []
+        defending = []
+        other = []
+
+        attack_keys = ["goal", "gol", "shot", "tiro", "xg", "expected goal", "chance", "ocasion", "dribble", "regate", "offside", "fuera de juego", "penalty"]
+        pass_keys = ["pass", "pase", "cross", "centro", "key pass", "pase clave", "assist", "asist", "xa", "expected assist", "progressive", "long ball", "through ball", "accurate"]
+        defend_keys = ["tackle", "entrada", "intercept", "block", "bloqueo", "clearance", "despeje", "duel", "aerial", "foul", "falta", "recovery", "recuper", "pressure", "presion"]
+
+        for s in stats:
+            title = s.get("title", "").lower()
+            entry = (s.get("title", ""), s.get("value", ""))
+            if any(k in title for k in attack_keys):
+                attacking.append(entry)
+            elif any(k in title for k in pass_keys):
+                passing_stats.append(entry)
+            elif any(k in title for k in defend_keys):
+                defending.append(entry)
+            else:
+                other.append(entry)
+
+        # Minutes for per-90
+        minutes = None
+        for s in stats:
+            if "minut" in s.get("title", "").lower():
+                try:
+                    minutes = int(str(s.get("value", 0)).replace(",", "").replace(".", ""))
+                except (ValueError, TypeError):
+                    pass
+
+        def _show_category(cat_name, items):
+            if not items:
+                return
+            print(f"\n  {C.header(cat_name)}")
+            print(f"  {'Métrica':<35} {'Total':>8} {'Per-90':>8}")
+            print(f"  {'-' * 53}")
+            for title, val in items:
+                p90 = ""
+                if minutes and minutes > 0:
+                    try:
+                        num = float(str(val).replace(",", ""))
+                        p90 = f"{num * 90 / minutes:.2f}"
+                    except (ValueError, TypeError):
+                        pass
+                print(f"  {title:<35} {str(val):>8} {p90:>8}")
+
+        _show_category("ATAQUE", attacking)
+        _show_category("PASES", passing_stats)
+        _show_category("DEFENSA", defending)
+        if other:
+            _show_category("OTROS", other)
+    else:
+        print("  No season stats available.")
+
+    # Shotmap summary
+    shotmap = data.get("shotmap", [])
+    if shotmap:
+        goals = sum(1 for s in shotmap if s.get("eventType") == "Goal" or s.get("isGoal"))
+        total_xg = sum(s.get("expectedGoals", s.get("xG", 0)) or 0 for s in shotmap)
+        xg_diff = goals - total_xg
+        print(f"\n  {C.header('EFICIENCIA')}")
+        print(f"  Goles: {goals}  |  xG: {total_xg:.2f}  |  Diferencia: {xg_diff:+.2f}")
+        if total_xg > 0:
+            conversion = goals / len(shotmap) * 100
+            print(f"  Tiros: {len(shotmap)}  |  Conversión: {conversion:.1f}%  |  xG/tiro: {total_xg / len(shotmap):.3f}")
+
+    # Traits
+    traits = data.get("traits", {})
+    if traits:
+        strengths = traits.get("strengths", [])
+        weaknesses = traits.get("weaknesses", [])
+        if strengths or weaknesses:
+            print(f"\n  {C.header('PERFIL')}")
+            for t in strengths:
+                label = t.get("title", t.get("name", "?")) if isinstance(t, dict) else str(t)
+                val = t.get("value", "") if isinstance(t, dict) else ""
+                print(f"  {C.win('+')} {label} {val}")
+            for t in weaknesses:
+                label = t.get("title", t.get("name", "?")) if isinstance(t, dict) else str(t)
+                val = t.get("value", "") if isinstance(t, dict) else ""
+                print(f"  {C.loss('-')} {label} {val}")
+
+
+def print_percentiles(player_id: int) -> None:
+    """Calculate player percentile rankings vs same position across the league."""
+    target = get_player_data(player_id)
+    name = target.get("name", "Unknown")
+    pos_desc = target.get("positionDescription", {})
+    primary_pos = pos_desc.get("primaryPosition", {}).get("label", "?")
+
+    print(f"\n{'=' * 70}")
+    print(C.header(f"  PERCENTILES — {name} ({primary_pos})"))
+    print(f"{'=' * 70}")
+
+    # Get target's stats
+    target_stats = {}
+    target_minutes = None
+    for s in target.get("mainLeague", {}).get("stats", []):
+        title = s.get("title", "")
+        value = s.get("value", "")
+        if title:
+            try:
+                target_stats[title] = float(str(value).replace(",", ""))
+            except (ValueError, TypeError):
+                pass
+            if "minut" in title.lower():
+                try:
+                    target_minutes = int(str(value).replace(",", "").replace(".", ""))
+                except (ValueError, TypeError):
+                    pass
+
+    if not target_stats or not target_minutes or target_minutes < 450:
+        print(f"  Necesita mínimo 450 minutos jugados. Actual: {target_minutes or 0}")
+        return
+
+    # Collect stats for all players at the same position
+    print(f"  Recopilando datos de la liga (esto tarda ~30-60s)...")
+    league = get_league_data()
+    teams = extract_teams(league)
+
+    pos_lower = primary_pos.lower()
+    peer_stats: dict[str, list[float]] = defaultdict(list)
+    peer_count = 0
+
+    for t in teams:
+        try:
+            tdata = get_team_data(t["id"])
+        except requests.exceptions.RequestException:
+            continue
+
+        squad = tdata.get("squad", [])
+        for group in squad:
+            group_title = group.get("title", "").lower()
+            # Match position group
+            pos_match = False
+            if "goalkeeper" in pos_lower or "portero" in pos_lower:
+                pos_match = "goalkeeper" in group_title or "portero" in group_title
+            elif "defend" in pos_lower or "defens" in pos_lower:
+                pos_match = "defend" in group_title or "defens" in group_title
+            elif "midfield" in pos_lower or "mediocampo" in pos_lower or "centrocampista" in pos_lower:
+                pos_match = "midfield" in group_title or "mediocampo" in group_title or "centrocampista" in group_title
+            elif "forward" in pos_lower or "attack" in pos_lower or "delantero" in pos_lower:
+                pos_match = "forward" in group_title or "attack" in group_title or "delantero" in group_title
+            else:
+                pos_match = pos_lower[:4] in group_title.lower()
+
+            if not pos_match:
+                continue
+
+            for m in group.get("members", []):
+                pid = m.get("id")
+                if not pid:
+                    continue
+                try:
+                    pdata = get_player_data(pid)
+                except requests.exceptions.RequestException:
+                    continue
+
+                p_minutes = None
+                for s in pdata.get("mainLeague", {}).get("stats", []):
+                    if "minut" in s.get("title", "").lower():
+                        try:
+                            p_minutes = int(str(s.get("value", 0)).replace(",", "").replace(".", ""))
+                        except (ValueError, TypeError):
+                            pass
+
+                if not p_minutes or p_minutes < 450:
+                    continue
+
+                peer_count += 1
+                p90_factor = 90 / p_minutes
+                for s in pdata.get("mainLeague", {}).get("stats", []):
+                    title = s.get("title", "")
+                    value = s.get("value", "")
+                    if "minut" in title.lower() or "match" in title.lower() or "appear" in title.lower():
+                        continue
+                    try:
+                        num = float(str(value).replace(",", ""))
+                        peer_stats[title].append(num * p90_factor)
+                    except (ValueError, TypeError):
+                        pass
+                _delay()
+        _delay()
+
+    if peer_count < 5:
+        print(f"  Solo {peer_count} pares encontrados. Necesita mínimo 5 para percentiles.")
+        return
+
+    # Calculate percentiles for target player
+    target_p90_factor = 90 / target_minutes
+
+    print(f"\n  Pares analizados: {peer_count} jugadores ({primary_pos})")
+    print(f"\n  {'Métrica':<30} {'Valor':>8} {'Per-90':>8} {'Pctl':>6} {'Rango'}")
+    print(f"  {'-' * 65}")
+
+    percentile_results = []
+    for stat_name, values in sorted(peer_stats.items()):
+        if stat_name not in target_stats:
+            continue
+        if len(values) < 5:
+            continue
+
+        target_p90 = target_stats[stat_name] * target_p90_factor
+        sorted_vals = sorted(values)
+        below = sum(1 for v in sorted_vals if v < target_p90)
+        pctl = int(below / len(sorted_vals) * 100)
+
+        # Visual bar
+        bar_len = pctl // 5
+        bar = "█" * bar_len + "░" * (20 - bar_len)
+
+        if pctl >= 90:
+            pctl_str = C.win(f"{pctl}%")
+        elif pctl >= 70:
+            pctl_str = C.draw(f"{pctl}%")
+        elif pctl <= 20:
+            pctl_str = C.loss(f"{pctl}%")
+        else:
+            pctl_str = f"{pctl}%"
+
+        print(f"  {stat_name:<30} {target_stats[stat_name]:>8} {target_p90:>8.2f} {pctl_str:>6} {bar}")
+        percentile_results.append((stat_name, pctl))
+
+    # Summary
+    if percentile_results:
+        avg_pctl = sum(p for _, p in percentile_results) / len(percentile_results)
+        top_stats = sorted(percentile_results, key=lambda x: -x[1])[:3]
+        bottom_stats = sorted(percentile_results, key=lambda x: x[1])[:3]
+
+        print(f"\n  Percentil medio: {avg_pctl:.0f}%")
+        print(f"  Mejores: {', '.join(f'{n} ({p}%)' for n, p in top_stats)}")
+        print(f"  Peores:  {', '.join(f'{n} ({p}%)' for n, p in bottom_stats)}")
+
+
 def print_player_shotmap_ascii(player: dict[str, Any]) -> None:
     """Render an ASCII shot map from player shotmap data."""
     shotmap = player.get("shotmap", [])
@@ -2794,6 +3044,131 @@ def print_verificador_24h(team_id: int, league_data: dict[str, Any]) -> None:
             print(f"\n  REFERENCIA POISSON:")
             print(f"    P(1)={poisson['p1']*100:.1f}%  P(X)={poisson['px']*100:.1f}%  P(2)={poisson['p2']*100:.1f}%")
             print(f"    λ_home={poisson['lambda_home']}  λ_away={poisson['lambda_away']}")
+
+
+# ──────────────────────────────────────────────
+# 12d. Investment manager integration
+# ──────────────────────────────────────────────
+
+LISTED_CLUBS = {
+    "Manchester United": {"ticker": "MANU", "exchange": "NYSE"},
+    "Juventus": {"ticker": "JUVE.MI", "exchange": "BIT"},
+    "Borussia Dortmund": {"ticker": "BVB.DE", "exchange": "XETRA"},
+    "Ajax": {"ticker": "AJAX.AS", "exchange": "AMS"},
+    "Benfica": {"ticker": "SLBEN.LS", "exchange": "ELO"},
+    "Sporting CP": {"ticker": "SCP.LS", "exchange": "ELO"},
+    "Porto": {"ticker": "FCP.LS", "exchange": "ELO"},
+    "Olympique Lyonnais": {"ticker": "OLG.PA", "exchange": "EPA"},
+    "Celtic": {"ticker": "CCP.L", "exchange": "LSE"},
+    "Lazio": {"ticker": "SSL.MI", "exchange": "BIT"},
+    "Roma": {"ticker": "ASR.MI", "exchange": "BIT"},
+}
+
+UCL_PRIZE_MONEY = {
+    "group_stage": 15_640_000,
+    "round_of_16": 9_600_000,
+    "quarter_final": 10_600_000,
+    "semi_final": 12_500_000,
+    "final": 15_500_000,
+    "winner": 20_000_000,
+    "group_win_bonus": 2_800_000,
+    "group_draw_bonus": 930_000,
+}
+
+UEL_PRIZE_MONEY = {
+    "group_stage": 3_630_000,
+    "round_of_16": 1_200_000,
+    "quarter_final": 1_800_000,
+    "semi_final": 2_800_000,
+    "final": 4_600_000,
+    "winner": 8_600_000,
+}
+
+
+def print_investment_report(league_data: dict[str, Any]) -> None:
+    """Analyze European qualification impact and listed club exposure."""
+    all_rows = _find_standings_rows(league_data.get("table", []))
+    if not all_rows:
+        print("  No standings data.")
+        return
+
+    print(f"\n{'=' * 75}")
+    print(C.header(f"  INFORME DE INVERSIÓN — LaLiga {SEASON}"))
+    print(f"{'=' * 75}")
+
+    # Zone analysis
+    print(f"\n  {C.header('CLASIFICACIÓN EUROPEA')}")
+    print(f"  {'#':>3}  {'Equipo':<25} {'Pts':>4} {'Zona':<20}")
+    print(f"  {'-' * 55}")
+
+    for row in all_rows:
+        pos = row.get("idx", 99)
+        name = row.get("name", "?")
+        pts = row.get("pts", 0)
+
+        if isinstance(pos, int) or (isinstance(pos, str) and pos.isdigit()):
+            pos_int = int(pos)
+        else:
+            pos_int = 99
+
+        if pos_int <= 4:
+            zone = C.win("Champions League")
+        elif pos_int <= 6:
+            zone = C.draw("Europa League / UECL")
+        elif pos_int >= 18:
+            zone = C.loss("Descenso")
+        else:
+            zone = "—"
+        print(f"  {pos:>3}  {name:<25} {pts:>4} {zone}")
+
+    # Revenue impact analysis
+    print(f"\n  {C.header('IMPACTO EN INGRESOS (premios UEFA)')}")
+    print(f"  Champions League grupo:         €{UCL_PRIZE_MONEY['group_stage']:>12,}")
+    print(f"  Champions League ronda 16:      €{UCL_PRIZE_MONEY['round_of_16']:>12,}")
+    print(f"  Champions League ganador total:  €{sum(UCL_PRIZE_MONEY.values()):>12,}")
+    print(f"  Europa League grupo:            €{UEL_PRIZE_MONEY['group_stage']:>12,}")
+
+    # Gap analysis for positions that matter
+    if len(all_rows) >= 6:
+        pos4 = all_rows[3].get("pts", 0)
+        pos5 = all_rows[4].get("pts", 0)
+        gap_ucl = pos4 - pos5
+        print(f"\n  Gap 4º-5º (UCL cutoff): {gap_ucl} pts")
+
+    if len(all_rows) >= 18:
+        pos17 = all_rows[16].get("pts", 0)
+        pos18 = all_rows[17].get("pts", 0)
+        gap_rel = pos17 - pos18
+        print(f"  Gap 17º-18º (descenso cutoff): {gap_rel} pts")
+
+    # Check for listed clubs in the league
+    listed_in_league = []
+    for row in all_rows:
+        name = row.get("name", "")
+        for club, info in LISTED_CLUBS.items():
+            if _normalize(club) in _normalize(name) or _normalize(name) in _normalize(club):
+                listed_in_league.append({
+                    "name": name,
+                    "ticker": info["ticker"],
+                    "exchange": info["exchange"],
+                    "position": row.get("idx", "?"),
+                    "points": row.get("pts", 0),
+                })
+
+    if listed_in_league:
+        print(f"\n  {C.header('CLUBES COTIZADOS EN ESTA LIGA')}")
+        for club in listed_in_league:
+            print(f"    {club['name']:<25} {club['ticker']:<12} ({club['exchange']})  Pos: {club['position']}")
+    else:
+        print(f"\n  No hay clubes cotizados en bolsa en esta liga.")
+        print(f"  (Los clubes españoles son sociedades anónimas deportivas no cotizadas)")
+
+    # Specialist integration note
+    print(f"\n  {C.header('PARA EL ESPECIALISTA (invest_value_manager)')}")
+    print(f"  Datos exportables con --json para análisis del especialista:")
+    print(f"  - Posiciones de clasificación europea (impacto en ingresos)")
+    print(f"  - Gaps de puntos en zonas críticas (probabilidad de cambio)")
+    print(f"  - Premios UEFA por ronda (cuantificación de impacto)")
 
 
 # ──────────────────────────────────────────────
@@ -3206,6 +3581,9 @@ Agent Pipeline:
   poisson <home> <away>    1X2 probabilities (Poisson Dixon-Coles model)
   agent-json <home> <away> Machine-readable JSON for Claude SDK agents
   verificar <team>         Pre-kickoff 24h check (injuries, form, congestion)
+  advanced <player>        Advanced metrics breakdown (attack/pass/defense)
+  percentiles <player>     Percentile rankings vs position peers (slow ~60s)
+  invest-report            European qualification & revenue impact analysis
 
 Export (append to any command):
   --json [filename]        Export as JSON (stdout or file)
@@ -3555,6 +3933,28 @@ def main() -> None:
             team_id = _resolve_team_arg(sys.argv[2])
             league = get_league_data()
             print_verificador_24h(team_id, league)
+
+        elif cmd == "advanced":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py advanced <player_id|name>")
+                return
+            pid = _resolve_player_arg(sys.argv[2])
+            print_advanced_metrics(pid)
+
+        elif cmd == "percentiles":
+            if len(sys.argv) < 3:
+                print("Usage: python laliga_stats.py percentiles <player_id|name>")
+                print("Warning: This command is slow (~60s), fetches all players at same position.")
+                return
+            pid = _resolve_player_arg(sys.argv[2])
+            print_percentiles(pid)
+
+        elif cmd == "invest-report":
+            data = get_league_data()
+            if export_fmt == "json":
+                _export_json(data, export_file)
+            else:
+                print_investment_report(data)
 
         elif cmd == "full":
             data = get_league_data()
