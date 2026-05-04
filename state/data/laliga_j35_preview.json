@@ -38,8 +38,9 @@
     },
     {
       "date": "2026-05-10", "home": "Real Oviedo", "away": "Getafe",
-      "home_pos": 20, "home_pts": null, "away_pos": 7, "away_pts": 44,
-      "context": "Oviedo lucha por la vida. Getafe sin mucho en juego."
+      "home_pos": 20, "home_pts": 28, "away_pos": 7, "away_pts": 44,
+      "context": "Oviedo (28 pts) lucha por la vida, 8 pts from safety. Getafe sin mucho en juego.",
+      "note": "AUDIT CORRECTED: Oviedo pts was null, verified as 28"
     },
     {
       "date": "2026-05-10", "home": "Barcelona", "away": "Real Madrid",
@@ -49,8 +50,9 @@
     },
     {
       "date": "2026-05-10", "home": "Levante", "away": "Osasuna",
-      "home_pos": 19, "home_pts": null, "away_pos": 10, "away_pts": 42,
-      "context": "Levante desesperado tras 1-5 vs Villarreal. Osasuna tranquilo."
+      "home_pos": 19, "home_pts": 33, "away_pos": 10, "away_pts": 42,
+      "context": "Levante (33 pts) desesperado tras 1-5 vs Villarreal, 3 pts from safety. Osasuna tranquilo.",
+      "note": "AUDIT CORRECTED: Levante pts was null, verified as 33"
     },
     {
       "date": "2026-05-11", "home": "Rayo Vallecano", "away": "Girona",

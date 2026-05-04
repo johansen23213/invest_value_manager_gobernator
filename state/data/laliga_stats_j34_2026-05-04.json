@@ -25,7 +25,7 @@
     "pichichi": "Mbappé (24) leads. Muriqi (21) surprise challenger. Yamal (16) third."
   },
   "jornada_34_results": [
-    {"date": "2026-05-02", "home": "Girona", "away": "Mallorca", "score": "0-1"},
+    {"date": "2026-05-01", "home": "Girona", "away": "Mallorca", "score": "0-1", "note": "AUDIT CORRECTED: date was 05-02, actual was 05-01 (Friday opener)"},
     {"date": "2026-05-02", "home": "Villarreal", "away": "Levante", "score": "5-1"},
     {"date": "2026-05-02", "home": "Valencia", "away": "Atlético Madrid", "score": "0-2"},
     {"date": "2026-05-02", "home": "Alavés", "away": "Athletic Club", "score": "2-4"},

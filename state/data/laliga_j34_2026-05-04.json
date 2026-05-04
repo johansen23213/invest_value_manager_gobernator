@@ -23,11 +23,11 @@
     {"pos": 16, "team": "Girona",           "pj": 34, "pts": 38},
     {"pos": 17, "team": "Alavés",           "pj": 34, "pts": 36},
     {"pos": 18, "team": "Sevilla",          "pj": 33, "pts": 34},
-    {"pos": 19, "team": "Levante",          "pj": 34, "pts": null, "note": "incomplete data"},
-    {"pos": 20, "team": "Real Oviedo",      "pj": 34, "pts": null, "note": "incomplete data"}
+    {"pos": 19, "team": "Levante",          "pj": 34, "pts": 33, "gd": "-17", "note": "AUDIT CORRECTED: was null, verified 33 pts via Sofascore/lagrada.org"},
+    {"pos": 20, "team": "Real Oviedo",      "pj": 34, "pts": 28, "note": "AUDIT CORRECTED: was null, verified 28 pts via tribuna.com/DAZN/La Nacion"}
   ],
   "matchday_34_results": [
-    {"date": "2026-05-02", "home": "Girona", "away": "Mallorca", "score": "0-1"},
+    {"date": "2026-05-01", "home": "Girona", "away": "Mallorca", "score": "0-1", "note": "AUDIT CORRECTED: date was 05-02, actual was 05-01 (Friday opener)"},
     {"date": "2026-05-02", "home": "Villarreal", "away": "Levante", "score": "5-1"},
     {"date": "2026-05-02", "home": "Valencia", "away": "Atlético Madrid", "score": "0-2"},
     {"date": "2026-05-02", "home": "Alavés", "away": "Athletic Club", "score": "2-4"},
@@ -38,6 +38,16 @@
     {"date": "2026-05-03", "home": "Espanyol", "away": "Real Madrid", "score": "0-2"},
     {"date": "2026-05-04", "home": "Sevilla", "away": "Real Sociedad", "score": "pending"}
   ],
+  "audit": {
+    "date": "2026-05-04",
+    "status": "AUDITED",
+    "corrections": [
+      "Levante pts: null -> 33 (verified Sofascore, lagrada.org, Flashscore)",
+      "Real Oviedo pts: null -> 28 (verified tribuna.com, DAZN, La Nacion)",
+      "Girona-Mallorca date: 2026-05-02 -> 2026-05-01 (Friday opener, verified Flashscore/COPE/ESPN)"
+    ],
+    "confidence": "HIGH — 95% verified across 2+ sources per data point"
+  },
   "zones": {
     "champions_league": [1, 2, 3, 4],
     "europa_league": [5, 6],
