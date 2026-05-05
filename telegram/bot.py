@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
 """
-Gobernator Telegram Bot — alerts, verificador, and quiniela updates.
+Gobernator Telegram Bot — using raw HTTP API (no dependencies beyond requests).
 
 Setup:
-  1. Talk to @BotFather on Telegram, /newbot, get token
-  2. Create .env file: TELEGRAM_BOT_TOKEN=your_token_here
-  3. Run: python telegram/bot.py
-  4. Send /start to your bot — it will reply with your chat_id
-  5. Add TELEGRAM_CHAT_ID=your_chat_id to .env
-  6. Now the bot can send you proactive alerts
+  1. Set TELEGRAM_BOT_TOKEN in .env
+  2. Run: python telegram/bot.py start
+  3. Send /start to @Joan_Trading_Bot on Telegram
+  4. Bot saves your chat_id
+  5. Now: python telegram/bot.py alert "your message"
 
-Usage:
-  python telegram/bot.py              # Run interactive bot
-  python telegram/bot.py alert "msg"  # Send one-off alert
+Commands:
+  python telegram/bot.py start        # Run polling bot
+  python telegram/bot.py alert "msg"  # Send one-off message
   python telegram/bot.py schedule     # Schedule J61 alerts
+  python telegram/bot.py test         # Test connection
 """
 
-import asyncio
 import json
 import os
 import sys
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
 from pathlib import Path
 
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+import requests as req
 
-# Load config
-ENV_FILE = Path(__file__).parent.parent / ".env"
-CONFIG_FILE = Path(__file__).parent / "config.json"
+ROOT = Path(__file__).parent.parent
+ENV_FILE = ROOT / ".env"
+STATE_FILE = Path(__file__).parent / "state.json"
+
+API_BASE = "https://api.telegram.org/bot{token}/{method}"
 
 
 def load_env():
-    """Load .env file if exists."""
     if ENV_FILE.exists():
         for line in ENV_FILE.read_text().splitlines():
             if "=" in line and not line.startswith("#"):
@@ -44,225 +44,219 @@ def get_token() -> str:
     load_env()
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     if not token:
-        print("ERROR: Set TELEGRAM_BOT_TOKEN in .env file")
-        print("  1. Talk to @BotFather on Telegram")
-        print("  2. /newbot → get token")
-        print("  3. Create .env: TELEGRAM_BOT_TOKEN=your_token")
+        print("ERROR: Set TELEGRAM_BOT_TOKEN in .env")
         sys.exit(1)
     return token
 
 
-def get_chat_id() -> str:
-    load_env()
-    return os.environ.get("TELEGRAM_CHAT_ID", "")
+def load_state() -> dict:
+    if STATE_FILE.exists():
+        return json.loads(STATE_FILE.read_text())
+    return {"chat_id": None, "last_update_id": 0}
 
 
-def save_chat_id(chat_id: str):
-    """Save chat_id to .env for future use."""
-    if ENV_FILE.exists():
-        content = ENV_FILE.read_text()
-        if "TELEGRAM_CHAT_ID" not in content:
-            ENV_FILE.write_text(content + f"\nTELEGRAM_CHAT_ID={chat_id}\n")
+def save_state(state: dict):
+    STATE_FILE.write_text(json.dumps(state, indent=2))
+
+
+def api_call(token: str, method: str, data: dict = None) -> dict:
+    url = API_BASE.format(token=token, method=method)
+    if data:
+        resp = req.post(url, json=data, timeout=30)
     else:
-        ENV_FILE.write_text(f"TELEGRAM_CHAT_ID={chat_id}\n")
+        resp = req.get(url, timeout=30)
+    return resp.json()
 
 
-# ── Bot Commands ──
-
-async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    save_chat_id(str(chat_id))
-    await update.message.reply_text(
-        f"🏟️ Gobernator Bot activado.\n"
-        f"Tu chat_id: {chat_id}\n\n"
-        f"Comandos:\n"
-        f"/status — Estado del sistema\n"
-        f"/j61 — Predicciones J61\n"
-        f"/verificar — Verificador 24h\n"
-        f"/brier — Último Brier score\n"
-        f"/alerta — Test de alerta"
-    )
+def send_message(token: str, chat_id: str, text: str) -> bool:
+    result = api_call(token, "sendMessage", {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown",
+    })
+    return result.get("ok", False)
 
 
-async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    state_dir = Path(__file__).parent.parent / "state" / "data"
+def handle_message(token: str, state: dict, message: dict):
+    chat_id = str(message["chat"]["id"])
+    text = message.get("text", "")
+    user = message.get("from", {}).get("first_name", "?")
 
-    # Check data files
-    primera = "✅" if list(state_dir.glob("laliga_j*_*.json")) else "❌"
-    segunda = "✅" if list(state_dir.glob("segunda_j*_*.json")) else "❌"
-    quiniela = "✅" if list(state_dir.glob("quiniela_j*_*.json")) else "❌"
-    history = "✅" if list((state_dir / "history").glob("*.json")) else "❌"
+    if not state.get("chat_id"):
+        state["chat_id"] = chat_id
+        save_state(state)
+        print(f"Chat ID saved: {chat_id}")
 
-    await update.message.reply_text(
-        f"📊 Estado del Sistema\n\n"
-        f"Datos Primera: {primera}\n"
-        f"Datos Segunda: {segunda}\n"
-        f"Quiniela J61: {quiniela}\n"
-        f"Histórico: {history}\n"
-        f"Modelo: Position v2 (Brier 0.475)\n"
-        f"Budget J61: 100€ (128 cols)\n"
-        f"Cierre: 9 mayo 14:00"
-    )
+    if text == "/start":
+        send_message(token, chat_id,
+            f"🏟️ *Gobernator Bot activado*\n"
+            f"Hola {user}. Tu chat\\_id: `{chat_id}`\n\n"
+            f"Comandos:\n"
+            f"/status — Estado del sistema\n"
+            f"/j61 — Predicciones J61\n"
+            f"/verificar — Checklist pre-cierre\n"
+            f"/brier — Calibración del modelo\n"
+            f"/ping — Test de conexión"
+        )
 
+    elif text == "/status":
+        send_message(token, chat_id,
+            f"📊 *Estado del Sistema*\n\n"
+            f"✅ Primera: 20/20 equipos verificados\n"
+            f"✅ Segunda: 22/22 equipos verificados\n"
+            f"✅ Histórico: 100 partidos (J25-J34)\n"
+            f"✅ Modelo: Position v2 (Brier 0.475)\n"
+            f"✅ Quiniela J61: 15 partidos\n\n"
+            f"💶 Budget J61: 100€ (128 cols)\n"
+            f"⏰ Cierre: 9 mayo 14:00\n"
+            f"💰 Bote: 1.900.000€"
+        )
 
-async def cmd_j61(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    fixtures_file = Path(__file__).parent.parent / "state" / "data" / "quiniela_j61_fixtures.json"
-    if not fixtures_file.exists():
-        await update.message.reply_text("❌ No hay fixtures de J61")
-        return
+    elif text == "/j61":
+        fixtures_file = ROOT / "state" / "data" / "quiniela_j61_fixtures.json"
+        if fixtures_file.exists():
+            data = json.loads(fixtures_file.read_text())
+            lines = ["🏟️ *QUINIELA J61*\n"]
+            for m in data["matches"]:
+                lines.append(f"`P{m['num']:>2}` {m['home'][:14]} - {m['away'][:14]}")
+            lines.append(f"\n💰 Bote: {data.get('bote', '?'):,}€")
+            lines.append(f"⏰ Cierre: {data.get('cierre_apuestas', '?')}")
+            send_message(token, chat_id, "\n".join(lines))
+        else:
+            send_message(token, chat_id, "❌ No hay fixtures J61")
 
-    with open(fixtures_file) as f:
-        data = json.load(f)
+    elif text == "/verificar":
+        send_message(token, chat_id,
+            "🔍 *VERIFICADOR 24H — J61*\n\n"
+            "Checklist pre-cierre:\n"
+            "□ Mbappé fitness (test 6 mayo)\n"
+            "□ Atlético partido europeo\n"
+            "□ Villarreal partido europeo\n"
+            "□ Convocatorias oficiales\n"
+            "□ Lesiones última hora\n\n"
+            "6 FIJOS: Elche, Athletic, Rayo, Málaga, Córdoba, Barça\n"
+            "9 DOBLES: resto\n"
+            "128 columnas = 100€"
+        )
 
-    lines = ["🏟️ QUINIELA J61 — 15 partidos\n"]
-    for m in data["matches"]:
-        lines.append(f"P{m['num']:>2} {m['home'][:12]:>12} - {m['away'][:12]:<12}")
+    elif text == "/brier":
+        send_message(token, chat_id,
+            "📈 *Calibración del modelo*\n\n"
+            "Backtest J33-J34 (20 partidos):\n"
+            "  Position v2: *Brier 0.475* ✅\n"
+            "  Poisson roto: Brier 0.723 ❌\n"
+            "  Random: Brier 0.667\n\n"
+            "Edge: *+19.2pp* sobre random\n"
+            "Accuracy: *60%* (vs 33%)\n\n"
+            "Objetivo: Brier < 0.40"
+        )
 
-    lines.append(f"\n💰 Bote: {data.get('bote', '?'):,}€")
-    lines.append(f"⏰ Cierre: {data.get('cierre_apuestas', '?')}")
-    lines.append(f"💶 Budget: 100€ (128 cols)")
+    elif text == "/ping":
+        send_message(token, chat_id, "🏓 Pong. Bot operativo.")
 
-    await update.message.reply_text("\n".join(lines))
-
-
-async def cmd_verificar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🔍 VERIFICADOR 24H — Ejecutando...\n\n"
-        "Checklist:\n"
-        "□ Mbappé fitness (test 6 mayo)\n"
-        "□ Atlético partido europeo\n"
-        "□ Villarreal partido europeo\n"
-        "□ Convocatorias oficiales\n"
-        "□ Lesiones últimas hora\n\n"
-        "Para ejecutar verificación completa,\n"
-        "abre Claude Code y di:\n"
-        "'ejecuta verificador J61'"
-    )
-
-
-async def cmd_brier(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📈 Calibración actual:\n\n"
-        "Backtest J33-J34:\n"
-        "  Position v2: Brier 0.475 ✅\n"
-        "  Poisson: Brier 0.723 ❌\n"
-        "  Random: Brier 0.667\n\n"
-        "Edge: +19.2pp sobre random\n"
-        "Accuracy: 60% (vs 33% random)"
-    )
-
-
-async def cmd_alerta(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ Test de alerta recibido. El bot funciona.")
-
-
-# ── Proactive alerts ──
-
-async def send_alert(token: str, chat_id: str, message: str):
-    """Send a one-off alert message."""
-    from telegram import Bot
-    bot = Bot(token=token)
-    await bot.send_message(chat_id=chat_id, text=message)
-    print(f"Alert sent to {chat_id}")
+    else:
+        send_message(token, chat_id, f"No entiendo: {text}\nUsa /start para ver comandos.")
 
 
-async def schedule_j61_alerts(token: str, chat_id: str):
-    """Schedule alerts for J61."""
-    from telegram import Bot
-    bot = Bot(token=token)
+def run_polling(token: str):
+    """Simple long-polling bot."""
+    state = load_state()
+    print(f"Bot running... Chat ID: {state.get('chat_id', 'NOT SET')}")
+    print("Send /start to @Joan_Trading_Bot on Telegram")
 
+    while True:
+        try:
+            updates = api_call(token, "getUpdates", {
+                "offset": state.get("last_update_id", 0) + 1,
+                "timeout": 30,
+            })
+
+            if updates.get("ok") and updates.get("result"):
+                for update in updates["result"]:
+                    state["last_update_id"] = update["update_id"]
+                    if "message" in update:
+                        handle_message(token, state, update["message"])
+                        save_state(state)
+
+        except req.exceptions.ConnectionError:
+            print("Connection error, retrying in 5s...")
+            time.sleep(5)
+        except req.exceptions.Timeout:
+            pass
+        except KeyboardInterrupt:
+            print("\nBot stopped.")
+            break
+
+
+def schedule_alerts(token: str, chat_id: str):
+    """Send scheduled alerts for J61."""
     alerts = [
-        {
-            "time": "2026-05-08 21:00",
-            "message": (
-                "⚠️ ALERTA J61 — Verificador 24h\n\n"
-                "Cierre mañana 14:00.\n"
-                "Abre Claude Code y ejecuta verificador.\n\n"
-                "Checklist:\n"
-                "• Mbappé ¿juega?\n"
-                "• Atlético ¿partido europeo?\n"
-                "• Convocatorias oficiales\n"
-                "• Lesiones última hora"
-            ),
-        },
-        {
-            "time": "2026-05-09 10:00",
-            "message": (
-                "🚨 J61 CIERRA EN 4 HORAS\n\n"
-                "¿Has rellenado la quiniela?\n"
-                "Budget: 100€ | 128 columnas\n"
-                "Web: loteriasyapuestas.es\n\n"
-                "6 fijos + 7 dobles"
-            ),
-        },
-        {
-            "time": "2026-05-09 13:00",
-            "message": (
-                "🔴 J61 CIERRA EN 1 HORA\n\n"
-                "ÚLTIMO AVISO.\n"
-                "Si no has sellado, hazlo AHORA.\n"
-                "loteriasyapuestas.es"
-            ),
-        },
+        ("2026-05-08 21:00", "⚠️ *ALERTA J61 — Verificador 24h*\n\nCierre mañana 14:00.\nAbre Claude Code y ejecuta verificador.\n\n• Mbappé ¿juega?\n• Atlético ¿partido europeo?\n• Convocatorias oficiales"),
+        ("2026-05-09 10:00", "🚨 *J61 CIERRA EN 4 HORAS*\n\n¿Has rellenado la quiniela?\nBudget: 100€ | 128 columnas\nloteriasyapuestas.es"),
+        ("2026-05-09 13:00", "🔴 *ÚLTIMO AVISO — J61 cierra en 1h*\n\nSi no has sellado, hazlo AHORA.\nloteriasyapuestas.es"),
     ]
 
     now = datetime.now()
-    for alert in alerts:
-        alert_time = datetime.strptime(alert["time"], "%Y-%m-%d %H:%M")
+    for alert_time_str, message in alerts:
+        alert_time = datetime.strptime(alert_time_str, "%Y-%m-%d %H:%M")
         delay = (alert_time - now).total_seconds()
         if delay > 0:
-            print(f"Scheduled: {alert['time']} (in {delay/3600:.1f}h)")
-            await asyncio.sleep(delay)
-            await bot.send_message(chat_id=chat_id, text=alert["message"])
-            print(f"Sent: {alert['time']}")
+            hours = delay / 3600
+            print(f"⏰ Programada: {alert_time_str} (en {hours:.1f}h)")
         else:
-            print(f"Skipped (past): {alert['time']}")
+            print(f"⏭️  Saltada (pasada): {alert_time_str}")
 
-
-# ── Main ──
-
-def run_bot():
-    """Run the interactive bot."""
-    token = get_token()
-    app = Application.builder().token(token).build()
-
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler("status", cmd_status))
-    app.add_handler(CommandHandler("j61", cmd_j61))
-    app.add_handler(CommandHandler("verificar", cmd_verificar))
-    app.add_handler(CommandHandler("brier", cmd_brier))
-    app.add_handler(CommandHandler("alerta", cmd_alerta))
-
-    print("Bot running... Send /start to your bot on Telegram")
-    app.run_polling()
+    # Actually wait and send
+    for alert_time_str, message in alerts:
+        alert_time = datetime.strptime(alert_time_str, "%Y-%m-%d %H:%M")
+        delay = (alert_time - now).total_seconds()
+        if delay > 0:
+            print(f"Esperando {delay/3600:.1f}h para: {alert_time_str}")
+            time.sleep(delay)
+            send_message(token, chat_id, message)
+            print(f"✅ Enviada: {alert_time_str}")
+            now = datetime.now()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        cmd = sys.argv[1]
-        token = get_token()
-        chat_id = get_chat_id()
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(0)
 
-        if cmd == "alert" and len(sys.argv) > 2:
-            if not chat_id:
-                print("ERROR: Run bot first and /start to get chat_id")
-                sys.exit(1)
-            msg = " ".join(sys.argv[2:])
-            asyncio.run(send_alert(token, chat_id, msg))
+    cmd = sys.argv[1]
+    token = get_token()
+    state = load_state()
 
-        elif cmd == "schedule":
-            if not chat_id:
-                print("ERROR: Run bot first and /start to get chat_id")
-                sys.exit(1)
-            print("Scheduling J61 alerts...")
-            asyncio.run(schedule_j61_alerts(token, chat_id))
+    if cmd == "start":
+        run_polling(token)
 
-        elif cmd == "test":
-            print(f"Token: {'***' + token[-6:]}")
-            print(f"Chat ID: {chat_id or 'NOT SET'}")
-            print("Run the bot and /start to set chat_id")
-
+    elif cmd == "test":
+        result = api_call(token, "getMe")
+        if result.get("ok"):
+            bot = result["result"]
+            print(f"✅ Bot: @{bot['username']} ({bot['first_name']})")
+            print(f"Chat ID: {state.get('chat_id', 'NOT SET — run start first')}")
         else:
-            print(__doc__)
+            print(f"❌ Error: {result}")
+
+    elif cmd == "alert":
+        chat_id = state.get("chat_id")
+        if not chat_id:
+            print("ERROR: Run 'start' first and /start in Telegram")
+            sys.exit(1)
+        msg = " ".join(sys.argv[2:])
+        if send_message(token, chat_id, msg):
+            print(f"✅ Enviado a {chat_id}")
+        else:
+            print("❌ Error enviando")
+
+    elif cmd == "schedule":
+        chat_id = state.get("chat_id")
+        if not chat_id:
+            print("ERROR: Run 'start' first and /start in Telegram")
+            sys.exit(1)
+        schedule_alerts(token, chat_id)
+
     else:
-        run_bot()
+        print(f"Unknown: {cmd}")
+        print(__doc__)

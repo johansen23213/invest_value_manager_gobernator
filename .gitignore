@@ -19,3 +19,4 @@ Thumbs.db
 
 # Specialist repo (submodule or separate)
 invest_value_manager/
+.env
