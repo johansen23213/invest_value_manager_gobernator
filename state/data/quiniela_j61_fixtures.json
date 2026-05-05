@@ -1,0 +1,27 @@
+{
+  "quiniela_jornada": 61,
+  "date": "2026-05-10",
+  "cierre_apuestas": "2026-05-09 14:00",
+  "bote": 1900000,
+  "source": "WebSearch (casasdeapuestas.com, quiniela15.com, libertaddigital.com)",
+  "matches": [
+    {"num": 1,  "home": "Elche",           "away": "Alavés",          "league": "Primera", "home_pos": 14, "away_pos": 17, "home_pts": 38, "away_pts": 36},
+    {"num": 2,  "home": "Sevilla",         "away": "Espanyol",        "league": "Primera", "home_pos": 18, "away_pos": 13, "home_pts": 34, "away_pts": 39},
+    {"num": 3,  "home": "Atlético Madrid", "away": "Celta",           "league": "Primera", "home_pos": 4,  "away_pos": 6,  "home_pts": 63, "away_pts": 47,
+     "context_european": "Atlético en semifinal Champions/Europa — probable rotación"},
+    {"num": 4,  "home": "Real Sociedad",   "away": "Real Betis",      "league": "Primera", "home_pos": 9,  "away_pos": 5,  "home_pts": 43, "away_pts": 53},
+    {"num": 5,  "home": "Mallorca",        "away": "Villarreal",      "league": "Primera", "home_pos": 15, "away_pos": 3,  "home_pts": 38, "away_pts": 68},
+    {"num": 6,  "home": "Athletic Club",   "away": "Valencia",        "league": "Primera", "home_pos": 8,  "away_pos": 12, "home_pts": 44, "away_pts": 39},
+    {"num": 7,  "home": "Real Oviedo",     "away": "Getafe",          "league": "Primera", "home_pos": 20, "away_pos": 7,  "home_pts": 28, "away_pts": 44},
+    {"num": 8,  "home": "Levante",         "away": "Osasuna",         "league": "Primera", "home_pos": 19, "away_pos": 10, "home_pts": 33, "away_pts": 42},
+    {"num": 9,  "home": "Rayo Vallecano",  "away": "Girona",          "league": "Primera", "home_pos": 11, "away_pos": 16, "home_pts": 42, "away_pts": 38},
+    {"num": 10, "home": "Ceuta",           "away": "Castellón",       "league": "Segunda", "home_pos": 12, "away_pos": 5,  "home_pts": 51, "away_pts": 64},
+    {"num": 11, "home": "Burgos",          "away": "Almería",         "league": "Segunda", "home_pos": 7,  "away_pos": 3,  "home_pts": 62, "away_pts": 67},
+    {"num": 12, "home": "Málaga",          "away": "Sporting Gijón",  "league": "Segunda", "home_pos": 6,  "away_pos": 11, "home_pts": 63, "away_pts": 52},
+    {"num": 13, "home": "Andorra CF",      "away": "Las Palmas",      "league": "Segunda", "home_pos": 10, "away_pos": 4,  "home_pts": 55, "away_pts": 66},
+    {"num": 14, "home": "Córdoba",         "away": "Granada CF",      "league": "Segunda", "home_pos": 9,  "away_pos": 14, "home_pts": 57, "away_pts": 48},
+    {"num": 15, "home": "Barcelona",       "away": "Real Madrid",     "league": "Primera", "home_pos": 1,  "away_pos": 2,  "home_pts": 88, "away_pts": 77,
+     "pleno_al_15": true,
+     "context": "EL CLÁSICO. Barça campeón si gana. Mbappé DUDA (lesión). Madrid sin opciones de título."}
+  ]
+}
