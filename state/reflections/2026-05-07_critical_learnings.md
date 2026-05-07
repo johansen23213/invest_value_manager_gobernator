@@ -33,12 +33,18 @@ Todo lo demás quedó sin usar. **El sistema no vale nada si no lo uso.**
 
 ## DATOS VERIFICADOS QUE NO DEBO PERDER
 
-### Barça-Madrid (P15)
-- Barcelona ha ganado 3/3 esta temporada: 0-4 Liga, 2-5 Supercopa, 3-2 Copa
+### TEMPORADA: 2025-2026 (NO confundir con 2024-25)
+
+### Barça-Madrid (P15) — H2H VERIFICADO individualmente con ESPN
+- Liga ida J10 (26 oct 2025): MADRID 2-1 Barcelona (Mbappé + Bellingham)
+- Supercopa final (11 ene 2026): Barcelona 3-2 MADRID (Raphinha x2 + Lewandowski)
+- Copa del Rey semi (mar 2026): MADRID 0-3 Barcelona
+- BALANCE REAL: Barcelona 2W, Madrid 1W — NO es 3-0 como decía un snippet erróneo
 - Barcelona 9 partidos sin perder en casa (8W 1D)
 - Mbappé lesionado (semitendinoso izq, 27 abril). Test 6 mayo. 50/50.
 - Madrid SIN: Courtois, Carvajal, Militao, Arda Güler, Rodrygo (temporada)
 - Barcelona campeón si gana (91pts inalcanzable)
+- PERO: Madrid GANÓ la ida de Liga → puede competir en Camp Nou
 
 ### Atlético-Celta (P3)
 - Atlético ELIMINADO de Champions por Arsenal 1-0 (5 mayo)
