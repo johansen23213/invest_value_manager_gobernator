@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "decay_rate": 0.05,
+  "rho": -0.1,
+  "home_advantage": 1.35,
+  "surprise_weights": {
+    "home_fragility": 0.25,
+    "away_competence": 0.2,
+    "motivational_asymmetry": 0.2,
+    "congestion_penalty": 0.15,
+    "key_player_absence": 0.1,
+    "historical_venue": 0.1
+  },
+  "surprise_threshold_high": 55,
+  "surprise_threshold_medium": 40,
+  "fijo_confidence": 0.55,
+  "doble_confidence": 0.45,
+  "draw_adjustment": 0.0,
+  "away_adjustment": 0.011428571428571429,
+  "history": [
+    {
+      "jornada": 60,
+      "date": "2026-05-04T21:25:52.354797",
+      "errors": {
+        "home_overestimate": 0,
+        "home_underestimate": 0,
+        "draw_overestimate": 0,
+        "draw_underestimate": 0,
+        "away_overestimate": 0,
+        "away_underestimate": 2,
+        "surprise_missed": 2,
+        "surprise_false_alarm": 0,
+        "total": 14
+      },
+      "changes": [
+        {
+          "parameter": "surprise_threshold_high",
+          "old": 60,
+          "new": 55,
+          "reason": "auto-adjustment"
+        },
+        {
+          "parameter": "away_adjustment",
+          "old": 0.0,
+          "new": 0.011428571428571429,
+          "reason": "auto-adjustment"
+        }
+      ]
+    }
+  ],
+  "last_updated": "2026-05-04T21:25:52.355243"
+}

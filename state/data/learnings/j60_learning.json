@@ -1,0 +1,36 @@
+{
+  "jornada": 60,
+  "date": "2026-05-04T21:25:52.355985",
+  "errors": {
+    "home_overestimate": 0,
+    "home_underestimate": 0,
+    "draw_overestimate": 0,
+    "draw_underestimate": 0,
+    "away_overestimate": 0,
+    "away_underestimate": 2,
+    "surprise_missed": 2,
+    "surprise_false_alarm": 0,
+    "total": 14
+  },
+  "adjustments": {
+    "surprise_threshold_high": 55,
+    "surprise_reason": "Missed 2 surprises — lowering threshold 60→55",
+    "away_adjustment": 0.011428571428571429,
+    "away_reason": "Away underestimation 14% — boosting away by 1.1pp"
+  },
+  "changes_applied": [
+    {
+      "parameter": "surprise_threshold_high",
+      "old": 60,
+      "new": 55,
+      "reason": "auto-adjustment"
+    },
+    {
+      "parameter": "away_adjustment",
+      "old": 0.0,
+      "new": 0.011428571428571429,
+      "reason": "auto-adjustment"
+    }
+  ],
+  "new_config_version": 2
+}

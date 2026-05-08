@@ -1,0 +1,49 @@
+{
+  "league": "LaLiga Hypermotion (Segunda División)",
+  "season": "2025/2026",
+  "date": "2026-05-04",
+  "matchday": "~J38 (approx, needs audit)",
+  "source": "WebSearch (Wikipedia, laliga.com, ESPN, globalsportsarchive.com)",
+  "data_quality": "PARTIAL — needs full audit",
+  "standings_partial": {
+    "promotion_zone": [
+      {"pos": 1, "team": "Racing Santander", "note": "Top of table, automatic promotion spot"},
+      {"pos": 2, "team": "Deportivo de La Coruña", "note": "Second automatic promotion spot"}
+    ],
+    "playoff_zone": [
+      {"pos": 3, "team": "Almería", "note": "In playoff spots"},
+      {"pos": 4, "team": "Las Palmas", "note": "In playoff spots"},
+      {"pos": 5, "team": "Castellón", "note": "In playoff spots"},
+      {"pos": 6, "team": "Málaga", "note": "In playoff spots — relevant for quiniela J60 P11"}
+    ],
+    "mid_table_notable": [
+      {"team": "Eibar", "note": "Near playoff contention, just behind on H2H vs Burgos — relevant for quiniela J60 P11"},
+      {"team": "Sporting Gijón", "note": "Mid-table — relevant for quiniela J60 P13"},
+      {"team": "Ceuta", "note": "Position unknown, promoted well — relevant for quiniela J60 P13, beat Sporting 1-2 away"}
+    ],
+    "relegation_zone": [
+      {"team": "Mirandés", "note": "In relegation zone"},
+      {"team": "Huesca", "note": "In relegation zone"},
+      {"team": "Real Zaragoza", "note": "In relegation zone"},
+      {"team": "Cultural Leonesa", "note": "In relegation zone"}
+    ]
+  },
+  "quiniela_j60_segunda_matches": {
+    "P11_eibar_vs_malaga": {
+      "result": "2-4",
+      "analysis": "Málaga in playoff zone (6th), strong away. Eibar fighting for playoffs but inconsistent. Surprise scoreline but Málaga's form explains away win.",
+      "lesson": "Teams in playoff spots (3rd-6th) are DANGEROUS away. They have something to play for and are typically strong squads."
+    },
+    "P13_sporting_vs_ceuta": {
+      "result": "1-2",
+      "analysis": "Ceuta as newly promoted team beating Sporting away. Classic surprise from team with nothing to lose.",
+      "lesson": "Newly promoted teams in comfortable mid-table positions can be fearless away. No relegation pressure, no promotion expectation = free football."
+    }
+  },
+  "gaps_to_fill": [
+    "Full 22-team standings with points",
+    "Top scorers of Segunda",
+    "Recent form per team (last 5)",
+    "Which Segunda teams are in quiniela for J35"
+  ]
+}

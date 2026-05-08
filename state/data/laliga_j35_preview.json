@@ -1,0 +1,89 @@
+{
+  "league": "LaLiga EA Sports",
+  "season": "2025/2026",
+  "matchday": 35,
+  "dates": "2026-05-09 to 2026-05-11",
+  "source": "WebSearch aggregation (ESPN, dailysports.net, multiple)",
+  "headline": "EL CLÁSICO — Barcelona puede ser campeón si gana al Real Madrid",
+  "fixtures": [
+    {
+      "date": "2026-05-09", "home": "Elche", "away": "Alavés",
+      "home_pos": 14, "home_pts": 38, "away_pos": 17, "away_pts": 36,
+      "context": "Partido directo por la salvación. Perdedor queda en zona de peligro."
+    },
+    {
+      "date": "2026-05-09", "home": "Sevilla", "away": "Espanyol",
+      "home_pos": 18, "home_pts": 34, "away_pos": 13, "away_pts": 39,
+      "context": "Sevilla DEBE ganar para salir del descenso. Espanyol relativamente seguro."
+    },
+    {
+      "date": "2026-05-09", "home": "Atlético Madrid", "away": "Celta",
+      "home_pos": 4, "home_pts": 63, "away_pos": 6, "away_pts": 47,
+      "context": "Atlético asegura UCL. Celta lucha por Europa League."
+    },
+    {
+      "date": "2026-05-09", "home": "Real Sociedad", "away": "Real Betis",
+      "home_pos": 9, "home_pts": 43, "away_pos": 5, "away_pts": 53,
+      "context": "Betis defiende 5ª plaza (Europa). Real Sociedad necesita puntos."
+    },
+    {
+      "date": "2026-05-10", "home": "Mallorca", "away": "Villarreal",
+      "home_pos": 15, "home_pts": 38, "away_pos": 3, "away_pts": 68,
+      "context": "Villarreal tiene 3ª plaza asegurada. Mallorca necesita puntos vs descenso."
+    },
+    {
+      "date": "2026-05-10", "home": "Athletic Club", "away": "Valencia",
+      "home_pos": 8, "home_pts": 44, "away_pos": 12, "away_pts": 39,
+      "context": "Athletic busca Europa. Valencia necesita puntos para alejarse del descenso."
+    },
+    {
+      "date": "2026-05-10", "home": "Real Oviedo", "away": "Getafe",
+      "home_pos": 20, "home_pts": 28, "away_pos": 7, "away_pts": 44,
+      "context": "Oviedo (28 pts) lucha por la vida, 8 pts from safety. Getafe sin mucho en juego.",
+      "note": "AUDIT CORRECTED: Oviedo pts was null, verified as 28"
+    },
+    {
+      "date": "2026-05-10", "home": "Barcelona", "away": "Real Madrid",
+      "home_pos": 1, "home_pts": 88, "away_pos": 2, "away_pts": 77,
+      "context": "EL CLÁSICO. Barcelona campeón si gana (91 pts, inalcanzable). Madrid necesita ganar para mantener esperanza matemática.",
+      "spotlight": true
+    },
+    {
+      "date": "2026-05-10", "home": "Levante", "away": "Osasuna",
+      "home_pos": 19, "home_pts": 33, "away_pos": 10, "away_pts": 42,
+      "context": "Levante (33 pts) desesperado tras 1-5 vs Villarreal, 3 pts from safety. Osasuna tranquilo.",
+      "note": "AUDIT CORRECTED: Levante pts was null, verified as 33"
+    },
+    {
+      "date": "2026-05-11", "home": "Rayo Vallecano", "away": "Girona",
+      "home_pos": 11, "home_pts": 42, "away_pos": 16, "away_pts": 38,
+      "context": "Girona necesita puntos (zona de peligro). Rayo seguro."
+    }
+  ],
+  "poisson_estimates_manual": {
+    "note": "Estimaciones manuales basadas en posiciones y tendencias J34. Sin lambda real (FotMob 403).",
+    "barcelona_vs_real_madrid": {
+      "context": "Barça en casa, 88 pts, racha ganadora. Madrid 77 pts, consistente fuera.",
+      "est_p1": 0.50, "est_px": 0.25, "est_p2": 0.25,
+      "reasoning": "Barça domina esta temporada pero el Clásico siempre es partido aparte. Madrid compite."
+    },
+    "sevilla_vs_espanyol": {
+      "context": "Sevilla 18º necesita ganar desesperadamente en casa.",
+      "est_p1": 0.50, "est_px": 0.28, "est_p2": 0.22,
+      "reasoning": "Factor desesperación local. Pero Sevilla solo 34 pts = equipo débil."
+    },
+    "elche_vs_alaves": {
+      "context": "Directo por salvación. Máxima tensión.",
+      "est_p1": 0.40, "est_px": 0.32, "est_p2": 0.28,
+      "reasoning": "Partido igualado, factor casa ligero. Alto empate."
+    }
+  },
+  "key_narratives": [
+    "Barcelona puede ser CAMPEÓN si gana el Clásico (91 pts inalcanzable con 3 jornadas restantes)",
+    "Sevilla en descenso necesita victoria urgente vs Espanyol",
+    "Elche-Alavés es un partido directo por la salvación (38 vs 36 pts)",
+    "Girona (38 pts, 16º) visita Rayo — derrota la acerca al abismo",
+    "Oviedo (20º) recibe a Getafe — última oportunidad en casa",
+    "Cluster 12º-17º separado por 3 pts — cualquier resultado cambia el mapa"
+  ]
+}

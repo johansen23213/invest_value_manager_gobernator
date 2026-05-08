@@ -1,0 +1,54 @@
+{
+  "league": "LaLiga Hypermotion (Segunda División)",
+  "season": "2025/2026",
+  "date": "2026-05-04",
+  "matchday": 37,
+  "source": "WebSearch (AiScore, Wikipedia, worldfootball.net, ESPN, FOX Sports)",
+  "data_quality": "MIXED — top 10 verified, 11-22 partial/estimated. NEEDS FULL AUDIT.",
+  "composition_notes": {
+    "from_2024_25_segunda": "15 teams stayed",
+    "relegated_from_primera": ["Valladolid", "Las Palmas", "Leganés"],
+    "promoted_from_1rfef": ["Ceuta AD", "Cultural Leonesa", "Andorra CF", "Real Sociedad B"],
+    "relegated_to_1rfef": ["Racing Ferrol", "Cartagena", "Tenerife", "Amorebieta"],
+    "total": 22
+  },
+  "standings": [
+    {"pos": 1,  "team": "Racing Santander",    "pj": 37, "pts": 69, "w": 21, "d": 6,  "l": 10, "verified": true},
+    {"pos": 2,  "team": "Deportivo La Coruña", "pj": 38, "pts": 68, "w": 19, "d": 11, "l": 8,  "verified": true},
+    {"pos": 3,  "team": "Almería",             "pj": 37, "pts": 67, "w": 20, "d": 7,  "l": 10, "verified": true},
+    {"pos": 4,  "team": "Castellón",           "pj": 37, "pts": 64, "w": 18, "d": 10, "l": 9,  "verified": true},
+    {"pos": 5,  "team": "Las Palmas",          "pj": 37, "pts": 63, "w": 17, "d": 12, "l": 8,  "verified": true},
+    {"pos": 6,  "team": "Burgos CF",           "pj": 37, "pts": 61, "w": 17, "d": 10, "l": 10, "verified": true},
+    {"pos": 7,  "team": "Eibar",               "pj": 37, "pts": 61, "w": 17, "d": 10, "l": 10, "verified": true},
+    {"pos": 8,  "team": "Málaga",              "pj": 37, "pts": 60, "w": 17, "d": 9,  "l": 11, "verified": true},
+    {"pos": 9,  "team": "Andorra CF",          "pj": 38, "pts": 55, "w": 15, "d": 10, "l": 13, "verified": true},
+    {"pos": 10, "team": "Córdoba",             "pj": 37, "pts": 54, "verified": "partial"},
+    {"pos": 11, "team": "Sporting Gijón",      "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 12, "team": "Leganés",             "pts": null, "verified": false, "note": "NEEDS VERIFICATION — relegated from Primera"},
+    {"pos": 13, "team": "Cádiz CF",            "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 14, "team": "Granada CF",          "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 15, "team": "Ceuta AD",            "pts": null, "verified": false, "note": "Newly promoted. Beat Sporting 2-1 away J37"},
+    {"pos": 16, "team": "Valladolid",          "pts": null, "verified": false, "note": "NEEDS VERIFICATION — relegated from Primera"},
+    {"pos": 17, "team": "Eldense",             "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 18, "team": "Albacete",            "pts": null, "verified": false, "note": "NEEDS VERIFICATION"},
+    {"pos": 19, "team": "Mirandés",            "pts": null, "verified": false, "note": "RELEGATION ZONE — NEEDS VERIFICATION"},
+    {"pos": 20, "team": "Real Zaragoza",       "pts": 30, "verified": "partial", "note": "30 pts as of J30 (March). NEEDS UPDATE"},
+    {"pos": 21, "team": "Cultural Leonesa",    "pts": 28, "verified": "partial", "note": "28 pts as of J30 (March). NEEDS UPDATE"},
+    {"pos": 22, "team": "Real Sociedad B",     "pts": null, "verified": false, "note": "NEEDS VERIFICATION"}
+  ],
+  "zones": {
+    "automatic_promotion": [1, 2],
+    "playoff_promotion": [3, 4, 5, 6],
+    "relegation": [19, 20, 21, 22]
+  },
+  "errors_corrected": [
+    "REMOVED Cartagena — relegated to 1ªRFEF in 2024-25",
+    "REMOVED Tenerife — relegated to 1ªRFEF in 2024-25",
+    "REMOVED Racing Ferrol — relegated to 1ªRFEF in 2024-25",
+    "ADDED Andorra CF — promoted from 1ªRFEF",
+    "ADDED Real Sociedad B — promoted from 1ªRFEF playoff",
+    "ADDED Valladolid — relegated from Primera División",
+    "ADDED Leganés — relegated from Primera División"
+  ],
+  "remaining_gaps": "12 of 22 teams have unverified points. Positions 11-22 are estimated order only."
+}
