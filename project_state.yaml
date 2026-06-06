@@ -1,0 +1,131 @@
+# project_state.yaml — Única fuente de verdad del avance de Vetlla
+# Se actualiza al cerrar cada hito (tests verdes + checkpoint + resumen).
+
+project:
+  name: Vetlla
+  description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
+  phase: planning            # planning | building | done
+  current_milestone: H0
+  last_updated: 2026-06-06
+
+# --------------------------------------------------------------------------
+# Decisiones tomadas (las no triviales también van a docs/adr/)
+# --------------------------------------------------------------------------
+decisions:
+  - id: D-001
+    date: 2026-06-06
+    decision: >-
+      Esta branch (claude/vetlla-saas-mvp-spec-PuHOW) se dedica exclusivamente a
+      Vetlla. Se reemplaza el CLAUDE.md previo (sistema Gobernator de inversiones),
+      que permanece en la branch main.
+  - id: D-002
+    date: 2026-06-06
+    decision: >-
+      Stack confirmado del spec: monorepo pnpm+Turborepo, Next.js App Router + TS,
+      tRPC, Prisma + Postgres con RLS, Auth.js, PWA offline (IndexedDB + cola sync),
+      Tailwind + shadcn/ui, Zod, Vitest + Playwright, @anthropic-ai/sdk. Todo en UE.
+
+# --------------------------------------------------------------------------
+# Supuestos pendientes de confirmar (ver chat de planificación)
+# --------------------------------------------------------------------------
+assumptions:
+  - id: A-001
+    text: Auth.js (NextAuth) con adaptador Postgres en lugar de Supabase Auth, para mantener el control del schema y RLS en un solo Postgres.
+    status: pending_confirmation
+  - id: A-002
+    text: Transcripción de voz se deja como interfaz/stub en el MVP (entrada por texto operativa); motor UE/on-prem se integra cuando se elija proveedor.
+    status: pending_confirmation
+  - id: A-003
+    text: Despliegue concreto (proveedor app + Postgres EU) se decide en H0/ADR; el MVP corre en local con docker-compose para Postgres.
+    status: pending_confirmation
+  - id: A-004
+    text: 2FA opcional se modela en datos pero su implementación completa puede caer en H1 o roadmap según esfuerzo.
+    status: pending_confirmation
+
+# --------------------------------------------------------------------------
+# Hitos
+# --------------------------------------------------------------------------
+milestones:
+  - id: H0
+    name: Andamiaje
+    status: not_started        # not_started | in_progress | done
+    effort: M
+    goal: Monorepo, Next.js, Prisma+Postgres (docker), Auth.js, CI básico, CLAUDE.md, project_state.yaml, login funcional.
+    exit_criteria:
+      - Monorepo arranca (pnpm install + dev) y lint/typecheck en verde.
+      - Postgres local vía docker-compose; primera migración Prisma aplicada.
+      - Pantalla de login funcional con Auth.js.
+      - CI básico (lint + typecheck + tests) en verde.
+
+  - id: H1
+    name: Multitenancy + RBAC
+    status: not_started
+    effort: L
+    goal: Tenants, usuarios, roles, RLS y aislamiento verificado por test.
+    exit_criteria:
+      - tenant_id + RLS en todas las tablas con datos.
+      - Contexto de tenant inyectado en middleware de auth.
+      - Test demuestra que un tenant no ve datos de otro por ninguna ruta/query.
+      - RBAC por rol + pertenencia a tenant (mínimo privilegio).
+
+  - id: H2
+    name: Centros, plazas y residentes
+    status: not_started
+    effort: L
+    goal: CRUD de centro/unidad/plaza y expediente sociosanitario básico + escalas.
+    exit_criteria:
+      - CRUD Center (residencia|centro_dia|vivienda_tutelada), Unit, Bed/Plaza, ocupación.
+      - Expediente Resident con contactos, dependencia, alergias, diagnósticos.
+      - Assessment con escalas Barthel y Tinetti.
+
+  - id: H3
+    name: Atención directa offline
+    status: not_started
+    effort: XL
+    goal: Flujo tablet, CareRecord, PWA + cola de sync con resolución de conflictos.
+    exit_criteria:
+      - PWA instalable; flujo a pie de cama con objetivos táctiles amplios.
+      - CareRecord (constantes, ABVD, deposiciones, ingesta, incidencias) con autor+timestamp+syncStatus.
+      - Registro sin red y sincronización sin duplicados al volver online (last-write-wins por campo + log de conflictos).
+
+  - id: H4
+    name: Medicación + PIA
+    status: not_started
+    effort: L
+    goal: Prescripción, MAR con alertas de no-administrado, PIA con objetivos y revisión.
+    exit_criteria:
+      - Medication (prescripción) + MedicationAdministration (MAR).
+      - Alertas de no-administración.
+      - CarePlan (PIA) con CarePlanGoal y CarePlanReview.
+
+  - id: H5
+    name: IA Copilot
+    status: not_started
+    effort: XL
+    goal: Las 2 features estrella con tool use y human-in-the-loop.
+    exit_criteria:
+      - Lenguaje natural -> CareRecord estructurados, con confirmación previa (es y ca).
+      - Borrador automático de PIA/seguimiento que requiere aprobación humana.
+      - Herramientas tipadas respetan RLS+rol; cada acción en AuditLog; nada de PII fuera de UE.
+
+  - id: H6
+    name: Portal de familias + pulido
+    status: not_started
+    effort: M
+    goal: Portal de familias (solo lectura) + pulido de accesibilidad e i18n.
+    exit_criteria:
+      - Familiar ve resumen y novedades de su residente vinculado y nada más.
+      - WCAG 2.1 AA en flujos de auxiliar y familia.
+      - i18n es-ES y ca-ES completos en los flujos del MVP.
+
+# --------------------------------------------------------------------------
+# Criterios de aceptación globales del MVP (§12 del spec)
+# --------------------------------------------------------------------------
+acceptance_criteria:
+  - Operador se da de alta, crea residencia + vivienda tutelada, da de alta plazas y residentes.
+  - Auxiliar registra atención desde tablet sin red; datos aparecen al volver online sin duplicados.
+  - Sanitario prescribe medicación y ve alertas de no-administración.
+  - Copiloto convierte frase libre en registros estructurados (es y ca) y redacta borrador de PIA con aprobación.
+  - Familiar ve solo el resumen de su residente.
+  - Aislamiento total entre tenants demostrado por test.
+  - Toda acción sobre datos personales en AuditLog. Datos alojados en la UE.
