@@ -11,6 +11,8 @@ import { unitsRouter } from '@/server/routers/units';
 import { bedsRouter } from '@/server/routers/beds';
 import { residentsRouter } from '@/server/routers/residents';
 import { careRouter } from '@/server/routers/care';
+import { medicationsRouter } from '@/server/routers/medications';
+import { carePlansRouter } from '@/server/routers/careplans';
 
 // Router raíz de la API tipada. Cada hito añade sus routers
 // (centros, residentes, atención, medicación, copiloto...).
@@ -51,6 +53,8 @@ export const appRouter = createTRPCRouter({
   beds: bedsRouter,
   residents: residentsRouter,
   care: careRouter,
+  medications: medicationsRouter,
+  carePlans: carePlansRouter,
 });
 
 export type AppRouter = typeof appRouter;

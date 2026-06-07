@@ -48,4 +48,16 @@ describe('hasPermission', () => {
     expect(hasPermission('AUXILIAR', 'care:write')).toBe(true);
     expect(hasPermission('AUXILIAR', 'care:read')).toBe(true);
   });
+
+  it('el auxiliar administra medicación pero no prescribe', () => {
+    expect(hasPermission('AUXILIAR', 'medication:administer')).toBe(true);
+    expect(hasPermission('AUXILIAR', 'medication:prescribe')).toBe(false);
+  });
+
+  it('solo sanitario y dirección prescriben y editan el PIA', () => {
+    expect(hasPermission('SANITARIO', 'medication:prescribe')).toBe(true);
+    expect(hasPermission('SANITARIO', 'careplan:write')).toBe(true);
+    expect(hasPermission('DIRECTOR', 'careplan:write')).toBe(true);
+    expect(hasPermission('AUXILIAR', 'careplan:write')).toBe(false);
+  });
 });

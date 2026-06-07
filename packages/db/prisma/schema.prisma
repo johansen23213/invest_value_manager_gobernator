@@ -192,6 +192,9 @@ model Resident {
   diagnoses   Diagnosis[]
   assessments Assessment[]
   careRecords CareRecord[]
+  medications Medication[]
+  administrations MedicationAdministration[]
+  carePlans   CarePlan[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -333,4 +336,129 @@ model SyncConflict {
   @@index([tenantId])
   @@index([careRecordId])
   @@map("sync_conflicts")
+}
+
+// ---------------------------------------------------------------------------
+// H4 — Medicación (prescripción + MAR) y PIA (plan individualizado)
+// ---------------------------------------------------------------------------
+
+enum MedAdminStatus {
+  ADMINISTRADO
+  NO_ADMINISTRADO
+  RECHAZADO
+}
+
+enum CarePlanStatus {
+  ACTIVO
+  CERRADO
+}
+
+enum GoalStatus {
+  PENDIENTE
+  EN_PROGRESO
+  CONSEGUIDO
+  CANCELADO
+}
+
+/// Prescripción de medicación. `times` son las horas de pauta (HH:MM) del día.
+model Medication {
+  id            String    @id @default(cuid())
+  tenantId      String    @map("tenant_id")
+  residentId    String    @map("resident_id")
+  resident      Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  name          String
+  dose          String
+  route         String?
+  times         Json // array de "HH:MM"
+  startDate     DateTime  @map("start_date")
+  endDate       DateTime? @map("end_date")
+  instructions  String?
+  active        Boolean   @default(true)
+  prescribedById String?  @map("prescribed_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  administrations MedicationAdministration[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("medications")
+}
+
+/// Registro de administración (MAR). Idempotente por (tenant, medicación, hora pautada).
+model MedicationAdministration {
+  id               String         @id @default(cuid())
+  tenantId         String         @map("tenant_id")
+  residentId       String         @map("resident_id")
+  resident         Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  medicationId     String         @map("medication_id")
+  medication       Medication     @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  scheduledAt      DateTime       @map("scheduled_at")
+  status           MedAdminStatus
+  administeredAt   DateTime?      @map("administered_at")
+  administeredById String?        @map("administered_by_id")
+  notes            String?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@unique([tenantId, medicationId, scheduledAt])
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("medication_administrations")
+}
+
+/// Plan Individualizado de Atención (PIA/PAI).
+model CarePlan {
+  id          String         @id @default(cuid())
+  tenantId    String         @map("tenant_id")
+  residentId  String         @map("resident_id")
+  resident    Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  title       String
+  status      CarePlanStatus @default(ACTIVO)
+  startDate   DateTime       @default(now()) @map("start_date")
+  notes       String?
+  createdById String?        @map("created_by_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  goals   CarePlanGoal[]
+  reviews CarePlanReview[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("care_plans")
+}
+
+/// Objetivo dentro de un PIA.
+model CarePlanGoal {
+  id            String     @id @default(cuid())
+  tenantId      String     @map("tenant_id")
+  carePlanId    String     @map("care_plan_id")
+  carePlan      CarePlan   @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  description   String
+  status        GoalStatus @default(PENDIENTE)
+  targetDate    DateTime?  @map("target_date")
+  progressNotes String?    @map("progress_notes")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([carePlanId])
+  @@map("care_plan_goals")
+}
+
+/// Revisión/seguimiento de un PIA.
+model CarePlanReview {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  carePlanId   String   @map("care_plan_id")
+  carePlan     CarePlan @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  reviewDate   DateTime @default(now()) @map("review_date")
+  summary      String
+  reviewedById String?  @map("reviewed_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([carePlanId])
+  @@map("care_plan_reviews")
 }

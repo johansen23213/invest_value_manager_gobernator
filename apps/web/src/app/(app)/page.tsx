@@ -7,14 +7,29 @@ import { api } from '@/trpc/react';
 export default function DashboardPage() {
   const centers = api.centers.list.useQuery();
   const residents = api.residents.list.useQuery();
+  const me = api.me.useQuery();
+  const canMeds = me.data?.permissions.includes('medication:read') ?? false;
+  const alerts = api.medications.alertsToday.useQuery(undefined, { enabled: canMeds });
 
   const totalCenters = centers.data?.length ?? 0;
   const totalResidents = residents.data?.length ?? 0;
   const occupied = residents.data?.filter((r) => r.bed).length ?? 0;
+  const alertCount = alerts.data?.length ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">Panel</h1>
+
+      {canMeds && alertCount > 0 && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <strong>{alertCount}</strong> dosis no administradas hoy.{' '}
+          {alerts.data?.slice(0, 3).map((a) => (
+            <span key={`${a.medicationId}-${a.scheduledAt}`} className="mr-2">
+              {a.residentName} ({a.medicationName})
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>

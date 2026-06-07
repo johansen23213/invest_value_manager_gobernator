@@ -14,6 +14,11 @@ export const PERMISSIONS = [
   'clinical:write', // diagnósticos, alergias, valoraciones
   'care:read', // registros de atención directa
   'care:write',
+  'medication:read',
+  'medication:prescribe',
+  'medication:administer', // MAR
+  'careplan:read', // PIA
+  'careplan:write',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -31,6 +36,11 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'clinical:write',
     'care:read',
     'care:write',
+    'medication:read',
+    'medication:prescribe',
+    'medication:administer',
+    'careplan:read',
+    'careplan:write',
   ],
   SANITARIO: [
     'tenant:read',
@@ -41,9 +51,23 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'clinical:write',
     'care:read',
     'care:write',
+    'medication:read',
+    'medication:prescribe',
+    'medication:administer',
+    'careplan:read',
+    'careplan:write',
   ],
-  // El auxiliar es quien registra la atención directa a pie de cama.
-  AUXILIAR: ['tenant:read', 'centers:read', 'residents:read', 'care:read', 'care:write'],
+  // El auxiliar registra atención directa y administra medicación (MAR).
+  AUXILIAR: [
+    'tenant:read',
+    'centers:read',
+    'residents:read',
+    'care:read',
+    'care:write',
+    'medication:read',
+    'medication:administer',
+    'careplan:read',
+  ],
   FAMILIAR: ['tenant:read'], // acceso al residente vinculado vía portal (H6)
 };
 

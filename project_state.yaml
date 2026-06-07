@@ -5,7 +5,7 @@ project:
   name: Vetlla
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
-  current_milestone: H4
+  current_milestone: H5
   last_updated: 2026-06-07
 
 # --------------------------------------------------------------------------
@@ -161,13 +161,31 @@ milestones:
 
   - id: H4
     name: Medicación + PIA
-    status: not_started
+    status: done
     effort: L
     goal: Prescripción, MAR con alertas de no-administrado, PIA con objetivos y revisión.
     exit_criteria:
       - Medication (prescripción) + MedicationAdministration (MAR).
       - Alertas de no-administración.
       - CarePlan (PIA) con CarePlanGoal y CarePlanReview.
+    result:
+      summary: >-
+        Medication + MedicationAdministration + CarePlan/Goal/Review (tenant_id +
+        RLS+FORCE). MAR calculado on-the-fly (computeSchedule/computeAlerts, lógica
+        pura) con alertas de no-administrado derivadas; registro idempotente por
+        (tenant, medicación, hora). Routers medications (prescribe/schedule/record/
+        alertsToday) y carePlans (plan/goal/review) con RBAC. UI: sub-páginas
+        medicación (prescripción + MAR + administrar) y PIA (objetivos + revisiones),
+        más alerta de no-administrado en el panel. Seed con medicación y PIA demo.
+      verified:
+        - "Web: 26 tests (mar 6, rbac 11, scales 5, schema 3, login 1)"
+        - "DB: 16 tests (sin cambios; RLS/sync siguen verdes)"
+        - "Runtime: prescripción -> dosis NO_ADMINISTRADO (alerta) -> administración por auxiliar -> resuelto; auxiliar no prescribe (FORBIDDEN); PIA crea plan+objetivo"
+        - "lint + build + typecheck verde; 42 tests en total"
+      adr: docs/adr/0005-medicacion-mar-pia.md
+      notes:
+        - "MAR no pre-genera dosis: se calculan; alerta = dosis vencida (>hora+60min) sin registro."
+        - "Numeración de migración RLS de H3 corregida (orden lexicográfico para deploy en fresco)."
 
   - id: H5
     name: IA Copilot

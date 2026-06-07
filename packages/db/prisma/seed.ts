@@ -149,6 +149,37 @@ async function seedResidents(
         isPrimary: true,
       },
     });
+
+    // Medicación (parte de los residentes). Pauta con dosis de mañana para que
+    // se generen alertas de no-administrado durante el día.
+    if (idx % 2 === 0) {
+      await db.medication.create({
+        data: {
+          tenantId,
+          residentId: resident.id,
+          name: pick(['Paracetamol', 'Omeprazol', 'Enalapril', 'Metformina'], idx),
+          dose: pick(['1g', '20mg', '10mg', '850mg'], idx),
+          times: ['08:00', '20:00'],
+          startDate: new Date(2024, 0, 1),
+        },
+      });
+    }
+
+    // PIA con objetivos y una revisión, en algunos residentes.
+    if (idx % 4 === 0) {
+      const plan = await db.carePlan.create({
+        data: { tenantId, residentId: resident.id, title: 'Plan de atención 2026' },
+      });
+      await db.carePlanGoal.create({
+        data: { tenantId, carePlanId: plan.id, description: 'Mantener la deambulación autónoma' },
+      });
+      await db.carePlanGoal.create({
+        data: { tenantId, carePlanId: plan.id, description: 'Mejorar la hidratación diaria' },
+      });
+      await db.carePlanReview.create({
+        data: { tenantId, carePlanId: plan.id, summary: 'Evolución estable. Continuar pauta.' },
+      });
+    }
   }
 }
 

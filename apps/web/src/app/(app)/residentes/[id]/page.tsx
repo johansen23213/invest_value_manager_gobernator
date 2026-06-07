@@ -86,6 +86,20 @@ export default function ResidentDetailPage() {
           Nacimiento: {fmtDate(r.birthDate)} · Ingreso: {fmtDate(r.admissionDate)} · DNI/NIE:{' '}
           {r.nationalId ?? '—'}
         </p>
+        <div className="mt-3 flex gap-2">
+          <Link
+            href={`/residentes/${residentId}/medicacion`}
+            className="min-h-touch rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100"
+          >
+            Medicación
+          </Link>
+          <Link
+            href={`/residentes/${residentId}/pia`}
+            className="min-h-touch rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100"
+          >
+            PIA
+          </Link>
+        </div>
       </div>
 
       {/* Escalas */}

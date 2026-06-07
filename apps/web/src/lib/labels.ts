@@ -58,6 +58,25 @@ export const CARE_TYPE_LABELS: Record<string, string> = {
   INCIDENCIA: 'Incidencia',
 };
 
+export const DOSE_STATUS_LABELS: Record<string, string> = {
+  PENDIENTE: 'Pendiente',
+  ADMINISTRADO: 'Administrado',
+  NO_ADMINISTRADO: 'No administrado',
+  RECHAZADO: 'Rechazado',
+};
+
+export const GOAL_STATUS_LABELS: Record<string, string> = {
+  PENDIENTE: 'Pendiente',
+  EN_PROGRESO: 'En progreso',
+  CONSEGUIDO: 'Conseguido',
+  CANCELADO: 'Cancelado',
+};
+
+export const CARE_PLAN_STATUS_LABELS: Record<string, string> = {
+  ACTIVO: 'Activo',
+  CERRADO: 'Cerrado',
+};
+
 export const ROLE_LABELS: Record<string, string> = {
   SUPERADMIN: 'Superadmin de plataforma',
   DIRECTOR: 'Dirección / gestor',
