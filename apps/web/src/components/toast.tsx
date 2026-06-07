@@ -10,15 +10,20 @@ import {
 
 // Sistema de notificaciones (UX-04). Accesible: aria-live="polite" + role="status".
 type ToastType = 'success' | 'error' | 'info';
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 interface Toast {
   id: number;
   type: ToastType;
   message: string;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  toast: (message: string, type?: ToastType) => void;
-  success: (message: string) => void;
+  toast: (message: string, type?: ToastType, action?: ToastAction) => void;
+  success: (message: string, action?: ToastAction) => void;
   error: (message: string) => void;
 }
 
@@ -40,15 +45,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toast = useCallback(
-    (message: string, type: ToastType = 'info') => {
+    (message: string, type: ToastType = 'info', action?: ToastAction) => {
       const id = ++counter;
-      setToasts((list) => [...list, { id, type, message }]);
-      setTimeout(() => remove(id), 4500);
+      setToasts((list) => [...list, { id, type, message, action }]);
+      setTimeout(() => remove(id), action ? 7000 : 4500);
     },
     [remove],
   );
 
-  const success = useCallback((m: string) => toast(m, 'success'), [toast]);
+  const success = useCallback(
+    (m: string, action?: ToastAction) => toast(m, 'success', action),
+    [toast],
+  );
   const error = useCallback((m: string) => toast(m, 'error'), [toast]);
 
   return (
@@ -62,17 +70,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm shadow-md ${TONE[t.type]}`}
+            className={`pointer-events-auto flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm shadow-md ${TONE[t.type]}`}
           >
             <span>{t.message}</span>
-            <button
-              type="button"
-              onClick={() => remove(t.id)}
-              aria-label="Cerrar"
-              className="text-slate-400 hover:text-slate-700"
-            >
-              ×
-            </button>
+            <span className="flex items-center gap-2">
+              {t.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    t.action?.onClick();
+                    remove(t.id);
+                  }}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  {t.action.label}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => remove(t.id)}
+                aria-label="Cerrar"
+                className="text-slate-400 hover:text-slate-700"
+              >
+                ×
+              </button>
+            </span>
           </div>
         ))}
       </div>

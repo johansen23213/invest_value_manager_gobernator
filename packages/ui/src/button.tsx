@@ -16,6 +16,7 @@ const buttonVariants = cva(
       size: {
         md: 'px-4 py-2 text-base',
         sm: 'px-3 py-1.5 text-sm',
+        lg: 'min-h-[56px] px-5 py-3 text-lg', // tablet / pie de cama
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },

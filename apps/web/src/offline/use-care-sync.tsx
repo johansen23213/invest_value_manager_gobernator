@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { allOutbox, isUnsynced, putOutbox } from './db';
+import { allOutbox, deleteOutbox, isUnsynced, putOutbox } from './db';
 import { syncOutbox } from './sync';
 import type { CarePayload, OutboxRecord } from './types';
 import type { CareRecordType } from '@vetlla/db';
@@ -23,7 +23,9 @@ interface EnqueueInput {
 interface CareSyncContextValue {
   online: boolean;
   pending: number;
-  enqueue: (input: EnqueueInput) => Promise<void>;
+  pendingItems: OutboxRecord[];
+  enqueue: (input: EnqueueInput) => Promise<string>;
+  undo: (clientId: string) => Promise<void>;
   syncNow: () => Promise<void>;
 }
 
@@ -31,11 +33,11 @@ const CareSyncContext = createContext<CareSyncContextValue | null>(null);
 
 export function CareSyncProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(true);
-  const [pending, setPending] = useState(0);
+  const [pendingItems, setPendingItems] = useState<OutboxRecord[]>([]);
 
   const refresh = useCallback(async () => {
     const all = await allOutbox();
-    setPending(all.filter(isUnsynced).length);
+    setPendingItems(all.filter(isUnsynced).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   }, []);
 
   const syncNow = useCallback(async () => {
@@ -54,8 +56,9 @@ export function CareSyncProvider({ children }: { children: ReactNode }) {
       const fieldTimestamps: Record<string, string> = {};
       for (const key of Object.keys(input.payload)) fieldTimestamps[key] = now;
 
+      const clientId = crypto.randomUUID();
       const record: OutboxRecord = {
-        clientId: crypto.randomUUID(),
+        clientId,
         residentId: input.residentId,
         residentName: input.residentName,
         type: input.type,
@@ -68,8 +71,22 @@ export function CareSyncProvider({ children }: { children: ReactNode }) {
       await putOutbox(record);
       await refresh();
       if (typeof navigator !== 'undefined' && navigator.onLine) await syncNow();
+      return clientId;
     },
     [refresh, syncNow],
+  );
+
+  // Deshacer: solo si el registro aún no se ha sincronizado en el servidor.
+  const undo = useCallback(
+    async (clientId: string) => {
+      const all = await allOutbox();
+      const rec = all.find((r) => r.clientId === clientId);
+      if (rec && isUnsynced(rec)) {
+        await deleteOutbox(clientId);
+        await refresh();
+      }
+    },
+    [refresh],
   );
 
   useEffect(() => {
@@ -94,7 +111,9 @@ export function CareSyncProvider({ children }: { children: ReactNode }) {
   }, [refresh, syncNow]);
 
   return (
-    <CareSyncContext.Provider value={{ online, pending, enqueue, syncNow }}>
+    <CareSyncContext.Provider
+      value={{ online, pending: pendingItems.length, pendingItems, enqueue, undo, syncNow }}
+    >
       {children}
     </CareSyncContext.Provider>
   );

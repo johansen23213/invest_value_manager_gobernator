@@ -28,6 +28,11 @@ export async function allOutbox(): Promise<OutboxRecord[]> {
   return db.getAll('outbox');
 }
 
+export async function deleteOutbox(clientId: string): Promise<void> {
+  const db = await getDb();
+  await db.delete('outbox', clientId);
+}
+
 export function isUnsynced(r: OutboxRecord): boolean {
   return r.status === 'PENDING' || r.status === 'ERROR';
 }
