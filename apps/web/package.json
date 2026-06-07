@@ -20,6 +20,7 @@
     "@vetlla/db": "workspace:*",
     "@vetlla/ui": "workspace:*",
     "bcryptjs": "^2.4.3",
+    "idb": "^8.0.1",
     "next": "^15.1.6",
     "next-auth": "^5.0.0-beta.25",
     "react": "^19.0.0",

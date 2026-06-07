@@ -43,4 +43,9 @@ describe('hasPermission', () => {
   it('el familiar no accede al listado general de residentes', () => {
     expect(hasPermission('FAMILIAR', 'residents:read')).toBe(false);
   });
+
+  it('el auxiliar registra atención directa', () => {
+    expect(hasPermission('AUXILIAR', 'care:write')).toBe(true);
+    expect(hasPermission('AUXILIAR', 'care:read')).toBe(true);
+  });
 });

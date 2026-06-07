@@ -12,6 +12,8 @@ export const PERMISSIONS = [
   'residents:read', // expediente del residente
   'residents:write',
   'clinical:write', // diagnósticos, alergias, valoraciones
+  'care:read', // registros de atención directa
+  'care:write',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -27,6 +29,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'residents:read',
     'residents:write',
     'clinical:write',
+    'care:read',
+    'care:write',
   ],
   SANITARIO: [
     'tenant:read',
@@ -35,8 +39,11 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'residents:read',
     'residents:write',
     'clinical:write',
+    'care:read',
+    'care:write',
   ],
-  AUXILIAR: ['tenant:read', 'centers:read', 'residents:read'],
+  // El auxiliar es quien registra la atención directa a pie de cama.
+  AUXILIAR: ['tenant:read', 'centers:read', 'residents:read', 'care:read', 'care:write'],
   FAMILIAR: ['tenant:read'], // acceso al residente vinculado vía portal (H6)
 };
 

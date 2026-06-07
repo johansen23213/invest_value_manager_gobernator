@@ -50,6 +50,14 @@ export const BED_STATUS_LABELS: Record<string, string> = {
   FUERA_SERVICIO: 'Fuera de servicio',
 };
 
+export const CARE_TYPE_LABELS: Record<string, string> = {
+  CONSTANTES: 'Constantes',
+  ABVD: 'ABVD',
+  DEPOSICION: 'Deposición',
+  INGESTA: 'Ingesta',
+  INCIDENCIA: 'Incidencia',
+};
+
 export const ROLE_LABELS: Record<string, string> = {
   SUPERADMIN: 'Superadmin de plataforma',
   DIRECTOR: 'Dirección / gestor',

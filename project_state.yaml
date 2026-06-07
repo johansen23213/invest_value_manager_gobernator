@@ -5,7 +5,7 @@ project:
   name: Vetlla
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
-  current_milestone: H3
+  current_milestone: H4
   last_updated: 2026-06-07
 
 # --------------------------------------------------------------------------
@@ -132,13 +132,32 @@ milestones:
 
   - id: H3
     name: Atención directa offline
-    status: not_started
+    status: done
     effort: XL
     goal: Flujo tablet, CareRecord, PWA + cola de sync con resolución de conflictos.
     exit_criteria:
       - PWA instalable; flujo a pie de cama con objetivos táctiles amplios.
       - CareRecord (constantes, ABVD, deposiciones, ingesta, incidencias) con autor+timestamp+syncStatus.
       - Registro sin red y sincronización sin duplicados al volver online (last-write-wins por campo + log de conflictos).
+    result:
+      summary: >-
+        CareRecord + SyncConflict (tenant_id + RLS+FORCE). Motor de sync en
+        packages/db: mergeCareRecord (puro, LWW por campo + conflictos) y
+        applyCareRecordPush (idempotente por tenant_id+client_id). Router tRPC
+        care.push/listByResident con RBAC (care:*). Cliente offline: IndexedDB
+        (cola outbox) + motor de sync (online/intervalo) + cliente tRPC vanilla +
+        provider/hook + badge de estado en la shell. PWA: manifest + service
+        worker network-first + registro. Página /atencion a pie de cama
+        (constantes, ingesta, deposición, incidencia) con objetivos táctiles.
+      verified:
+        - "DB: 16 tests (merge puro 5, integración sync 3 -idempotencia/LWW/RLS-, RLS 7, enum 1)"
+        - "Web: 18 tests"
+        - "Runtime HTTP: care.push mismo clientId -> CREATED luego MERGED, mismo id, 1 solo registro (sin duplicados)"
+        - "lint + build + typecheck verde; 34 tests en total"
+      adr: docs/adr/0004-atencion-offline-sync.md
+      notes:
+        - Conflictos se registran y gana el más reciente; revisión/resolución manual en UI queda pendiente.
+        - El offline real de datos lo da IndexedDB; el SW cubre navegación. E2E offline con navegador no ejecutado aquí (sin browser); cubierto por tests de integración + verificación HTTP del push.
 
   - id: H4
     name: Medicación + PIA

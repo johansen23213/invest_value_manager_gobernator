@@ -191,6 +191,7 @@ model Resident {
   allergies   Allergy[]
   diagnoses   Diagnosis[]
   assessments Assessment[]
+  careRecords CareRecord[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -268,4 +269,68 @@ model Assessment {
   @@index([tenantId])
   @@index([residentId])
   @@map("assessments")
+}
+
+// ---------------------------------------------------------------------------
+// H3 — Atención directa offline-first
+// ---------------------------------------------------------------------------
+
+enum CareRecordType {
+  CONSTANTES // tensión, FC, temperatura, SatO2...
+  ABVD // actividades básicas de la vida diaria
+  DEPOSICION
+  INGESTA
+  INCIDENCIA
+}
+
+enum SyncStatus {
+  SYNCED
+  CONFLICT // hubo conflicto en la última fusión (ver SyncConflict)
+}
+
+enum ConflictWinner {
+  SERVER
+  CLIENT
+}
+
+/// Registro de atención directa. Creado a pie de cama, posiblemente offline.
+/// La idempotencia se garantiza por (tenant_id, client_id): reenviar no duplica.
+model CareRecord {
+  id              String         @id @default(cuid())
+  tenantId        String         @map("tenant_id")
+  residentId      String         @map("resident_id")
+  resident        Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type            CareRecordType
+  clientId        String         @map("client_id") // uuid generado en el dispositivo
+  payload         Json // valores estructurados (varían por tipo)
+  fieldTimestamps Json           @map("field_timestamps") // campo -> ISO timestamp (LWW por campo)
+  recordedAt      DateTime       @map("recorded_at") // momento clínico (del dispositivo)
+  authorId        String         @map("author_id") // user.id que registró
+  syncStatus      SyncStatus     @default(SYNCED) @map("sync_status")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  conflicts SyncConflict[]
+
+  @@unique([tenantId, clientId])
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("care_records")
+}
+
+/// Registro de conflicto de sincronización (last-write-wins por campo).
+model SyncConflict {
+  id           String         @id @default(cuid())
+  tenantId     String         @map("tenant_id")
+  careRecordId String         @map("care_record_id")
+  careRecord   CareRecord     @relation(fields: [careRecordId], references: [id], onDelete: Cascade)
+  field        String
+  serverValue  Json?          @map("server_value")
+  clientValue  Json?          @map("client_value")
+  winner       ConflictWinner
+  resolvedAt   DateTime       @default(now()) @map("resolved_at")
+
+  @@index([tenantId])
+  @@index([careRecordId])
+  @@map("sync_conflicts")
 }
