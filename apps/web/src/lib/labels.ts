@@ -65,6 +65,12 @@ export const DOSE_STATUS_LABELS: Record<string, string> = {
   RECHAZADO: 'Rechazado',
 };
 
+export const SHIFT_LABELS: Record<string, string> = {
+  MANANA: 'Mañana',
+  TARDE: 'Tarde',
+  NOCHE: 'Noche',
+};
+
 export const GOAL_STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
   EN_PROGRESO: 'En progreso',

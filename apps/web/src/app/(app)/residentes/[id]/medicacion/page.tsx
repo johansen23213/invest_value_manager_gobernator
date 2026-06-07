@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle, Input, Label } from '@vetlla/ui';
 import { api } from '@/trpc/react';
-import { DOSE_STATUS_LABELS } from '@/lib/labels';
-import type { DoseStatus } from '@/lib/mar';
+import { DOSE_STATUS_LABELS, SHIFT_LABELS } from '@/lib/labels';
+import { groupByShift, type DoseStatus } from '@/lib/mar';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
 import { useT } from '@/i18n/provider';
@@ -69,7 +69,7 @@ export default function MedicationPage() {
   async function reject(medicationId: string, scheduledAt: string) {
     const result = await confirm({
       title: 'Marcar como rechazada',
-      description: 'Indica el motivo por el que no se administra la dosis.',
+      description: 'El residente rechaza la dosis. Indica el motivo.',
       confirmLabel: 'Registrar',
       tone: 'danger',
       reason: { label: 'Motivo', required: true, placeholder: 'p. ej. el residente la rechaza' },
@@ -78,6 +78,22 @@ export default function MedicationPage() {
       record.mutate({ medicationId, scheduledAt: new Date(scheduledAt), status: 'RECHAZADO', notes: result.reason });
     }
   }
+
+  async function notAdministered(medicationId: string, scheduledAt: string) {
+    const result = await confirm({
+      title: 'Marcar como no administrada',
+      description: 'La dosis no se administra. Indica el motivo (obligatorio).',
+      confirmLabel: 'Registrar',
+      tone: 'danger',
+      reason: { label: 'Motivo', required: true, placeholder: 'p. ej. en ayunas para analítica' },
+    });
+    if (result) {
+      record.mutate({ medicationId, scheduledAt: new Date(scheduledAt), status: 'NO_ADMINISTRADO', notes: result.reason });
+    }
+  }
+
+  // Pase de medicación agrupado por turno (UX-17).
+  const shiftGroups = useMemo(() => groupByShift(schedule.data ?? []), [schedule.data]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,33 +112,46 @@ export default function MedicationPage() {
           <CardTitle className="mb-3 text-base">Pauta de hoy (MAR)</CardTitle>
           {schedule.isLoading ? (
             <p className="text-slate-500">Cargando…</p>
-          ) : schedule.data && schedule.data.length > 0 ? (
-            <ul className="flex flex-col gap-2">
-              {schedule.data.map((d) => (
-                <li
-                  key={`${d.medicationId}-${d.scheduledAt}`}
-                  className={`flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${d.overdue ? 'bg-red-50' : 'bg-slate-50'}`}
-                >
-                  <span>
-                    <strong>{formatTime(locale, d.scheduledAt)}</strong> {d.medicationName} ({d.dose}){' '}
-                    <Badge tone={STATUS_TONE[d.status]}>{DOSE_STATUS_LABELS[d.status]}</Badge>
-                  </span>
-                  {canAdminister && (
-                    <span className="flex gap-1">
-                      <Button
-                        size="sm"
-                        onClick={() => record.mutate({ medicationId: d.medicationId, scheduledAt: new Date(d.scheduledAt), status: 'ADMINISTRADO' })}
+          ) : shiftGroups.length > 0 ? (
+            <div className="flex flex-col gap-5">
+              {shiftGroups.map((group) => (
+                <section key={group.shift} aria-label={`Turno de ${SHIFT_LABELS[group.shift]}`}>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {SHIFT_LABELS[group.shift]}
+                  </h3>
+                  <ul className="flex flex-col gap-2">
+                    {group.doses.map((d) => (
+                      <li
+                        key={`${d.medicationId}-${d.scheduledAt}`}
+                        className={`flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${d.overdue ? 'bg-red-50' : 'bg-slate-50'}`}
                       >
-                        Administrar
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => reject(d.medicationId, d.scheduledAt)}>
-                        Rechazada
-                      </Button>
-                    </span>
-                  )}
-                </li>
+                        <span>
+                          <strong>{formatTime(locale, d.scheduledAt)}</strong> {d.medicationName} ({d.dose}){' '}
+                          <Badge tone={STATUS_TONE[d.status]}>{DOSE_STATUS_LABELS[d.status]}</Badge>
+                          {d.notes && <span className="ml-1 text-slate-500">— {d.notes}</span>}
+                        </span>
+                        {canAdminister && (
+                          <span className="flex flex-wrap gap-1">
+                            <Button
+                              size="sm"
+                              onClick={() => record.mutate({ medicationId: d.medicationId, scheduledAt: new Date(d.scheduledAt), status: 'ADMINISTRADO' })}
+                            >
+                              Administrar
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => reject(d.medicationId, d.scheduledAt)}>
+                              Rechazada
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => notAdministered(d.medicationId, d.scheduledAt)}>
+                              No administrada
+                            </Button>
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </div>
           ) : (
             <p className="text-sm text-slate-500">Sin dosis pautadas para hoy.</p>
           )}

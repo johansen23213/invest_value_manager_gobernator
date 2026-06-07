@@ -180,8 +180,9 @@ function toAdminForSchedule(a: {
   medicationId: string;
   scheduledAt: Date;
   status: MedForScheduleStatus;
+  notes?: string | null;
 }): AdminForSchedule {
-  return { medicationId: a.medicationId, scheduledAt: a.scheduledAt, status: a.status };
+  return { medicationId: a.medicationId, scheduledAt: a.scheduledAt, status: a.status, notes: a.notes };
 }
 
 type MedForScheduleStatus = 'ADMINISTRADO' | 'NO_ADMINISTRADO' | 'RECHAZADO';

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Button,
@@ -10,6 +10,7 @@ import {
   EmptyState,
   Input,
   Label,
+  Pagination,
   Select,
   Skeleton,
   Table,
@@ -22,6 +23,7 @@ import { useToast } from '@/components/toast';
 
 const GRADES = ['SIN_VALORAR', 'GRADO_I', 'GRADO_II', 'GRADO_III'] as const;
 const STATUSES = ['ACTIVO', 'PREINGRESO', 'BAJA'] as const;
+const PAGE_SIZE = 20;
 
 export default function ResidentsPage() {
   const utils = api.useUtils();
@@ -61,6 +63,22 @@ export default function ResidentsPage() {
       return true;
     });
   }, [residents.data, query, centerFilter, statusFilter]);
+
+  // Paginación (UX-10): se aplica sobre el resultado filtrado.
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Al cambiar los filtros/búsqueda, vuelve a la primera página.
+  useEffect(() => {
+    setPage(1);
+  }, [query, centerFilter, statusFilter]);
+  // Mantén la página dentro de rango si el conjunto encoge.
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+  const paginated = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,7 +183,7 @@ export default function ResidentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => (
+                  {paginated.map((r) => (
                     <tr key={r.id}>
                       <Td>
                         <Link href={`/residentes/${r.id}`} className="font-medium text-brand-700 hover:underline">
@@ -184,6 +202,13 @@ export default function ResidentsPage() {
                   ))}
                 </tbody>
               </Table>
+              <Pagination
+                className="mt-4"
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                label="Paginación de residentes"
+              />
             </>
           ) : residents.data && residents.data.length > 0 ? (
             <EmptyState title="Sin resultados" description="Prueba a cambiar la búsqueda o los filtros." />

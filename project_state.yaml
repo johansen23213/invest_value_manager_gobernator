@@ -7,6 +7,8 @@ project:
   phase: building            # planning | building | done
   current_milestone: H5      # único pendiente (diferido); resto del MVP completo
   last_updated: 2026-06-07
+  # 2026-06-07: cerrada deuda de UX en estado "doing": UX-10 (paginación de
+  # listados) y UX-17 (MAR por turno + motivo en no-administrado). 54 tests verde.
 
 # --------------------------------------------------------------------------
 # Decisiones tomadas (las no triviales también van a docs/adr/)
@@ -280,14 +282,14 @@ ux_backlog:
     - { id: UX-07, titulo: "Identidad visual / tokens de marca (Vetlla teal)", prioridad: sprint1, estado: done }
     - { id: UX-08, titulo: "Design system accesible (Radix/shadcn): Dialog, Toast, Tabs…", prioridad: sprint1, estado: todo }
     - { id: UX-09, titulo: "Patrón de formularios con validación inline (Zod en cliente)", prioridad: sprint1, estado: todo }
-    - { id: UX-10, titulo: "Búsqueda y filtros en listados (paginación pendiente)", prioridad: sprint1, estado: doing }
+    - { id: UX-10, titulo: "Búsqueda y filtros en listados + paginación", prioridad: sprint1, estado: done }
     - { id: UX-11, titulo: "Migas de pan y cabecera de residente persistente", prioridad: backlog, estado: todo }
     - { id: UX-12, titulo: "Expediente en pestañas", prioridad: backlog, estado: todo }
     - { id: UX-13, titulo: "Auxiliar: lista 'mi unidad' de 1 toque", prioridad: sprint1, estado: done }
     - { id: UX-14, titulo: "Auxiliar: confirmación con deshacer + pendientes de sync", prioridad: sprint1, estado: done }
     - { id: UX-15, titulo: "Entrada táctil (inputMode, steppers, botones grandes)", prioridad: sprint1, estado: done }
     - { id: UX-16, titulo: "Indicador offline visible y educativo", prioridad: backlog, estado: done }
-    - { id: UX-17, titulo: "MAR como pase por turno + motivo en no-administrado", prioridad: sprint1, estado: doing }
+    - { id: UX-17, titulo: "MAR como pase por turno + motivo en no-administrado", prioridad: sprint1, estado: done }
     - { id: UX-18, titulo: "Centro de alertas priorizado", prioridad: backlog, estado: todo }
     - { id: UX-19, titulo: "Dirección: plano de ocupación + KPIs", prioridad: backlog, estado: todo }
     - { id: UX-20, titulo: "Portal de familias más humano + control de privacidad", prioridad: backlog, estado: todo }
