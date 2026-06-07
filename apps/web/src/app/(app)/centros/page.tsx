@@ -110,7 +110,7 @@ export default function CentersPage() {
                 {filtered.map((c) => (
                   <tr key={c.id}>
                     <Td>
-                      <Link href={`/centros/${c.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/centros/${c.id}`} className="font-medium text-brand-700 hover:underline">
                         {c.name}
                       </Link>
                     </Td>

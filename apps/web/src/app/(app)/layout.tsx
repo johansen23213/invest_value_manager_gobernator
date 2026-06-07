@@ -8,6 +8,7 @@ import { SyncStatusBadge } from '@/offline/sync-status-badge';
 import { LocaleSwitcher } from '@/i18n/locale-switcher';
 import { ToastProvider } from '@/components/toast';
 import { ConfirmProvider } from '@/components/confirm';
+import { Logo } from '@/components/logo';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -24,8 +25,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="flex items-center gap-6">
-              <Link href={isFamily ? '/portal' : '/'} className="text-lg font-bold">
-                {t('app.name')}
+              <Link href={isFamily ? '/portal' : '/'} aria-label={t('app.name')}>
+                <Logo />
               </Link>
               <nav className="flex items-center gap-1 text-sm" aria-label="Principal">
                 {isFamily ? (

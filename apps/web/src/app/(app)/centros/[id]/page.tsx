@@ -88,7 +88,7 @@ export default function CenterDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href="/centros" className="text-sm text-blue-600 hover:underline">
+        <Link href="/centros" className="text-sm text-brand-700 hover:underline">
           ← Centros
         </Link>
         <h1 className="mt-1 text-2xl font-bold">{c.name}</h1>

@@ -259,7 +259,7 @@ ux_backlog:
     - { id: UX-04, titulo: "Sistema de notificaciones (toasts) + errores consistentes", prioridad: ya, estado: done }
     - { id: UX-05, titulo: "Estados de carga (skeletons) y vacíos con CTA", prioridad: sprint1, estado: done }
     - { id: UX-06, titulo: "Reequilibrar el Panel + accesos rápidos por rol", prioridad: sprint1, estado: done }
-    - { id: UX-07, titulo: "Identidad visual / tokens de marca", prioridad: sprint1, estado: todo }
+    - { id: UX-07, titulo: "Identidad visual / tokens de marca (Vetlla teal)", prioridad: sprint1, estado: done }
     - { id: UX-08, titulo: "Design system accesible (Radix/shadcn): Dialog, Toast, Tabs…", prioridad: sprint1, estado: todo }
     - { id: UX-09, titulo: "Patrón de formularios con validación inline (Zod en cliente)", prioridad: sprint1, estado: todo }
     - { id: UX-10, titulo: "Búsqueda y filtros en listados (paginación pendiente)", prioridad: sprint1, estado: doing }

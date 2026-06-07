@@ -167,7 +167,7 @@ export default function CarePage() {
           <button
             type="button"
             onClick={() => setResidentId('')}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-brand-700 hover:underline"
           >
             ← Mi unidad
           </button>

@@ -12,7 +12,7 @@ function Kpi({ label, value, loading, href, cta }: { label: string; value: numbe
         <p className="text-sm text-slate-500">{label}</p>
         {loading ? <Skeleton className="mt-1 h-9 w-16" /> : <p className="text-3xl font-bold">{value}</p>}
         {href && cta && (
-          <Link href={href} className="text-sm text-blue-600 hover:underline">
+          <Link href={href} className="text-sm text-brand-700 hover:underline">
             {cta} →
           </Link>
         )}

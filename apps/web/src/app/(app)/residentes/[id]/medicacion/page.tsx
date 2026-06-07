@@ -82,7 +82,7 @@ export default function MedicationPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href={`/residentes/${residentId}`} className="text-sm text-blue-600 hover:underline">
+        <Link href={`/residentes/${residentId}`} className="text-sm text-brand-700 hover:underline">
           ← Expediente
         </Link>
         <h1 className="mt-1 text-2xl font-bold">

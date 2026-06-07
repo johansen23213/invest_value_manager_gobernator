@@ -168,7 +168,7 @@ export default function ResidentsPage() {
                   {filtered.map((r) => (
                     <tr key={r.id}>
                       <Td>
-                        <Link href={`/residentes/${r.id}`} className="font-medium text-blue-600 hover:underline">
+                        <Link href={`/residentes/${r.id}`} className="font-medium text-brand-700 hover:underline">
                           {r.lastName}, {r.firstName}
                         </Link>
                       </Td>
