@@ -38,7 +38,7 @@ export const medicationsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const resident = await ctx.db.resident.findUnique({ where: { id: input.residentId } });
       if (!resident) throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
-      return ctx.db.medication.create({
+      const medication = await ctx.db.medication.create({
         data: {
           tenantId: ctx.tenantId,
           residentId: input.residentId,
@@ -52,6 +52,13 @@ export const medicationsRouter = createTRPCRouter({
           prescribedById: ctx.session.user.id,
         },
       });
+      await ctx.audit({
+        action: 'CREATE',
+        entity: 'Medication',
+        entityId: input.residentId,
+        summary: `Prescripción: ${input.name} ${input.dose}`,
+      });
+      return medication;
     }),
 
   setActive: permissionProcedure('medication:prescribe')
@@ -92,7 +99,7 @@ export const medicationsRouter = createTRPCRouter({
       const med = await ctx.db.medication.findUnique({ where: { id: input.medicationId } });
       if (!med) throw new TRPCError({ code: 'NOT_FOUND', message: 'Medicación no encontrada.' });
       const administeredAt = input.status === MedAdminStatus.ADMINISTRADO ? new Date() : null;
-      return ctx.db.medicationAdministration.upsert({
+      const administration = await ctx.db.medicationAdministration.upsert({
         where: {
           tenantId_medicationId_scheduledAt: {
             tenantId: ctx.tenantId,
@@ -117,6 +124,14 @@ export const medicationsRouter = createTRPCRouter({
           administeredById: ctx.session.user.id,
         },
       });
+      await ctx.audit({
+        action: 'ADMINISTER',
+        entity: 'MedicationAdministration',
+        entityId: med.residentId,
+        summary: `${med.name}: ${input.status}`,
+        metadata: { medicationId: input.medicationId, scheduledAt: input.scheduledAt.toISOString() },
+      });
+      return administration;
     }),
 
   /** Alertas de no-administrado de hoy en todo el tenant (para el panel). */

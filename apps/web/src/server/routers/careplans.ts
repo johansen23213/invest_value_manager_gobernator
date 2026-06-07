@@ -28,7 +28,7 @@ export const carePlansRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const resident = await ctx.db.resident.findUnique({ where: { id: input.residentId } });
       if (!resident) throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
-      return ctx.db.carePlan.create({
+      const plan = await ctx.db.carePlan.create({
         data: {
           tenantId: ctx.tenantId,
           residentId: input.residentId,
@@ -37,6 +37,8 @@ export const carePlansRouter = createTRPCRouter({
           createdById: ctx.session.user.id,
         },
       });
+      await ctx.audit({ action: 'CREATE', entity: 'CarePlan', entityId: input.residentId, summary: `PIA creado: ${input.title}` });
+      return plan;
     }),
 
   addGoal: permissionProcedure('careplan:write')
@@ -78,7 +80,7 @@ export const carePlansRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const plan = await ctx.db.carePlan.findUnique({ where: { id: input.carePlanId } });
       if (!plan) throw new TRPCError({ code: 'NOT_FOUND', message: 'PIA no encontrado.' });
-      return ctx.db.carePlanReview.create({
+      const review = await ctx.db.carePlanReview.create({
         data: {
           tenantId: ctx.tenantId,
           carePlanId: input.carePlanId,
@@ -86,5 +88,7 @@ export const carePlansRouter = createTRPCRouter({
           reviewedById: ctx.session.user.id,
         },
       });
+      await ctx.audit({ action: 'CREATE', entity: 'CarePlanReview', entityId: plan.residentId, summary: 'Revisión de PIA' });
+      return review;
     }),
 });

@@ -1,19 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Badge, Button, Card, CardContent, Input, Label, Select, Table, Td, Th } from '@vetlla/ui';
+import { useMemo, useState } from 'react';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+} from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { CENTER_TYPE_LABELS } from '@/lib/labels';
+import { useToast } from '@/components/toast';
 
 const CENTER_TYPES = ['RESIDENCIA', 'CENTRO_DIA', 'VIVIENDA_TUTELADA'] as const;
 
 export default function CentersPage() {
   const utils = api.useUtils();
+  const toast = useToast();
   const me = api.me.useQuery();
   const centers = api.centers.list.useQuery();
   const canWrite = me.data?.permissions.includes('centers:write') ?? false;
 
+  const [query, setQuery] = useState('');
   const [name, setName] = useState('');
   const [type, setType] = useState<(typeof CENTER_TYPES)[number]>('RESIDENCIA');
 
@@ -21,8 +37,15 @@ export default function CentersPage() {
     onSuccess: async () => {
       setName('');
       await utils.centers.list.invalidate();
+      toast.success('Centro creado.');
     },
+    onError: (e) => toast.error(e.message),
   });
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (centers.data ?? []).filter((c) => !q || c.name.toLowerCase().includes(q));
+  }, [centers.data, query]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,22 +63,11 @@ export default function CentersPage() {
             >
               <div className="flex-1">
                 <Label htmlFor="name">Nombre</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  minLength={2}
-                  placeholder="Residencia Los Olivos"
-                />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} placeholder="Residencia Los Olivos" />
               </div>
               <div>
                 <Label htmlFor="type">Tipo</Label>
-                <Select
-                  id="type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value as (typeof CENTER_TYPES)[number])}
-                >
+                <Select id="type" value={type} onChange={(e) => setType(e.target.value as (typeof CENTER_TYPES)[number])}>
                   {CENTER_TYPES.map((t) => (
                     <option key={t} value={t}>
                       {CENTER_TYPE_LABELS[t]}
@@ -67,20 +79,24 @@ export default function CentersPage() {
                 {create.isPending ? 'Creando…' : 'Crear centro'}
               </Button>
             </form>
-            {create.error && (
-              <p role="alert" className="mt-2 text-sm text-red-600">
-                {create.error.message}
-              </p>
-            )}
           </CardContent>
         </Card>
       )}
 
+      <div className="max-w-sm">
+        <Label htmlFor="q">Buscar</Label>
+        <Input id="q" type="search" placeholder="Nombre del centro…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      </div>
+
       <Card>
         <CardContent>
           {centers.isLoading ? (
-            <p className="text-slate-500">Cargando…</p>
-          ) : centers.data && centers.data.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : filtered.length > 0 ? (
             <Table>
               <thead>
                 <tr>
@@ -91,10 +107,10 @@ export default function CentersPage() {
                 </tr>
               </thead>
               <tbody>
-                {centers.data.map((c) => (
+                {filtered.map((c) => (
                   <tr key={c.id}>
                     <Td>
-                      <Link href={`/centros/${c.id}`} className="font-medium text-blue-600 hover:underline">
+                      <Link href={`/centros/${c.id}`} className="font-medium text-brand-700 hover:underline">
                         {c.name}
                       </Link>
                     </Td>
@@ -107,8 +123,10 @@ export default function CentersPage() {
                 ))}
               </tbody>
             </Table>
+          ) : centers.data && centers.data.length > 0 ? (
+            <EmptyState title="Sin resultados" description="Ningún centro coincide con la búsqueda." />
           ) : (
-            <p className="text-slate-500">No hay centros todavía.</p>
+            <EmptyState title="No hay centros todavía" description={canWrite ? 'Crea el primero con el formulario de arriba.' : undefined} />
           )}
         </CardContent>
       </Card>

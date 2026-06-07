@@ -6,6 +6,9 @@ import { useState } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle, Input, Label, Select } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { CARE_PLAN_STATUS_LABELS, GOAL_STATUS_LABELS } from '@/lib/labels';
+import { useT } from '@/i18n/provider';
+import { formatDate } from '@/lib/format';
+import { useToast } from '@/components/toast';
 import type { GoalStatus } from '@vetlla/db';
 
 const GOAL_STATUSES: GoalStatus[] = ['PENDIENTE', 'EN_PROGRESO', 'CONSEGUIDO', 'CANCELADO'];
@@ -14,6 +17,8 @@ export default function CarePlanPage() {
   const params = useParams<{ id: string }>();
   const residentId = params.id;
   const utils = api.useUtils();
+  const toast = useToast();
+  const { locale } = useT();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('careplan:write') ?? false;
 
@@ -30,16 +35,27 @@ export default function CarePlanPage() {
     onSuccess: async () => {
       setTitle('');
       await refresh();
+      toast.success('PIA creado.');
     },
+    onError: (e) => toast.error(e.message),
   });
-  const addGoal = api.carePlans.addGoal.useMutation({ onSuccess: refresh });
-  const updateGoal = api.carePlans.updateGoal.useMutation({ onSuccess: refresh });
-  const addReview = api.carePlans.addReview.useMutation({ onSuccess: refresh });
+  const addGoal = api.carePlans.addGoal.useMutation({
+    onSuccess: refresh,
+    onError: (e) => toast.error(e.message),
+  });
+  const updateGoal = api.carePlans.updateGoal.useMutation({
+    onSuccess: refresh,
+    onError: (e) => toast.error(e.message),
+  });
+  const addReview = api.carePlans.addReview.useMutation({
+    onSuccess: refresh,
+    onError: (e) => toast.error(e.message),
+  });
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href={`/residentes/${residentId}`} className="text-sm text-blue-600 hover:underline">
+        <Link href={`/residentes/${residentId}`} className="text-sm text-brand-700 hover:underline">
           ← Expediente
         </Link>
         <h1 className="mt-1 text-2xl font-bold">
@@ -138,7 +154,7 @@ export default function CarePlanPage() {
                   {plan.reviews.map((rv) => (
                     <li key={rv.id} className="rounded-md bg-slate-50 px-3 py-2">
                       <span className="text-slate-400">
-                        {new Date(rv.reviewDate).toLocaleDateString('es-ES')}:
+                        {formatDate(locale, rv.reviewDate)}:
                       </span>{' '}
                       {rv.summary}
                     </li>

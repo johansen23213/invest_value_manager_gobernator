@@ -63,14 +63,28 @@ export const residentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const center = await ctx.db.center.findUnique({ where: { id: input.centerId } });
       if (!center) throw new TRPCError({ code: 'NOT_FOUND', message: 'Centro no encontrado.' });
-      return ctx.db.resident.create({ data: { ...input, tenantId: ctx.tenantId } });
+      const resident = await ctx.db.resident.create({ data: { ...input, tenantId: ctx.tenantId } });
+      await ctx.audit({
+        action: 'CREATE',
+        entity: 'Resident',
+        entityId: resident.id,
+        summary: `Alta de residente ${resident.firstName} ${resident.lastName}`,
+      });
+      return resident;
     }),
 
   update: permissionProcedure('residents:write')
     .input(residentInput.partial().extend({ id: z.string() }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
-      return ctx.db.resident.update({ where: { id }, data });
+      const resident = await ctx.db.resident.update({ where: { id }, data });
+      await ctx.audit({
+        action: 'UPDATE',
+        entity: 'Resident',
+        entityId: id,
+        summary: `Modificación del expediente de ${resident.firstName} ${resident.lastName}`,
+      });
+      return resident;
     }),
 
   // --- Sub-recursos del expediente ---------------------------------------
@@ -89,9 +103,11 @@ export const residentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertResident(ctx.db, input.residentId);
       const { residentId, ...rest } = input;
-      return ctx.db.emergencyContact.create({
+      const contact = await ctx.db.emergencyContact.create({
         data: { ...rest, residentId, tenantId: ctx.tenantId },
       });
+      await ctx.audit({ action: 'CREATE', entity: 'EmergencyContact', entityId: residentId, summary: `Contacto añadido: ${rest.name}` });
+      return contact;
     }),
 
   addAllergy: permissionProcedure('clinical:write')
@@ -106,7 +122,9 @@ export const residentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertResident(ctx.db, input.residentId);
       const { residentId, ...rest } = input;
-      return ctx.db.allergy.create({ data: { ...rest, residentId, tenantId: ctx.tenantId } });
+      const allergy = await ctx.db.allergy.create({ data: { ...rest, residentId, tenantId: ctx.tenantId } });
+      await ctx.audit({ action: 'CREATE', entity: 'Allergy', entityId: residentId, summary: `Alergia registrada: ${rest.substance}` });
+      return allergy;
     }),
 
   addDiagnosis: permissionProcedure('clinical:write')
@@ -121,7 +139,9 @@ export const residentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await assertResident(ctx.db, input.residentId);
       const { residentId, ...rest } = input;
-      return ctx.db.diagnosis.create({ data: { ...rest, residentId, tenantId: ctx.tenantId } });
+      const diagnosis = await ctx.db.diagnosis.create({ data: { ...rest, residentId, tenantId: ctx.tenantId } });
+      await ctx.audit({ action: 'CREATE', entity: 'Diagnosis', entityId: residentId, summary: `Diagnóstico: ${rest.description}` });
+      return diagnosis;
     }),
 
   addAssessment: permissionProcedure('clinical:write')
@@ -142,7 +162,7 @@ export const residentsRouter = createTRPCRouter({
         });
       }
       await assertResident(ctx.db, input.residentId);
-      return ctx.db.assessment.create({
+      const assessment = await ctx.db.assessment.create({
         data: {
           residentId: input.residentId,
           type: input.type,
@@ -153,5 +173,7 @@ export const residentsRouter = createTRPCRouter({
           tenantId: ctx.tenantId,
         },
       });
+      await ctx.audit({ action: 'CREATE', entity: 'Assessment', entityId: input.residentId, summary: `Valoración ${input.type}: ${input.score}` });
+      return assessment;
     }),
 });

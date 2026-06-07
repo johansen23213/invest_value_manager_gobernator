@@ -6,6 +6,10 @@ import { getT } from '@/i18n/server';
 import { CareSyncProvider } from '@/offline/use-care-sync';
 import { SyncStatusBadge } from '@/offline/sync-status-badge';
 import { LocaleSwitcher } from '@/i18n/locale-switcher';
+import { ToastProvider } from '@/components/toast';
+import { ConfirmProvider } from '@/components/confirm';
+import { Logo } from '@/components/logo';
+import { hasPermission } from '@/lib/rbac';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -16,12 +20,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <CareSyncProvider>
+      <ToastProvider>
+        <ConfirmProvider>
       <div className="min-h-screen">
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="flex items-center gap-6">
-              <Link href={isFamily ? '/portal' : '/'} className="text-lg font-bold">
-                {t('app.name')}
+              <Link href={isFamily ? '/portal' : '/'} aria-label={t('app.name')}>
+                <Logo />
               </Link>
               <nav className="flex items-center gap-1 text-sm" aria-label="Principal">
                 {isFamily ? (
@@ -42,6 +48,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                     <Link href="/atencion" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.care')}
                     </Link>
+                    {hasPermission(user.role, 'audit:read') && (
+                      <Link href="/auditoria" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        Actividad
+                      </Link>
+                    )}
                   </>
                 )}
               </nav>
@@ -68,10 +79,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main id="contenido" className="mx-auto max-w-5xl px-4 py-8">
-          {children}
-        </main>
-      </div>
+          <main id="contenido" className="mx-auto max-w-5xl px-4 py-8">
+            {children}
+          </main>
+        </div>
+        </ConfirmProvider>
+      </ToastProvider>
     </CareSyncProvider>
   );
 }

@@ -20,9 +20,24 @@ export const careRouter = createTRPCRouter({
    */
   push: permissionProcedure('care:write')
     .input(z.object({ records: z.array(incomingRecord).max(200) }))
-    .mutation(({ ctx, input }) =>
-      applyCareRecordPush(ctx.db, ctx.tenantId, ctx.session.user.id, input.records),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      const results = await applyCareRecordPush(
+        ctx.db,
+        ctx.tenantId,
+        ctx.session.user.id,
+        input.records,
+      );
+      const created = results.filter((r) => r.status === 'CREATED').length;
+      if (created > 0) {
+        await ctx.audit({
+          action: 'RECORD',
+          entity: 'CareRecord',
+          summary: `${created} registro(s) de atención sincronizados`,
+          metadata: { count: created },
+        });
+      }
+      return results;
+    }),
 
   /** Registros de un residente (más recientes primero). */
   listByResident: permissionProcedure('care:read')
