@@ -1,9 +1,13 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import { prisma, type UserRole } from '@vetlla/db';
+import { asPlatformAdmin, type UserRole } from '@vetlla/db';
 import { credentialsSchema } from '@/lib/auth-schema';
 import './env'; // valida el entorno al cargar la capa de auth
+
+// La autenticación es una operación previa al tenant (lookup por email único,
+// cross-tenant), por lo que usa el cliente con bypass de RLS.
+const authDb = asPlatformAdmin();
 
 // Estrategia JWT con provider de credenciales. El adaptador Postgres de Auth.js
 // se incorporará al añadir providers OAuth/email (H1); credenciales requiere JWT.
@@ -21,13 +25,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await authDb.user.findUnique({ where: { email } });
         if (!user) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
-        await prisma.user.update({
+        await authDb.user.update({
           where: { id: user.id },
           data: { lastLoginAt: new Date() },
         });

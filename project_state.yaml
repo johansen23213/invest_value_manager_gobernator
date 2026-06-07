@@ -5,7 +5,7 @@ project:
   name: Vetlla
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
-  current_milestone: H1
+  current_milestone: H2
   last_updated: 2026-06-07
 
 # --------------------------------------------------------------------------
@@ -76,7 +76,7 @@ milestones:
 
   - id: H1
     name: Multitenancy + RBAC
-    status: not_started
+    status: done
     effort: L
     goal: Tenants, usuarios, roles, RLS y aislamiento verificado por test.
     exit_criteria:
@@ -84,6 +84,23 @@ milestones:
       - Contexto de tenant inyectado en middleware de auth.
       - Test demuestra que un tenant no ve datos de otro por ninguna ruta/query.
       - RBAC por rol + pertenencia a tenant (mínimo privilegio).
+    result:
+      summary: >-
+        RLS en Postgres (ENABLE + FORCE) sobre tenants y users, con políticas por
+        GUC app.tenant_id y bypass para superadmin/seed (fallo en cerrado). Cliente
+        Prisma forTenant/asPlatformAdmin que fija el contexto por transacción. tRPC
+        con tenantProcedure (inyecta ctx.db aislado) y permissionProcedure (RBAC).
+        Login adaptado a bypass (lookup cross-tenant por email).
+      verified:
+        - "DB: 6 tests de aislamiento RLS (lectura/escritura cruzada, fallo en cerrado, bypass)"
+        - "RBAC: 5 tests unitarios de la matriz de permisos"
+        - "Runtime API: dirección ve solo sus 4 usuarios; auxiliar -> FORBIDDEN en users.list; tenant.current aislado"
+        - "lint + build + typecheck verde; 16 tests en total"
+      adr: docs/adr/0002-rls-multitenancy.md
+      notes:
+        - Un solo rol de Postgres con FORCE RLS (app y migraciones comparten rol). En
+          producción se valorará un rol de app no propietario (ADR-0002).
+        - Cada tabla futura con datos debe añadir tenant_id + RLS+FORCE + política en su migración.
 
   - id: H2
     name: Centros, plazas y residentes

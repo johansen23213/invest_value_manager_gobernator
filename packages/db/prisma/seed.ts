@@ -1,14 +1,15 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { asPlatformAdmin, prisma, UserRole } from '../src/index';
 import bcrypt from 'bcryptjs';
 
-// Seed de H0: un tenant demo + un usuario por rol para poder iniciar sesión.
-// El seed completo (centros, residentes, registros — §13 del spec) se amplía en H2.
-const prisma = new PrismaClient();
+// Seed de H0/H1: un tenant demo + un usuario por rol para poder iniciar sesión.
+// Usa el cliente con bypass de RLS (operación de plataforma). El seed completo
+// (centros, residentes, registros — §13 del spec) se amplía en H2.
+const db = asPlatformAdmin();
 
 const DEMO_PASSWORD = 'vetlla1234';
 
 async function main() {
-  const tenant = await prisma.tenant.upsert({
+  const tenant = await db.tenant.upsert({
     where: { slug: 'demo' },
     update: {},
     create: { name: 'Residencias Demo S.L.', slug: 'demo' },
@@ -25,7 +26,7 @@ async function main() {
   ];
 
   for (const u of users) {
-    await prisma.user.upsert({
+    await db.user.upsert({
       where: { email: u.email },
       update: { name: u.name, role: u.role, tenantId: u.tenantId },
       create: { ...u, passwordHash },
