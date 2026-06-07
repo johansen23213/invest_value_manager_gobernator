@@ -33,6 +33,7 @@ model Tenant {
   users     User[]
   centers   Center[]
   residents Resident[]
+  auditLogs AuditLog[]
 
   @@map("tenants")
 }
@@ -481,4 +482,29 @@ model CarePlanReview {
   @@index([tenantId])
   @@index([carePlanId])
   @@map("care_plan_reviews")
+}
+
+// ---------------------------------------------------------------------------
+// Trazabilidad / RGPD — registro de actividad sobre datos personales (art. 9)
+// ---------------------------------------------------------------------------
+
+/// Registro de auditoría append-only: quién hizo qué, cuándo y sobre qué entidad.
+/// Inmutable: la aplicación no expone update/delete y un trigger bloquea UPDATE.
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorId    String?  @map("actor_id") // user.id que ejecuta la acción
+  actorEmail String?  @map("actor_email") // desnormalizado para trazabilidad estable
+  action     String // CREATE | UPDATE | DELETE | ADMINISTER | RECORD | LOGIN ...
+  entity     String // Resident | Medication | CareRecord | CarePlan ...
+  entityId   String?  @map("entity_id")
+  summary    String? // descripción legible de la acción
+  metadata   Json? // detalles estructurados (opcional)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, entity, entityId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
 }

@@ -44,6 +44,13 @@ describe('hasPermission', () => {
     expect(hasPermission('FAMILIAR', 'residents:read')).toBe(false);
   });
 
+  it('solo dirección y superadmin leen el registro de actividad (auditoría)', () => {
+    expect(hasPermission('DIRECTOR', 'audit:read')).toBe(true);
+    expect(hasPermission('SUPERADMIN', 'audit:read')).toBe(true);
+    expect(hasPermission('SANITARIO', 'audit:read')).toBe(false);
+    expect(hasPermission('AUXILIAR', 'audit:read')).toBe(false);
+  });
+
   it('el familiar solo tiene acceso al portal (su residente vinculado)', () => {
     expect(hasPermission('FAMILIAR', 'portal:read')).toBe(true);
     expect(hasPermission('FAMILIAR', 'centers:read')).toBe(false);

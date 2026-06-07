@@ -243,7 +243,25 @@ acceptance_criteria:
   - Copiloto convierte frase libre en registros estructurados (es y ca) y redacta borrador de PIA con aprobación.
   - Familiar ve solo el resumen de su residente.
   - Aislamiento total entre tenants demostrado por test.
-  - Toda acción sobre datos personales en AuditLog. Datos alojados en la UE.
+  - Toda acción sobre datos personales en AuditLog. Datos alojados en la UE. [HECHO — ver docs/adr/0007]
+
+# --------------------------------------------------------------------------
+# Trazabilidad / RGPD (post-MVP, transversal)
+# --------------------------------------------------------------------------
+auditlog:
+  status: done
+  date: 2026-06-07
+  summary: >-
+    AuditLog inmutable (trigger BEFORE UPDATE) con RLS+FORCE. Helper logAudit y
+    ctx.audit en tenantProcedure. Cobertura: residentes y expediente, medicación
+    (prescripción y MAR), PIA, atención directa y login. Página /auditoria y router
+    audit.list con permiso audit:read (dirección + superadmin).
+  adr: docs/adr/0007-auditlog-rgpd.md
+  verified:
+    - "DB: 3 tests (escritura, RLS, inmutabilidad UPDATE bloqueado)"
+    - "RBAC: audit:read solo dirección/superadmin"
+    - "Runtime: login y prescripción generan traza; auxiliar -> FORBIDDEN; aislamiento por tenant"
+    - "lint + build + typecheck verde; 50 tests en total"
 
 # --------------------------------------------------------------------------
 # Backlog de UX (equipo de Elena — ver docs/ux/)

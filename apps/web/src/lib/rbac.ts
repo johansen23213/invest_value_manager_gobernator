@@ -20,6 +20,7 @@ export const PERMISSIONS = [
   'careplan:read', // PIA
   'careplan:write',
   'portal:read', // portal de familias (solo el residente vinculado)
+  'audit:read', // registro de actividad (RGPD)
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -42,6 +43,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'medication:administer',
     'careplan:read',
     'careplan:write',
+    'audit:read',
   ],
   SANITARIO: [
     'tenant:read',

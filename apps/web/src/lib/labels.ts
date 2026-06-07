@@ -77,6 +77,15 @@ export const CARE_PLAN_STATUS_LABELS: Record<string, string> = {
   CERRADO: 'Cerrado',
 };
 
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  CREATE: 'Alta',
+  UPDATE: 'Modificación',
+  DELETE: 'Baja',
+  ADMINISTER: 'Administración',
+  RECORD: 'Registro',
+  LOGIN: 'Acceso',
+};
+
 export const ROLE_LABELS: Record<string, string> = {
   SUPERADMIN: 'Superadmin de plataforma',
   DIRECTOR: 'Dirección / gestor',

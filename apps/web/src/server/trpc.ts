@@ -1,9 +1,11 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
-import { forTenant } from '@vetlla/db';
+import { forTenant, logAudit, type AuditEntry } from '@vetlla/db';
 import { auth } from '@/auth';
 import { hasPermission, type Permission } from '@/lib/rbac';
+
+export type AuditInput = Omit<AuditEntry, 'tenantId' | 'actorId' | 'actorEmail'>;
 
 // Contexto de cada request: incluye la sesión de Auth.js.
 export async function createTRPCContext(opts: { headers: Headers }) {
@@ -48,7 +50,15 @@ export const tenantProcedure = protectedProcedure.use(({ ctx, next }) => {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'El usuario no pertenece a ningún tenant.' });
   }
   const db = forTenant({ tenantId, bypassRls: role === 'SUPERADMIN' });
-  return next({ ctx: { ...ctx, tenantId, db } });
+  // Helper de trazabilidad: registra la acción con el actor y el tenant actuales.
+  const audit = (entry: AuditInput) =>
+    logAudit(db, {
+      tenantId,
+      actorId: ctx.session.user.id,
+      actorEmail: ctx.session.user.email,
+      ...entry,
+    });
+  return next({ ctx: { ...ctx, tenantId, db, audit } });
 });
 
 /** Como `tenantProcedure` pero exige además un permiso concreto (RBAC). */

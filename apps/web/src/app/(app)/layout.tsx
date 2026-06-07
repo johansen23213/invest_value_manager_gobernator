@@ -9,6 +9,7 @@ import { LocaleSwitcher } from '@/i18n/locale-switcher';
 import { ToastProvider } from '@/components/toast';
 import { ConfirmProvider } from '@/components/confirm';
 import { Logo } from '@/components/logo';
+import { hasPermission } from '@/lib/rbac';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -47,6 +48,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                     <Link href="/atencion" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.care')}
                     </Link>
+                    {hasPermission(user.role, 'audit:read') && (
+                      <Link href="/auditoria" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        Actividad
+                      </Link>
+                    )}
                   </>
                 )}
               </nav>

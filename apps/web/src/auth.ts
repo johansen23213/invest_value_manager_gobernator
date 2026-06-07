@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import { asPlatformAdmin, type UserRole } from '@vetlla/db';
+import { asPlatformAdmin, logAudit, type UserRole } from '@vetlla/db';
 import { credentialsSchema } from '@/lib/auth-schema';
 import './env'; // valida el entorno al cargar la capa de auth
 
@@ -35,6 +35,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { id: user.id },
           data: { lastLoginAt: new Date() },
         });
+
+        // Trazabilidad de acceso (RGPD). Solo usuarios con tenant.
+        if (user.tenantId) {
+          await logAudit(authDb, {
+            tenantId: user.tenantId,
+            actorId: user.id,
+            actorEmail: user.email,
+            action: 'LOGIN',
+            entity: 'User',
+            entityId: user.id,
+            summary: 'Inicio de sesión',
+          });
+        }
 
         return {
           id: user.id,
