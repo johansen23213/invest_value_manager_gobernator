@@ -3,6 +3,7 @@
 import { Badge, Card, CardContent, CardTitle } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
+import { formatDateTime } from '@/lib/format';
 import { interpretScale, SCALE_RANGES, type ScaleType } from '@/lib/scales';
 import {
   ALLERGY_SEVERITY_LABELS,
@@ -12,7 +13,7 @@ import {
 } from '@/lib/labels';
 
 export default function PortalPage() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const portal = api.family.portal.useQuery();
 
   if (portal.isLoading) return <p className="text-slate-500">…</p>;
@@ -59,7 +60,7 @@ export default function PortalPage() {
                         .map(([k, v]) => `${k}: ${String(v)}`)
                         .join(' · ')}{' '}
                       <span className="text-slate-400">
-                        · {new Date(rec.recordedAt).toLocaleString('es-ES')}
+                        · {formatDateTime(locale, rec.recordedAt)}
                       </span>
                     </li>
                   ))}

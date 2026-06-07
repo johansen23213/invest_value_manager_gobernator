@@ -6,6 +6,8 @@ import { getT } from '@/i18n/server';
 import { CareSyncProvider } from '@/offline/use-care-sync';
 import { SyncStatusBadge } from '@/offline/sync-status-badge';
 import { LocaleSwitcher } from '@/i18n/locale-switcher';
+import { ToastProvider } from '@/components/toast';
+import { ConfirmProvider } from '@/components/confirm';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -16,6 +18,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <CareSyncProvider>
+      <ToastProvider>
+        <ConfirmProvider>
       <div className="min-h-screen">
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -68,10 +72,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main id="contenido" className="mx-auto max-w-5xl px-4 py-8">
-          {children}
-        </main>
-      </div>
+          <main id="contenido" className="mx-auto max-w-5xl px-4 py-8">
+            {children}
+          </main>
+        </div>
+        </ConfirmProvider>
+      </ToastProvider>
     </CareSyncProvider>
   );
 }

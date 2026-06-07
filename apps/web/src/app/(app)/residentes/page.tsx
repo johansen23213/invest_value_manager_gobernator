@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { Badge, Button, Card, CardContent, Input, Label, Select, Table, Td, Th } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { DEPENDENCY_GRADE_LABELS, RESIDENT_STATUS_LABELS } from '@/lib/labels';
+import { useToast } from '@/components/toast';
 
 const GRADES = ['SIN_VALORAR', 'GRADO_I', 'GRADO_II', 'GRADO_III'] as const;
 
 export default function ResidentsPage() {
   const utils = api.useUtils();
+  const toast = useToast();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('residents:write') ?? false;
   const residents = api.residents.list.useQuery();
@@ -25,7 +27,9 @@ export default function ResidentsPage() {
       setFirstName('');
       setLastName('');
       await utils.residents.list.invalidate();
+      toast.success('Residente dado de alta.');
     },
+    onError: (e) => toast.error(e.message),
   });
 
   return (

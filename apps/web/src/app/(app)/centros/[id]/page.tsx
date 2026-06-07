@@ -6,11 +6,15 @@ import { useState } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle, Input, Label, Select } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { BED_STATUS_LABELS, CENTER_TYPE_LABELS } from '@/lib/labels';
+import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm';
 
 export default function CenterDetailPage() {
   const params = useParams<{ id: string }>();
   const centerId = params.id;
   const utils = api.useUtils();
+  const toast = useToast();
+  const confirm = useConfirm();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('centers:write') ?? false;
   const center = api.centers.get.useQuery({ id: centerId });
@@ -27,16 +31,52 @@ export default function CenterDetailPage() {
       setUnitName('');
       setUnitFloor('');
       await refresh();
+      toast.success('Unidad creada.');
     },
+    onError: (e) => toast.error(e.message),
   });
   const createBed = api.beds.create.useMutation({
     onSuccess: async () => {
       setBedCode('');
       await refresh();
+      toast.success('Plaza creada.');
     },
+    onError: (e) => toast.error(e.message),
   });
-  const deleteBed = api.beds.delete.useMutation({ onSuccess: refresh });
-  const deleteUnit = api.units.delete.useMutation({ onSuccess: refresh });
+  const deleteBed = api.beds.delete.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success('Plaza eliminada.');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const deleteUnit = api.units.delete.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success('Unidad eliminada.');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  async function confirmDeleteUnit(id: string, name: string) {
+    const ok = await confirm({
+      title: `Eliminar la unidad "${name}"`,
+      description: 'Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    });
+    if (ok) deleteUnit.mutate({ id });
+  }
+
+  async function confirmDeleteBed(id: string, code: string) {
+    const ok = await confirm({
+      title: `Eliminar la plaza "${code}"`,
+      description: 'Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    });
+    if (ok) deleteBed.mutate({ id });
+  }
 
   if (center.isLoading) return <p className="text-slate-500">Cargando…</p>;
   if (!center.data) return <p className="text-slate-500">Centro no encontrado.</p>;
@@ -133,7 +173,7 @@ export default function CenterDetailPage() {
                   {u.name} {u.floor ? <span className="text-slate-400">· {u.floor}</span> : null}
                 </CardTitle>
                 {canWrite && u.beds.length === 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => deleteUnit.mutate({ id: u.id })}>
+                  <Button variant="ghost" size="sm" onClick={() => confirmDeleteUnit(u.id, u.name)}>
                     Eliminar unidad
                   </Button>
                 )}
@@ -162,7 +202,7 @@ export default function CenterDetailPage() {
                           type="button"
                           aria-label={`Eliminar plaza ${b.code}`}
                           className="text-slate-400 hover:text-red-600"
-                          onClick={() => deleteBed.mutate({ id: b.id })}
+                          onClick={() => confirmDeleteBed(b.id, b.code)}
                         >
                           ×
                         </button>

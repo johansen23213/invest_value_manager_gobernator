@@ -6,6 +6,9 @@ import { api } from '@/trpc/react';
 import { useCareSync } from '@/offline/use-care-sync';
 import type { CarePayload } from '@/offline/types';
 import { CARE_TYPE_LABELS } from '@/lib/labels';
+import { useT } from '@/i18n/provider';
+import { formatDateTime } from '@/lib/format';
+import { useToast } from '@/components/toast';
 
 function cleanPayload(raw: Record<string, string>): CarePayload {
   const out: CarePayload = {};
@@ -20,9 +23,10 @@ export default function CarePage() {
   const canWrite = me.data?.permissions.includes('care:write') ?? false;
   const residents = api.residents.list.useQuery();
   const { enqueue, online } = useCareSync();
+  const toast = useToast();
+  const { locale } = useT();
 
   const [residentId, setResidentId] = useState('');
-  const [flash, setFlash] = useState('');
   const resident = useMemo(
     () => residents.data?.find((r) => r.id === residentId),
     [residents.data, residentId],
@@ -51,7 +55,9 @@ export default function CarePage() {
       type,
       payload,
     });
-    setFlash(`${CARE_TYPE_LABELS[type]} registrado${online ? '' : ' (se sincronizará al recuperar la red)'}.`);
+    toast.success(
+      `${CARE_TYPE_LABELS[type]} registrado${online ? '' : ' (se sincronizará al recuperar la red)'}.`,
+    );
     void records.refetch();
   }
 
@@ -75,12 +81,6 @@ export default function CarePage() {
           </Select>
         </CardContent>
       </Card>
-
-      {flash && (
-        <p role="status" className="rounded-md bg-green-50 px-4 py-2 text-sm text-green-800">
-          {flash}
-        </p>
-      )}
 
       {resident && (
         <div className="grid gap-4 md:grid-cols-2">
@@ -217,7 +217,7 @@ export default function CarePage() {
                         .join(' · ')}
                     </span>
                     <span className="text-slate-400">
-                      {new Date(rec.recordedAt).toLocaleString('es-ES')}
+                      {formatDateTime(locale, rec.recordedAt)}
                     </span>
                   </li>
                 ))}

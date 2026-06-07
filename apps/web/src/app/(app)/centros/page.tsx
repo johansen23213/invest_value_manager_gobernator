@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { Badge, Button, Card, CardContent, Input, Label, Select, Table, Td, Th } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { CENTER_TYPE_LABELS } from '@/lib/labels';
+import { useToast } from '@/components/toast';
 
 const CENTER_TYPES = ['RESIDENCIA', 'CENTRO_DIA', 'VIVIENDA_TUTELADA'] as const;
 
 export default function CentersPage() {
   const utils = api.useUtils();
+  const toast = useToast();
   const me = api.me.useQuery();
   const centers = api.centers.list.useQuery();
   const canWrite = me.data?.permissions.includes('centers:write') ?? false;
@@ -21,7 +23,9 @@ export default function CentersPage() {
     onSuccess: async () => {
       setName('');
       await utils.centers.list.invalidate();
+      toast.success('Centro creado.');
     },
+    onError: (e) => toast.error(e.message),
   });
 
   return (

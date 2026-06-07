@@ -18,6 +18,11 @@
 - **Consistencia** vía design system (`packages/ui`).
 - **Seguridad clínica primero**: confirmaciones, motivos y trazabilidad donde el error tiene consecuencias.
 
-## Informes
+## Documentos
 
 - [`informes/2026-06-07-auditoria-ux.md`](informes/2026-06-07-auditoria-ux.md) — Auditoría inicial y backlog priorizado.
+- [`arquetipos.md`](arquetipos.md) — Arquetipos de usuario (personas) y mapa de mejoras.
+
+El backlog vivo está en `project_state.yaml` (sección `ux_backlog`). Sprint 1 (UX-01…04)
+implementado: fechas/horas localizadas, editor de horas de medicación, confirmación en
+acciones destructivas, sistema de avisos (toasts) y motivo obligatorio al rechazar dosis.

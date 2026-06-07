@@ -7,6 +7,11 @@ import { Badge, Button, Card, CardContent, CardTitle, Input, Label } from '@vetl
 import { api } from '@/trpc/react';
 import { DOSE_STATUS_LABELS } from '@/lib/labels';
 import type { DoseStatus } from '@/lib/mar';
+import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm';
+import { useT } from '@/i18n/provider';
+import { formatTime } from '@/lib/format';
+import { TimeListField } from '@/components/time-list-field';
 
 const STATUS_TONE: Record<DoseStatus, 'green' | 'amber' | 'red' | 'neutral'> = {
   ADMINISTRADO: 'green',
@@ -19,6 +24,10 @@ export default function MedicationPage() {
   const params = useParams<{ id: string }>();
   const residentId = params.id;
   const utils = api.useUtils();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { locale } = useT();
+
   const me = api.me.useQuery();
   const canPrescribe = me.data?.permissions.includes('medication:prescribe') ?? false;
   const canAdminister = me.data?.permissions.includes('medication:administer') ?? false;
@@ -27,19 +36,48 @@ export default function MedicationPage() {
   const meds = api.medications.listByResident.useQuery({ residentId });
   const schedule = api.medications.schedule.useQuery({ residentId });
 
-  const [form, setForm] = useState({ name: '', dose: '', times: '08:00,20:00', startDate: '' });
+  const [form, setForm] = useState<{ name: string; dose: string; times: string[]; startDate: string }>({
+    name: '',
+    dose: '',
+    times: ['08:00', '20:00'],
+    startDate: '',
+  });
 
   const refresh = async () => {
-    await Promise.all([utils.medications.listByResident.invalidate({ residentId }), utils.medications.schedule.invalidate({ residentId })]);
+    await Promise.all([
+      utils.medications.listByResident.invalidate({ residentId }),
+      utils.medications.schedule.invalidate({ residentId }),
+    ]);
   };
 
   const prescribe = api.medications.prescribe.useMutation({
     onSuccess: async () => {
-      setForm({ name: '', dose: '', times: '08:00,20:00', startDate: '' });
+      setForm({ name: '', dose: '', times: ['08:00', '20:00'], startDate: '' });
       await refresh();
+      toast.success('Medicación prescrita.');
     },
+    onError: (e) => toast.error(e.message),
   });
-  const record = api.medications.record.useMutation({ onSuccess: refresh });
+  const record = api.medications.record.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success('Administración registrada.');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  async function reject(medicationId: string, scheduledAt: string) {
+    const result = await confirm({
+      title: 'Marcar como rechazada',
+      description: 'Indica el motivo por el que no se administra la dosis.',
+      confirmLabel: 'Registrar',
+      tone: 'danger',
+      reason: { label: 'Motivo', required: true, placeholder: 'p. ej. el residente la rechaza' },
+    });
+    if (result) {
+      record.mutate({ medicationId, scheduledAt: new Date(scheduledAt), status: 'RECHAZADO', notes: result.reason });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,17 +104,19 @@ export default function MedicationPage() {
                   className={`flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${d.overdue ? 'bg-red-50' : 'bg-slate-50'}`}
                 >
                   <span>
-                    <strong>{new Date(d.scheduledAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</strong>{' '}
-                    {d.medicationName} ({d.dose}){' '}
+                    <strong>{formatTime(locale, d.scheduledAt)}</strong> {d.medicationName} ({d.dose}){' '}
                     <Badge tone={STATUS_TONE[d.status]}>{DOSE_STATUS_LABELS[d.status]}</Badge>
                   </span>
                   {canAdminister && (
                     <span className="flex gap-1">
-                      <Button size="sm" onClick={() => record.mutate({ medicationId: d.medicationId, scheduledAt: new Date(d.scheduledAt), status: 'ADMINISTRADO' })}>
+                      <Button
+                        size="sm"
+                        onClick={() => record.mutate({ medicationId: d.medicationId, scheduledAt: new Date(d.scheduledAt), status: 'ADMINISTRADO' })}
+                      >
                         Administrar
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => record.mutate({ medicationId: d.medicationId, scheduledAt: new Date(d.scheduledAt), status: 'RECHAZADO' })}>
-                        Rechazado
+                      <Button size="sm" variant="secondary" onClick={() => reject(d.medicationId, d.scheduledAt)}>
+                        Rechazada
                       </Button>
                     </span>
                   )}
@@ -95,39 +135,42 @@ export default function MedicationPage() {
           <CardContent>
             <CardTitle className="mb-3 text-base">Prescribir medicación</CardTitle>
             <form
-              className="flex flex-wrap items-end gap-3"
+              className="flex flex-col gap-3"
               onSubmit={(e) => {
                 e.preventDefault();
                 prescribe.mutate({
                   residentId,
                   name: form.name,
                   dose: form.dose,
-                  times: form.times.split(',').map((t) => t.trim()).filter(Boolean),
+                  times: form.times,
                   startDate: form.startDate ? new Date(form.startDate) : new Date(),
                 });
               }}
             >
-              <div>
-                <Label htmlFor="name">Fármaco</Label>
-                <Input id="name" value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} required />
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <Label htmlFor="name">Fármaco</Label>
+                  <Input id="name" value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} required />
+                </div>
+                <div>
+                  <Label htmlFor="dose">Dosis</Label>
+                  <Input id="dose" value={form.dose} onChange={(e) => setForm((s) => ({ ...s, dose: e.target.value }))} required placeholder="1g" />
+                </div>
+                <div>
+                  <Label htmlFor="start">Inicio</Label>
+                  <Input id="start" type="date" value={form.startDate} onChange={(e) => setForm((s) => ({ ...s, startDate: e.target.value }))} />
+                </div>
               </div>
               <div>
-                <Label htmlFor="dose">Dosis</Label>
-                <Input id="dose" value={form.dose} onChange={(e) => setForm((s) => ({ ...s, dose: e.target.value }))} required placeholder="1g" />
+                <Label>Horas de pauta</Label>
+                <TimeListField value={form.times} onChange={(times) => setForm((s) => ({ ...s, times }))} />
               </div>
               <div>
-                <Label htmlFor="times">Horas (HH:MM, coma)</Label>
-                <Input id="times" value={form.times} onChange={(e) => setForm((s) => ({ ...s, times: e.target.value }))} required />
+                <Button type="submit" disabled={prescribe.isPending || form.times.length === 0}>
+                  Prescribir
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="start">Inicio</Label>
-                <Input id="start" type="date" value={form.startDate} onChange={(e) => setForm((s) => ({ ...s, startDate: e.target.value }))} />
-              </div>
-              <Button type="submit" disabled={prescribe.isPending}>
-                Prescribir
-              </Button>
             </form>
-            {prescribe.error && <p role="alert" className="mt-2 text-sm text-red-600">{prescribe.error.message}</p>}
           </CardContent>
         </Card>
       )}

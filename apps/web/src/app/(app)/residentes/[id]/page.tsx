@@ -6,6 +6,9 @@ import { useState } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle, Input, Label, Select } from '@vetlla/ui';
 import type { AllergySeverity, ContactRelation } from '@vetlla/db';
 import { api } from '@/trpc/react';
+import { useT } from '@/i18n/provider';
+import { formatDate } from '@/lib/format';
+import { useToast } from '@/components/toast';
 import { interpretScale, SCALE_RANGES, type ScaleType } from '@/lib/scales';
 import {
   ALLERGY_SEVERITY_LABELS,
@@ -15,15 +18,13 @@ import {
   RESIDENT_STATUS_LABELS,
 } from '@/lib/labels';
 
-function fmtDate(d: Date | string | null | undefined): string {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('es-ES');
-}
-
 export default function ResidentDetailPage() {
   const params = useParams<{ id: string }>();
   const residentId = params.id;
   const utils = api.useUtils();
+  const { locale } = useT();
+  const fmtDate = (d: Date | string | null | undefined) => formatDate(locale, d);
+  const toast = useToast();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('residents:write') ?? false;
   const canClinical = me.data?.permissions.includes('clinical:write') ?? false;
@@ -41,25 +42,33 @@ export default function ResidentDetailPage() {
     onSuccess: async () => {
       setContact({ name: '', relation: 'HIJO_A', phone: '' });
       await refresh();
+      toast.success('Contacto añadido.');
     },
+    onError: (e) => toast.error(e.message),
   });
   const addAllergy = api.residents.addAllergy.useMutation({
     onSuccess: async () => {
       setAllergy({ substance: '', severity: '' });
       await refresh();
+      toast.success('Alergia añadida.');
     },
+    onError: (e) => toast.error(e.message),
   });
   const addDiagnosis = api.residents.addDiagnosis.useMutation({
     onSuccess: async () => {
       setDiagnosis({ description: '', code: '' });
       await refresh();
+      toast.success('Diagnóstico añadido.');
     },
+    onError: (e) => toast.error(e.message),
   });
   const addAssessment = api.residents.addAssessment.useMutation({
     onSuccess: async () => {
       setAssessment({ type: 'BARTHEL', score: '' });
       await refresh();
+      toast.success('Valoración registrada.');
     },
+    onError: (e) => toast.error(e.message),
   });
 
   if (resident.isLoading) return <p className="text-slate-500">Cargando…</p>;
