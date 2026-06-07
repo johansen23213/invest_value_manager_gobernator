@@ -4,9 +4,9 @@
 project:
   name: Vetlla
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
-  phase: planning            # planning | building | done
-  current_milestone: H0
-  last_updated: 2026-06-06
+  phase: building            # planning | building | done
+  current_milestone: H1
+  last_updated: 2026-06-07
 
 # --------------------------------------------------------------------------
 # Decisiones tomadas (las no triviales también van a docs/adr/)
@@ -48,7 +48,7 @@ assumptions:
 milestones:
   - id: H0
     name: Andamiaje
-    status: not_started        # not_started | in_progress | done
+    status: done               # not_started | in_progress | done
     effort: M
     goal: Monorepo, Next.js, Prisma+Postgres (docker), Auth.js, CI básico, CLAUDE.md, project_state.yaml, login funcional.
     exit_criteria:
@@ -56,6 +56,23 @@ milestones:
       - Postgres local vía docker-compose; primera migración Prisma aplicada.
       - Pantalla de login funcional con Auth.js.
       - CI básico (lint + typecheck + tests) en verde.
+    result:
+      summary: >-
+        Monorepo pnpm+Turborepo con apps/web (Next 15 App Router + tRPC v11 +
+        Auth.js v5 + Tailwind) y packages/db (Prisma 6 + Postgres). Login por
+        credenciales funcional (verificado en runtime: sesión con role+tenantId,
+        rechazo de credenciales inválidas). lint + build + typecheck + 5 tests en
+        verde. Migración inicial aplicada y seed con tenant demo + 5 roles.
+      verified:
+        - "pnpm lint / build / typecheck: verde"
+        - "Vitest: 5 tests verde (auth-schema, login-form, UserRole)"
+        - "Runtime: /login 200, / -> 307 /login, tRPC health ok, login credenciales -> sesión"
+      notes:
+        - Docker presente pero el registry está bloqueado por la política de red; en
+          este entorno se usó el Postgres 16 del sistema. docker-compose.yml queda
+          para entornos con acceso al registry.
+        - E2E (Playwright) configurado con smoke test; se integrará en CI con BD de test (post-H0).
+      adr: docs/adr/0001-monorepo-stack-andamiaje.md
 
   - id: H1
     name: Multitenancy + RBAC

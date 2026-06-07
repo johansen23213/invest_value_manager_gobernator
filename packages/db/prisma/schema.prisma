@@ -1,0 +1,52 @@
+// Vetlla — esquema de datos
+// H0: base mínima de multitenancy (Tenant + User) para login.
+// H1 añadirá Row-Level Security (RLS) sobre tenant_id en todas las tablas
+// con datos, más el resto de entidades del modelo (§6 del spec).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Roles de la plataforma. Permisos por rol + pertenencia al tenant (mínimo privilegio).
+enum UserRole {
+  SUPERADMIN // gestión de la plataforma (cross-tenant)
+  DIRECTOR // dirección/gestor del centro
+  SANITARIO // médico / enfermería
+  AUXILIAR // atención directa
+  FAMILIAR // solo lectura del residente vinculado
+}
+
+/// Operador / cliente del SaaS. Raíz del aislamiento multitenant.
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  @@map("tenants")
+}
+
+/// Usuario del sistema. Siempre pertenece a un tenant (salvo SUPERADMIN de plataforma).
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(AUXILIAR)
+  tenantId     String?   @map("tenant_id")
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("users")
+}
