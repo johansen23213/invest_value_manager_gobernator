@@ -27,4 +27,20 @@ describe('hasPermission', () => {
       expect(hasPermission(role, 'tenant:read')).toBe(true);
     }
   });
+
+  it('solo sanitarios y dirección registran datos clínicos', () => {
+    expect(hasPermission('SANITARIO', 'clinical:write')).toBe(true);
+    expect(hasPermission('DIRECTOR', 'clinical:write')).toBe(true);
+    expect(hasPermission('AUXILIAR', 'clinical:write')).toBe(false);
+  });
+
+  it('dirección gestiona centros; el auxiliar solo los lee', () => {
+    expect(hasPermission('DIRECTOR', 'centers:write')).toBe(true);
+    expect(hasPermission('AUXILIAR', 'centers:write')).toBe(false);
+    expect(hasPermission('AUXILIAR', 'centers:read')).toBe(true);
+  });
+
+  it('el familiar no accede al listado general de residentes', () => {
+    expect(hasPermission('FAMILIAR', 'residents:read')).toBe(false);
+  });
 });

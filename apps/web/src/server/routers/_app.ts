@@ -6,6 +6,10 @@ import {
   tenantProcedure,
 } from '@/server/trpc';
 import { permissionsFor } from '@/lib/rbac';
+import { centersRouter } from '@/server/routers/centers';
+import { unitsRouter } from '@/server/routers/units';
+import { bedsRouter } from '@/server/routers/beds';
+import { residentsRouter } from '@/server/routers/residents';
 
 // Router raíz de la API tipada. Cada hito añade sus routers
 // (centros, residentes, atención, medicación, copiloto...).
@@ -40,6 +44,11 @@ export const appRouter = createTRPCRouter({
       }),
     ),
   }),
+
+  centers: centersRouter,
+  units: unitsRouter,
+  beds: bedsRouter,
+  residents: residentsRouter,
 });
 
 export type AppRouter = typeof appRouter;

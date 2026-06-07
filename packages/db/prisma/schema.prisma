@@ -1,7 +1,8 @@
 // Vetlla — esquema de datos
-// H0: base mínima de multitenancy (Tenant + User) para login.
-// H1 añadirá Row-Level Security (RLS) sobre tenant_id en todas las tablas
-// con datos, más el resto de entidades del modelo (§6 del spec).
+// H0: base mínima de multitenancy (Tenant + User).
+// H1: Row-Level Security (RLS) sobre tenant_id en todas las tablas con datos.
+// H2: centros, unidades, plazas/camas y expediente del residente + escalas.
+// Toda tabla con datos lleva tenant_id, RLS+FORCE y su política (ver migraciones).
 
 generator client {
   provider = "prisma-client-js"
@@ -29,7 +30,9 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users User[]
+  users     User[]
+  centers   Center[]
+  residents Resident[]
 
   @@map("tenants")
 }
@@ -49,4 +52,220 @@ model User {
 
   @@index([tenantId])
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// H2 — Centros, unidades, plazas/camas y expediente del residente
+// ---------------------------------------------------------------------------
+
+enum CenterType {
+  RESIDENCIA // residencia de mayores
+  CENTRO_DIA // centro de día
+  VIVIENDA_TUTELADA // vivienda tutelada/supervisada
+}
+
+enum BedStatus {
+  DISPONIBLE // operativa (ocupada o no; la ocupación se deriva del residente)
+  FUERA_SERVICIO // baja temporal (mantenimiento, reforma...)
+}
+
+/// Grados de dependencia (Ley 39/2006).
+enum DependencyGrade {
+  SIN_VALORAR
+  GRADO_I
+  GRADO_II
+  GRADO_III
+}
+
+enum Sex {
+  HOMBRE
+  MUJER
+  OTRO
+  NS_NC
+}
+
+enum ResidentStatus {
+  ACTIVO
+  BAJA // alta médica / fallecimiento / traslado
+  PREINGRESO
+}
+
+enum ContactRelation {
+  HIJO_A
+  CONYUGE
+  HERMANO_A
+  TUTOR_LEGAL
+  OTRO
+}
+
+enum AllergySeverity {
+  LEVE
+  MODERADA
+  GRAVE
+}
+
+enum AssessmentType {
+  BARTHEL // ABVD (0–100)
+  TINETTI // marcha y equilibrio (0–28)
+}
+
+/// Centro físico del operador (residencia, centro de día o vivienda tutelada).
+model Center {
+  id         String     @id @default(cuid())
+  tenantId   String     @map("tenant_id")
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String
+  type       CenterType
+  address    String?
+  city       String?
+  postalCode String?    @map("postal_code")
+  phone      String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  units     Unit[]
+  residents Resident[]
+
+  @@index([tenantId])
+  @@map("centers")
+}
+
+/// Unidad/planta dentro de un centro.
+model Unit {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  centerId  String   @map("center_id")
+  center    Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  name      String
+  floor     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  beds Bed[]
+
+  @@index([tenantId])
+  @@index([centerId])
+  @@map("units")
+}
+
+/// Plaza/cama. La ocupación se deriva de si hay un residente vinculado.
+model Bed {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  unitId    String    @map("unit_id")
+  unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  code      String // etiqueta visible, p. ej. "101-A"
+  status    BedStatus @default(DISPONIBLE)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  resident Resident? // ocupante actual (0 o 1)
+
+  @@index([tenantId])
+  @@index([unitId])
+  @@map("beds")
+}
+
+/// Expediente sociosanitario del residente.
+model Resident {
+  id              String          @id @default(cuid())
+  tenantId        String          @map("tenant_id")
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  centerId        String          @map("center_id")
+  center          Center          @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  bedId           String?         @unique @map("bed_id")
+  bed             Bed?            @relation(fields: [bedId], references: [id], onDelete: SetNull)
+  firstName       String          @map("first_name")
+  lastName        String          @map("last_name")
+  birthDate       DateTime?       @map("birth_date")
+  sex             Sex?
+  nationalId      String?         @map("national_id") // DNI/NIE
+  dependencyGrade DependencyGrade @default(SIN_VALORAR) @map("dependency_grade")
+  status          ResidentStatus  @default(ACTIVO)
+  admissionDate   DateTime?       @map("admission_date")
+  notes           String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  contacts    EmergencyContact[]
+  allergies   Allergy[]
+  diagnoses   Diagnosis[]
+  assessments Assessment[]
+
+  @@index([tenantId])
+  @@index([centerId])
+  @@map("residents")
+}
+
+/// Contacto de emergencia / familiar de referencia.
+model EmergencyContact {
+  id         String          @id @default(cuid())
+  tenantId   String          @map("tenant_id")
+  residentId String          @map("resident_id")
+  resident   Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  name       String
+  relation   ContactRelation
+  phone      String?
+  email      String?
+  isPrimary  Boolean         @default(false) @map("is_primary")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("emergency_contacts")
+}
+
+/// Alergia/intolerancia conocida.
+model Allergy {
+  id         String           @id @default(cuid())
+  tenantId   String           @map("tenant_id")
+  residentId String           @map("resident_id")
+  resident   Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  substance  String
+  severity   AllergySeverity?
+  reaction   String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("allergies")
+}
+
+/// Diagnóstico clínico.
+model Diagnosis {
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")
+  residentId  String    @map("resident_id")
+  resident    Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  code        String? // CIE-10 (opcional)
+  description String
+  diagnosedAt DateTime? @map("diagnosed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("diagnoses")
+}
+
+/// Valoración mediante escala (Barthel, Tinetti...).
+model Assessment {
+  id           String         @id @default(cuid())
+  tenantId     String         @map("tenant_id")
+  residentId   String         @map("resident_id")
+  resident     Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type         AssessmentType
+  score        Int
+  details      Json? // desglose por ítems (opcional)
+  notes        String?
+  assessedAt   DateTime       @map("assessed_at")
+  assessedById String?        @map("assessed_by_id") // user.id (sin FK; trazado en AuditLog futuro)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("assessments")
 }

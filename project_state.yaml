@@ -5,7 +5,7 @@ project:
   name: Vetlla
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
-  current_milestone: H2
+  current_milestone: H3
   last_updated: 2026-06-07
 
 # --------------------------------------------------------------------------
@@ -104,13 +104,31 @@ milestones:
 
   - id: H2
     name: Centros, plazas y residentes
-    status: not_started
+    status: done
     effort: L
     goal: CRUD de centro/unidad/plaza y expediente sociosanitario básico + escalas.
     exit_criteria:
       - CRUD Center (residencia|centro_dia|vivienda_tutelada), Unit, Bed/Plaza, ocupación.
       - Expediente Resident con contactos, dependencia, alergias, diagnósticos.
       - Assessment con escalas Barthel y Tinetti.
+    result:
+      summary: >-
+        Modelo de datos de centros/unidades/plazas + expediente del residente
+        (contactos, alergias, diagnósticos, escalas), todo con tenant_id y RLS+FORCE.
+        API tRPC CRUD (centers, units, beds, residents + sub-recursos) con RBAC e
+        integridad cross-tenant. Escalas Barthel/Tinetti como dominio tipado con
+        validación de rango e interpretación. packages/ui (estilo shadcn) y UI con
+        shell autenticado: panel, centros (+detalle con ocupación), residentes
+        (+expediente). Seed §13 con 2 centros (30+8 plazas) y 28 residentes.
+      verified:
+        - "DB: 8 tests (aislamiento RLS incluye centros/residentes)"
+        - "Web: 17 tests (rbac, escalas, schemas, login-form)"
+        - "Runtime API: centers.list/residents.list, alta de centro (dir) vs FORBIDDEN (auxiliar), validación de rango de escala (BAD_REQUEST)"
+        - "lint + build + typecheck verde; 25 tests en total; 9 rutas construidas"
+      adr: docs/adr/0003-modelo-centros-residentes.md
+      notes:
+        - Ocupación derivada de Resident.bedId (1-1 @unique); BedStatus solo DISPONIBLE/FUERA_SERVICIO.
+        - UI sin Radix (primitivas Tailwind). shadcn con Radix si se necesitan modales/combobox.
 
   - id: H3
     name: Atención directa offline

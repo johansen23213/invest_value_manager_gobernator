@@ -3,7 +3,7 @@ import type { Config } from 'tailwindcss';
 // UX para auxiliares: tipografía grande y objetivos táctiles amplios.
 // Estos valores base se refinan en H3 (flujo tablet) y H6 (accesibilidad).
 const config: Config = {
-  content: ['./src/**/*.{ts,tsx}'],
+  content: ['./src/**/*.{ts,tsx}', '../../packages/ui/src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       fontSize: {

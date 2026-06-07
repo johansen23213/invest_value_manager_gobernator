@@ -87,4 +87,24 @@ describe.skipIf(!hasDb)('RLS — aislamiento multitenant', () => {
     });
     expect(tenants).toHaveLength(2);
   });
+
+  it('los centros y residentes también quedan aislados por RLS', async () => {
+    // El tenant A crea un centro con un residente.
+    const dbA = forTenant({ tenantId: tenantAId });
+    const center = await dbA.center.create({
+      data: { tenantId: tenantAId, name: 'Centro A', type: 'RESIDENCIA' },
+    });
+    await dbA.resident.create({
+      data: { tenantId: tenantAId, centerId: center.id, firstName: 'Ana', lastName: 'Test' },
+    });
+
+    // El tenant B no ve nada de A.
+    const dbB = forTenant({ tenantId: tenantBId });
+    expect(await dbB.center.findMany()).toHaveLength(0);
+    expect(await dbB.resident.findMany()).toHaveLength(0);
+
+    // A sí ve lo suyo.
+    expect((await dbA.center.findMany()).length).toBeGreaterThan(0);
+    expect((await dbA.resident.findMany()).length).toBeGreaterThan(0);
+  });
 });
