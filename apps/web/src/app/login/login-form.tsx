@@ -2,17 +2,19 @@
 
 import { useActionState } from 'react';
 import { authenticate, type LoginState } from './actions';
+import { useT } from '@/i18n/provider';
 
 const initialState: LoginState = undefined;
 
 export function LoginForm() {
+  const { t } = useT();
   const [state, formAction, isPending] = useActionState(authenticate, initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4" aria-label="Iniciar sesión">
+    <form action={formAction} className="flex flex-col gap-4" aria-label={t('action.login')}>
       <div className="flex flex-col gap-1">
         <label htmlFor="email" className="font-medium">
-          Email
+          {t('login.email')}
         </label>
         <input
           id="email"
@@ -26,7 +28,7 @@ export function LoginForm() {
 
       <div className="flex flex-col gap-1">
         <label htmlFor="password" className="font-medium">
-          Contraseña
+          {t('login.password')}
         </label>
         <input
           id="password"
@@ -40,7 +42,7 @@ export function LoginForm() {
 
       {state?.error ? (
         <p role="alert" className="text-sm font-medium text-red-600">
-          {state.error}
+          {t(state.error)}
         </p>
       ) : null}
 
@@ -49,7 +51,7 @@ export function LoginForm() {
         disabled={isPending}
         className="min-h-touch rounded-md bg-slate-900 px-4 py-2 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending ? 'Entrando…' : 'Entrar'}
+        {isPending ? t('login.loading') : t('login.submit')}
       </button>
     </form>
   );

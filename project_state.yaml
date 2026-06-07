@@ -5,7 +5,7 @@ project:
   name: Vetlla
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
-  current_milestone: H5
+  current_milestone: H5      # único pendiente (diferido); resto del MVP completo
   last_updated: 2026-06-07
 
 # --------------------------------------------------------------------------
@@ -189,23 +189,49 @@ milestones:
 
   - id: H5
     name: IA Copilot
-    status: not_started
+    status: deferred           # diferido por decisión de Angel (2026-06-07)
     effort: XL
     goal: Las 2 features estrella con tool use y human-in-the-loop.
     exit_criteria:
       - Lenguaje natural -> CareRecord estructurados, con confirmación previa (es y ca).
       - Borrador automático de PIA/seguimiento que requiere aprobación humana.
       - Herramientas tipadas respetan RLS+rol; cada acción en AuditLog; nada de PII fuera de UE.
+    deferral:
+      reason: >-
+        No se usará API key de Anthropic por ahora; queda pendiente decidir qué modelo
+        usar (UE/coste/capacidad). Se retoma cuando Angel defina el modelo.
+      preparado: >-
+        La arquitectura ya soporta tool use: el modelo llamará a los routers tRPC
+        tipados (centers/residents/care/medications/carePlans), que ya validan rol,
+        tenant y RLS. Faltará packages/ai (definición de tools + prompts + SDK) y los
+        endpoints de confirmación/aprobación (human-in-the-loop) + AuditLog.
 
   - id: H6
     name: Portal de familias + pulido
-    status: not_started
+    status: done
     effort: M
     goal: Portal de familias (solo lectura) + pulido de accesibilidad e i18n.
     exit_criteria:
       - Familiar ve resumen y novedades de su residente vinculado y nada más.
       - WCAG 2.1 AA en flujos de auxiliar y familia.
       - i18n es-ES y ca-ES completos en los flujos del MVP.
+    result:
+      summary: >-
+        FamilyLink (usuario↔residente) con RLS+FORCE. Router family.portal con
+        resumen minimizado y doble aislamiento (RLS + filtro por vínculo del usuario).
+        Portal de familias de solo lectura; shell con navegación reducida y redirección
+        del familiar al portal. i18n propio es/ca (cookie + catálogos + useT/getT +
+        selector), html lang dinámico; login, shell y portal traducidos. Accesibilidad:
+        skip-link, aria-live, nav/main etiquetados, objetivos táctiles, color no único.
+      verified:
+        - "Web: 30 tests (incluye i18n translate y rbac portal)"
+        - "DB: 16 tests"
+        - "Runtime: familiar ve solo su residente vinculado; residents.list -> FORBIDDEN; i18n es/ca (subtítulo, botón, html lang)"
+        - "lint + build + typecheck verde; 46 tests en total; /portal construido"
+      adr: docs/adr/0006-portal-familias-i18n-accesibilidad.md
+      notes:
+        - Pantallas de gestión quedan en castellano (i18n extensible añadiendo claves); ca cubre login/shell/portal.
+        - Superadmin de plataforma sin consola propia en el MVP (no opera dentro de tenant).
 
 # --------------------------------------------------------------------------
 # Criterios de aceptación globales del MVP (§12 del spec)

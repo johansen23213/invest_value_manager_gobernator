@@ -50,8 +50,27 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  familyLinks FamilyLink[]
+
   @@index([tenantId])
   @@map("users")
+}
+
+/// Vínculo entre un usuario familiar y el residente que puede consultar (portal).
+model FamilyLink {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  residentId   String   @map("resident_id")
+  resident     Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  relationship String? // p. ej. "hijo", "cónyuge"
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, residentId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("family_links")
 }
 
 // ---------------------------------------------------------------------------
@@ -195,6 +214,7 @@ model Resident {
   medications Medication[]
   administrations MedicationAdministration[]
   carePlans   CarePlan[]
+  familyLinks FamilyLink[]
 
   @@index([tenantId])
   @@index([centerId])

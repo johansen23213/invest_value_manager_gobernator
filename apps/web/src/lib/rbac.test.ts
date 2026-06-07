@@ -44,6 +44,13 @@ describe('hasPermission', () => {
     expect(hasPermission('FAMILIAR', 'residents:read')).toBe(false);
   });
 
+  it('el familiar solo tiene acceso al portal (su residente vinculado)', () => {
+    expect(hasPermission('FAMILIAR', 'portal:read')).toBe(true);
+    expect(hasPermission('FAMILIAR', 'centers:read')).toBe(false);
+    expect(hasPermission('FAMILIAR', 'care:read')).toBe(false);
+    expect(hasPermission('DIRECTOR', 'portal:read')).toBe(false);
+  });
+
   it('el auxiliar registra atención directa', () => {
     expect(hasPermission('AUXILIAR', 'care:write')).toBe(true);
     expect(hasPermission('AUXILIAR', 'care:read')).toBe(true);

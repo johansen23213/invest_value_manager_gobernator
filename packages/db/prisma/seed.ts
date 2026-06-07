@@ -211,6 +211,25 @@ async function main() {
   await seedResidents(tenant.id, residencia.center.id, residencia.bedIds, 22, 0);
   await seedResidents(tenant.id, vivienda.center.id, vivienda.bedIds, 6, 22);
 
+  // Vincula el usuario familiar demo a un residente (portal de familias).
+  const familiar = await db.user.findUnique({ where: { email: 'familiar@demo.vetlla.dev' } });
+  const firstResident = await db.resident.findFirst({
+    where: { tenantId: tenant.id },
+    orderBy: { lastName: 'asc' },
+  });
+  if (familiar && firstResident) {
+    await db.familyLink.upsert({
+      where: { userId_residentId: { userId: familiar.id, residentId: firstResident.id } },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        userId: familiar.id,
+        residentId: firstResident.id,
+        relationship: 'Hijo/a',
+      },
+    });
+  }
+
   console.log(`Seed OK.`);
   console.log(`  Tenant: ${tenant.name}`);
   console.log(`  Usuarios: ${userCount} (password demo: ${DEMO_PASSWORD})`);

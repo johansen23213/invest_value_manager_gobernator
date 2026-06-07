@@ -16,7 +16,7 @@ export async function authenticate(
   });
 
   if (!parsed.success) {
-    return { error: 'Introduce un email y una contraseña válidos.' };
+    return { error: 'login.invalid' };
   }
 
   try {
@@ -27,7 +27,7 @@ export async function authenticate(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: 'Credenciales incorrectas.' };
+      return { error: 'login.error' };
     }
     // Re-lanza el redirect de Next (NEXT_REDIRECT) y cualquier otro error.
     throw error;

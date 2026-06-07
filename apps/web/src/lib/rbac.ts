@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   'medication:administer', // MAR
   'careplan:read', // PIA
   'careplan:write',
+  'portal:read', // portal de familias (solo el residente vinculado)
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -68,7 +69,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'medication:administer',
     'careplan:read',
   ],
-  FAMILIAR: ['tenant:read'], // acceso al residente vinculado vía portal (H6)
+  FAMILIAR: ['tenant:read', 'portal:read'], // solo lectura del residente vinculado
 };
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {
