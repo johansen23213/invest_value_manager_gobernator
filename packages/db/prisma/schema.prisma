@@ -1,0 +1,484 @@
+// Vetlla — esquema de datos
+// H0: base mínima de multitenancy (Tenant + User).
+// H1: Row-Level Security (RLS) sobre tenant_id en todas las tablas con datos.
+// H2: centros, unidades, plazas/camas y expediente del residente + escalas.
+// Toda tabla con datos lleva tenant_id, RLS+FORCE y su política (ver migraciones).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Roles de la plataforma. Permisos por rol + pertenencia al tenant (mínimo privilegio).
+enum UserRole {
+  SUPERADMIN // gestión de la plataforma (cross-tenant)
+  DIRECTOR // dirección/gestor del centro
+  SANITARIO // médico / enfermería
+  AUXILIAR // atención directa
+  FAMILIAR // solo lectura del residente vinculado
+}
+
+/// Operador / cliente del SaaS. Raíz del aislamiento multitenant.
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  centers   Center[]
+  residents Resident[]
+
+  @@map("tenants")
+}
+
+/// Usuario del sistema. Siempre pertenece a un tenant (salvo SUPERADMIN de plataforma).
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(AUXILIAR)
+  tenantId     String?   @map("tenant_id")
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  familyLinks FamilyLink[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+/// Vínculo entre un usuario familiar y el residente que puede consultar (portal).
+model FamilyLink {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  residentId   String   @map("resident_id")
+  resident     Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  relationship String? // p. ej. "hijo", "cónyuge"
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, residentId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("family_links")
+}
+
+// ---------------------------------------------------------------------------
+// H2 — Centros, unidades, plazas/camas y expediente del residente
+// ---------------------------------------------------------------------------
+
+enum CenterType {
+  RESIDENCIA // residencia de mayores
+  CENTRO_DIA // centro de día
+  VIVIENDA_TUTELADA // vivienda tutelada/supervisada
+}
+
+enum BedStatus {
+  DISPONIBLE // operativa (ocupada o no; la ocupación se deriva del residente)
+  FUERA_SERVICIO // baja temporal (mantenimiento, reforma...)
+}
+
+/// Grados de dependencia (Ley 39/2006).
+enum DependencyGrade {
+  SIN_VALORAR
+  GRADO_I
+  GRADO_II
+  GRADO_III
+}
+
+enum Sex {
+  HOMBRE
+  MUJER
+  OTRO
+  NS_NC
+}
+
+enum ResidentStatus {
+  ACTIVO
+  BAJA // alta médica / fallecimiento / traslado
+  PREINGRESO
+}
+
+enum ContactRelation {
+  HIJO_A
+  CONYUGE
+  HERMANO_A
+  TUTOR_LEGAL
+  OTRO
+}
+
+enum AllergySeverity {
+  LEVE
+  MODERADA
+  GRAVE
+}
+
+enum AssessmentType {
+  BARTHEL // ABVD (0–100)
+  TINETTI // marcha y equilibrio (0–28)
+}
+
+/// Centro físico del operador (residencia, centro de día o vivienda tutelada).
+model Center {
+  id         String     @id @default(cuid())
+  tenantId   String     @map("tenant_id")
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String
+  type       CenterType
+  address    String?
+  city       String?
+  postalCode String?    @map("postal_code")
+  phone      String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  units     Unit[]
+  residents Resident[]
+
+  @@index([tenantId])
+  @@map("centers")
+}
+
+/// Unidad/planta dentro de un centro.
+model Unit {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  centerId  String   @map("center_id")
+  center    Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  name      String
+  floor     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  beds Bed[]
+
+  @@index([tenantId])
+  @@index([centerId])
+  @@map("units")
+}
+
+/// Plaza/cama. La ocupación se deriva de si hay un residente vinculado.
+model Bed {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  unitId    String    @map("unit_id")
+  unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  code      String // etiqueta visible, p. ej. "101-A"
+  status    BedStatus @default(DISPONIBLE)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  resident Resident? // ocupante actual (0 o 1)
+
+  @@index([tenantId])
+  @@index([unitId])
+  @@map("beds")
+}
+
+/// Expediente sociosanitario del residente.
+model Resident {
+  id              String          @id @default(cuid())
+  tenantId        String          @map("tenant_id")
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  centerId        String          @map("center_id")
+  center          Center          @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  bedId           String?         @unique @map("bed_id")
+  bed             Bed?            @relation(fields: [bedId], references: [id], onDelete: SetNull)
+  firstName       String          @map("first_name")
+  lastName        String          @map("last_name")
+  birthDate       DateTime?       @map("birth_date")
+  sex             Sex?
+  nationalId      String?         @map("national_id") // DNI/NIE
+  dependencyGrade DependencyGrade @default(SIN_VALORAR) @map("dependency_grade")
+  status          ResidentStatus  @default(ACTIVO)
+  admissionDate   DateTime?       @map("admission_date")
+  notes           String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  contacts    EmergencyContact[]
+  allergies   Allergy[]
+  diagnoses   Diagnosis[]
+  assessments Assessment[]
+  careRecords CareRecord[]
+  medications Medication[]
+  administrations MedicationAdministration[]
+  carePlans   CarePlan[]
+  familyLinks FamilyLink[]
+
+  @@index([tenantId])
+  @@index([centerId])
+  @@map("residents")
+}
+
+/// Contacto de emergencia / familiar de referencia.
+model EmergencyContact {
+  id         String          @id @default(cuid())
+  tenantId   String          @map("tenant_id")
+  residentId String          @map("resident_id")
+  resident   Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  name       String
+  relation   ContactRelation
+  phone      String?
+  email      String?
+  isPrimary  Boolean         @default(false) @map("is_primary")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("emergency_contacts")
+}
+
+/// Alergia/intolerancia conocida.
+model Allergy {
+  id         String           @id @default(cuid())
+  tenantId   String           @map("tenant_id")
+  residentId String           @map("resident_id")
+  resident   Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  substance  String
+  severity   AllergySeverity?
+  reaction   String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("allergies")
+}
+
+/// Diagnóstico clínico.
+model Diagnosis {
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")
+  residentId  String    @map("resident_id")
+  resident    Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  code        String? // CIE-10 (opcional)
+  description String
+  diagnosedAt DateTime? @map("diagnosed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("diagnoses")
+}
+
+/// Valoración mediante escala (Barthel, Tinetti...).
+model Assessment {
+  id           String         @id @default(cuid())
+  tenantId     String         @map("tenant_id")
+  residentId   String         @map("resident_id")
+  resident     Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type         AssessmentType
+  score        Int
+  details      Json? // desglose por ítems (opcional)
+  notes        String?
+  assessedAt   DateTime       @map("assessed_at")
+  assessedById String?        @map("assessed_by_id") // user.id (sin FK; trazado en AuditLog futuro)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("assessments")
+}
+
+// ---------------------------------------------------------------------------
+// H3 — Atención directa offline-first
+// ---------------------------------------------------------------------------
+
+enum CareRecordType {
+  CONSTANTES // tensión, FC, temperatura, SatO2...
+  ABVD // actividades básicas de la vida diaria
+  DEPOSICION
+  INGESTA
+  INCIDENCIA
+}
+
+enum SyncStatus {
+  SYNCED
+  CONFLICT // hubo conflicto en la última fusión (ver SyncConflict)
+}
+
+enum ConflictWinner {
+  SERVER
+  CLIENT
+}
+
+/// Registro de atención directa. Creado a pie de cama, posiblemente offline.
+/// La idempotencia se garantiza por (tenant_id, client_id): reenviar no duplica.
+model CareRecord {
+  id              String         @id @default(cuid())
+  tenantId        String         @map("tenant_id")
+  residentId      String         @map("resident_id")
+  resident        Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type            CareRecordType
+  clientId        String         @map("client_id") // uuid generado en el dispositivo
+  payload         Json // valores estructurados (varían por tipo)
+  fieldTimestamps Json           @map("field_timestamps") // campo -> ISO timestamp (LWW por campo)
+  recordedAt      DateTime       @map("recorded_at") // momento clínico (del dispositivo)
+  authorId        String         @map("author_id") // user.id que registró
+  syncStatus      SyncStatus     @default(SYNCED) @map("sync_status")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  conflicts SyncConflict[]
+
+  @@unique([tenantId, clientId])
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("care_records")
+}
+
+/// Registro de conflicto de sincronización (last-write-wins por campo).
+model SyncConflict {
+  id           String         @id @default(cuid())
+  tenantId     String         @map("tenant_id")
+  careRecordId String         @map("care_record_id")
+  careRecord   CareRecord     @relation(fields: [careRecordId], references: [id], onDelete: Cascade)
+  field        String
+  serverValue  Json?          @map("server_value")
+  clientValue  Json?          @map("client_value")
+  winner       ConflictWinner
+  resolvedAt   DateTime       @default(now()) @map("resolved_at")
+
+  @@index([tenantId])
+  @@index([careRecordId])
+  @@map("sync_conflicts")
+}
+
+// ---------------------------------------------------------------------------
+// H4 — Medicación (prescripción + MAR) y PIA (plan individualizado)
+// ---------------------------------------------------------------------------
+
+enum MedAdminStatus {
+  ADMINISTRADO
+  NO_ADMINISTRADO
+  RECHAZADO
+}
+
+enum CarePlanStatus {
+  ACTIVO
+  CERRADO
+}
+
+enum GoalStatus {
+  PENDIENTE
+  EN_PROGRESO
+  CONSEGUIDO
+  CANCELADO
+}
+
+/// Prescripción de medicación. `times` son las horas de pauta (HH:MM) del día.
+model Medication {
+  id            String    @id @default(cuid())
+  tenantId      String    @map("tenant_id")
+  residentId    String    @map("resident_id")
+  resident      Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  name          String
+  dose          String
+  route         String?
+  times         Json // array de "HH:MM"
+  startDate     DateTime  @map("start_date")
+  endDate       DateTime? @map("end_date")
+  instructions  String?
+  active        Boolean   @default(true)
+  prescribedById String?  @map("prescribed_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  administrations MedicationAdministration[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("medications")
+}
+
+/// Registro de administración (MAR). Idempotente por (tenant, medicación, hora pautada).
+model MedicationAdministration {
+  id               String         @id @default(cuid())
+  tenantId         String         @map("tenant_id")
+  residentId       String         @map("resident_id")
+  resident         Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  medicationId     String         @map("medication_id")
+  medication       Medication     @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  scheduledAt      DateTime       @map("scheduled_at")
+  status           MedAdminStatus
+  administeredAt   DateTime?      @map("administered_at")
+  administeredById String?        @map("administered_by_id")
+  notes            String?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@unique([tenantId, medicationId, scheduledAt])
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("medication_administrations")
+}
+
+/// Plan Individualizado de Atención (PIA/PAI).
+model CarePlan {
+  id          String         @id @default(cuid())
+  tenantId    String         @map("tenant_id")
+  residentId  String         @map("resident_id")
+  resident    Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  title       String
+  status      CarePlanStatus @default(ACTIVO)
+  startDate   DateTime       @default(now()) @map("start_date")
+  notes       String?
+  createdById String?        @map("created_by_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  goals   CarePlanGoal[]
+  reviews CarePlanReview[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("care_plans")
+}
+
+/// Objetivo dentro de un PIA.
+model CarePlanGoal {
+  id            String     @id @default(cuid())
+  tenantId      String     @map("tenant_id")
+  carePlanId    String     @map("care_plan_id")
+  carePlan      CarePlan   @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  description   String
+  status        GoalStatus @default(PENDIENTE)
+  targetDate    DateTime?  @map("target_date")
+  progressNotes String?    @map("progress_notes")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([carePlanId])
+  @@map("care_plan_goals")
+}
+
+/// Revisión/seguimiento de un PIA.
+model CarePlanReview {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  carePlanId   String   @map("care_plan_id")
+  carePlan     CarePlan @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  reviewDate   DateTime @default(now()) @map("review_date")
+  summary      String
+  reviewedById String?  @map("reviewed_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([carePlanId])
+  @@map("care_plan_reviews")
+}

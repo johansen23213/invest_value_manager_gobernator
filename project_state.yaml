@@ -1,0 +1,246 @@
+# project_state.yaml — Única fuente de verdad del avance de Vetlla
+# Se actualiza al cerrar cada hito (tests verdes + checkpoint + resumen).
+
+project:
+  name: Vetlla
+  description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
+  phase: building            # planning | building | done
+  current_milestone: H5      # único pendiente (diferido); resto del MVP completo
+  last_updated: 2026-06-07
+
+# --------------------------------------------------------------------------
+# Decisiones tomadas (las no triviales también van a docs/adr/)
+# --------------------------------------------------------------------------
+decisions:
+  - id: D-001
+    date: 2026-06-06
+    decision: >-
+      Esta branch (claude/vetlla-saas-mvp-spec-PuHOW) se dedica exclusivamente a
+      Vetlla. Se reemplaza el CLAUDE.md previo (sistema Gobernator de inversiones),
+      que permanece en la branch main.
+  - id: D-002
+    date: 2026-06-06
+    decision: >-
+      Stack confirmado del spec: monorepo pnpm+Turborepo, Next.js App Router + TS,
+      tRPC, Prisma + Postgres con RLS, Auth.js, PWA offline (IndexedDB + cola sync),
+      Tailwind + shadcn/ui, Zod, Vitest + Playwright, @anthropic-ai/sdk. Todo en UE.
+
+# --------------------------------------------------------------------------
+# Supuestos pendientes de confirmar (ver chat de planificación)
+# --------------------------------------------------------------------------
+assumptions:
+  - id: A-001
+    text: Auth.js (NextAuth) con adaptador Postgres en lugar de Supabase Auth, para mantener el control del schema y RLS en un solo Postgres.
+    status: pending_confirmation
+  - id: A-002
+    text: Transcripción de voz se deja como interfaz/stub en el MVP (entrada por texto operativa); motor UE/on-prem se integra cuando se elija proveedor.
+    status: pending_confirmation
+  - id: A-003
+    text: Despliegue concreto (proveedor app + Postgres EU) se decide en H0/ADR; el MVP corre en local con docker-compose para Postgres.
+    status: pending_confirmation
+  - id: A-004
+    text: 2FA opcional se modela en datos pero su implementación completa puede caer en H1 o roadmap según esfuerzo.
+    status: pending_confirmation
+
+# --------------------------------------------------------------------------
+# Hitos
+# --------------------------------------------------------------------------
+milestones:
+  - id: H0
+    name: Andamiaje
+    status: done               # not_started | in_progress | done
+    effort: M
+    goal: Monorepo, Next.js, Prisma+Postgres (docker), Auth.js, CI básico, CLAUDE.md, project_state.yaml, login funcional.
+    exit_criteria:
+      - Monorepo arranca (pnpm install + dev) y lint/typecheck en verde.
+      - Postgres local vía docker-compose; primera migración Prisma aplicada.
+      - Pantalla de login funcional con Auth.js.
+      - CI básico (lint + typecheck + tests) en verde.
+    result:
+      summary: >-
+        Monorepo pnpm+Turborepo con apps/web (Next 15 App Router + tRPC v11 +
+        Auth.js v5 + Tailwind) y packages/db (Prisma 6 + Postgres). Login por
+        credenciales funcional (verificado en runtime: sesión con role+tenantId,
+        rechazo de credenciales inválidas). lint + build + typecheck + 5 tests en
+        verde. Migración inicial aplicada y seed con tenant demo + 5 roles.
+      verified:
+        - "pnpm lint / build / typecheck: verde"
+        - "Vitest: 5 tests verde (auth-schema, login-form, UserRole)"
+        - "Runtime: /login 200, / -> 307 /login, tRPC health ok, login credenciales -> sesión"
+      notes:
+        - Docker presente pero el registry está bloqueado por la política de red; en
+          este entorno se usó el Postgres 16 del sistema. docker-compose.yml queda
+          para entornos con acceso al registry.
+        - E2E (Playwright) configurado con smoke test; se integrará en CI con BD de test (post-H0).
+      adr: docs/adr/0001-monorepo-stack-andamiaje.md
+
+  - id: H1
+    name: Multitenancy + RBAC
+    status: done
+    effort: L
+    goal: Tenants, usuarios, roles, RLS y aislamiento verificado por test.
+    exit_criteria:
+      - tenant_id + RLS en todas las tablas con datos.
+      - Contexto de tenant inyectado en middleware de auth.
+      - Test demuestra que un tenant no ve datos de otro por ninguna ruta/query.
+      - RBAC por rol + pertenencia a tenant (mínimo privilegio).
+    result:
+      summary: >-
+        RLS en Postgres (ENABLE + FORCE) sobre tenants y users, con políticas por
+        GUC app.tenant_id y bypass para superadmin/seed (fallo en cerrado). Cliente
+        Prisma forTenant/asPlatformAdmin que fija el contexto por transacción. tRPC
+        con tenantProcedure (inyecta ctx.db aislado) y permissionProcedure (RBAC).
+        Login adaptado a bypass (lookup cross-tenant por email).
+      verified:
+        - "DB: 6 tests de aislamiento RLS (lectura/escritura cruzada, fallo en cerrado, bypass)"
+        - "RBAC: 5 tests unitarios de la matriz de permisos"
+        - "Runtime API: dirección ve solo sus 4 usuarios; auxiliar -> FORBIDDEN en users.list; tenant.current aislado"
+        - "lint + build + typecheck verde; 16 tests en total"
+      adr: docs/adr/0002-rls-multitenancy.md
+      notes:
+        - Un solo rol de Postgres con FORCE RLS (app y migraciones comparten rol). En
+          producción se valorará un rol de app no propietario (ADR-0002).
+        - Cada tabla futura con datos debe añadir tenant_id + RLS+FORCE + política en su migración.
+
+  - id: H2
+    name: Centros, plazas y residentes
+    status: done
+    effort: L
+    goal: CRUD de centro/unidad/plaza y expediente sociosanitario básico + escalas.
+    exit_criteria:
+      - CRUD Center (residencia|centro_dia|vivienda_tutelada), Unit, Bed/Plaza, ocupación.
+      - Expediente Resident con contactos, dependencia, alergias, diagnósticos.
+      - Assessment con escalas Barthel y Tinetti.
+    result:
+      summary: >-
+        Modelo de datos de centros/unidades/plazas + expediente del residente
+        (contactos, alergias, diagnósticos, escalas), todo con tenant_id y RLS+FORCE.
+        API tRPC CRUD (centers, units, beds, residents + sub-recursos) con RBAC e
+        integridad cross-tenant. Escalas Barthel/Tinetti como dominio tipado con
+        validación de rango e interpretación. packages/ui (estilo shadcn) y UI con
+        shell autenticado: panel, centros (+detalle con ocupación), residentes
+        (+expediente). Seed §13 con 2 centros (30+8 plazas) y 28 residentes.
+      verified:
+        - "DB: 8 tests (aislamiento RLS incluye centros/residentes)"
+        - "Web: 17 tests (rbac, escalas, schemas, login-form)"
+        - "Runtime API: centers.list/residents.list, alta de centro (dir) vs FORBIDDEN (auxiliar), validación de rango de escala (BAD_REQUEST)"
+        - "lint + build + typecheck verde; 25 tests en total; 9 rutas construidas"
+      adr: docs/adr/0003-modelo-centros-residentes.md
+      notes:
+        - Ocupación derivada de Resident.bedId (1-1 @unique); BedStatus solo DISPONIBLE/FUERA_SERVICIO.
+        - UI sin Radix (primitivas Tailwind). shadcn con Radix si se necesitan modales/combobox.
+
+  - id: H3
+    name: Atención directa offline
+    status: done
+    effort: XL
+    goal: Flujo tablet, CareRecord, PWA + cola de sync con resolución de conflictos.
+    exit_criteria:
+      - PWA instalable; flujo a pie de cama con objetivos táctiles amplios.
+      - CareRecord (constantes, ABVD, deposiciones, ingesta, incidencias) con autor+timestamp+syncStatus.
+      - Registro sin red y sincronización sin duplicados al volver online (last-write-wins por campo + log de conflictos).
+    result:
+      summary: >-
+        CareRecord + SyncConflict (tenant_id + RLS+FORCE). Motor de sync en
+        packages/db: mergeCareRecord (puro, LWW por campo + conflictos) y
+        applyCareRecordPush (idempotente por tenant_id+client_id). Router tRPC
+        care.push/listByResident con RBAC (care:*). Cliente offline: IndexedDB
+        (cola outbox) + motor de sync (online/intervalo) + cliente tRPC vanilla +
+        provider/hook + badge de estado en la shell. PWA: manifest + service
+        worker network-first + registro. Página /atencion a pie de cama
+        (constantes, ingesta, deposición, incidencia) con objetivos táctiles.
+      verified:
+        - "DB: 16 tests (merge puro 5, integración sync 3 -idempotencia/LWW/RLS-, RLS 7, enum 1)"
+        - "Web: 18 tests"
+        - "Runtime HTTP: care.push mismo clientId -> CREATED luego MERGED, mismo id, 1 solo registro (sin duplicados)"
+        - "lint + build + typecheck verde; 34 tests en total"
+      adr: docs/adr/0004-atencion-offline-sync.md
+      notes:
+        - Conflictos se registran y gana el más reciente; revisión/resolución manual en UI queda pendiente.
+        - El offline real de datos lo da IndexedDB; el SW cubre navegación. E2E offline con navegador no ejecutado aquí (sin browser); cubierto por tests de integración + verificación HTTP del push.
+
+  - id: H4
+    name: Medicación + PIA
+    status: done
+    effort: L
+    goal: Prescripción, MAR con alertas de no-administrado, PIA con objetivos y revisión.
+    exit_criteria:
+      - Medication (prescripción) + MedicationAdministration (MAR).
+      - Alertas de no-administración.
+      - CarePlan (PIA) con CarePlanGoal y CarePlanReview.
+    result:
+      summary: >-
+        Medication + MedicationAdministration + CarePlan/Goal/Review (tenant_id +
+        RLS+FORCE). MAR calculado on-the-fly (computeSchedule/computeAlerts, lógica
+        pura) con alertas de no-administrado derivadas; registro idempotente por
+        (tenant, medicación, hora). Routers medications (prescribe/schedule/record/
+        alertsToday) y carePlans (plan/goal/review) con RBAC. UI: sub-páginas
+        medicación (prescripción + MAR + administrar) y PIA (objetivos + revisiones),
+        más alerta de no-administrado en el panel. Seed con medicación y PIA demo.
+      verified:
+        - "Web: 26 tests (mar 6, rbac 11, scales 5, schema 3, login 1)"
+        - "DB: 16 tests (sin cambios; RLS/sync siguen verdes)"
+        - "Runtime: prescripción -> dosis NO_ADMINISTRADO (alerta) -> administración por auxiliar -> resuelto; auxiliar no prescribe (FORBIDDEN); PIA crea plan+objetivo"
+        - "lint + build + typecheck verde; 42 tests en total"
+      adr: docs/adr/0005-medicacion-mar-pia.md
+      notes:
+        - "MAR no pre-genera dosis: se calculan; alerta = dosis vencida (>hora+60min) sin registro."
+        - "Numeración de migración RLS de H3 corregida (orden lexicográfico para deploy en fresco)."
+
+  - id: H5
+    name: IA Copilot
+    status: deferred           # diferido por decisión de Angel (2026-06-07)
+    effort: XL
+    goal: Las 2 features estrella con tool use y human-in-the-loop.
+    exit_criteria:
+      - Lenguaje natural -> CareRecord estructurados, con confirmación previa (es y ca).
+      - Borrador automático de PIA/seguimiento que requiere aprobación humana.
+      - Herramientas tipadas respetan RLS+rol; cada acción en AuditLog; nada de PII fuera de UE.
+    deferral:
+      reason: >-
+        No se usará API key de Anthropic por ahora; queda pendiente decidir qué modelo
+        usar (UE/coste/capacidad). Se retoma cuando Angel defina el modelo.
+      preparado: >-
+        La arquitectura ya soporta tool use: el modelo llamará a los routers tRPC
+        tipados (centers/residents/care/medications/carePlans), que ya validan rol,
+        tenant y RLS. Faltará packages/ai (definición de tools + prompts + SDK) y los
+        endpoints de confirmación/aprobación (human-in-the-loop) + AuditLog.
+
+  - id: H6
+    name: Portal de familias + pulido
+    status: done
+    effort: M
+    goal: Portal de familias (solo lectura) + pulido de accesibilidad e i18n.
+    exit_criteria:
+      - Familiar ve resumen y novedades de su residente vinculado y nada más.
+      - WCAG 2.1 AA en flujos de auxiliar y familia.
+      - i18n es-ES y ca-ES completos en los flujos del MVP.
+    result:
+      summary: >-
+        FamilyLink (usuario↔residente) con RLS+FORCE. Router family.portal con
+        resumen minimizado y doble aislamiento (RLS + filtro por vínculo del usuario).
+        Portal de familias de solo lectura; shell con navegación reducida y redirección
+        del familiar al portal. i18n propio es/ca (cookie + catálogos + useT/getT +
+        selector), html lang dinámico; login, shell y portal traducidos. Accesibilidad:
+        skip-link, aria-live, nav/main etiquetados, objetivos táctiles, color no único.
+      verified:
+        - "Web: 30 tests (incluye i18n translate y rbac portal)"
+        - "DB: 16 tests"
+        - "Runtime: familiar ve solo su residente vinculado; residents.list -> FORBIDDEN; i18n es/ca (subtítulo, botón, html lang)"
+        - "lint + build + typecheck verde; 46 tests en total; /portal construido"
+      adr: docs/adr/0006-portal-familias-i18n-accesibilidad.md
+      notes:
+        - Pantallas de gestión quedan en castellano (i18n extensible añadiendo claves); ca cubre login/shell/portal.
+        - Superadmin de plataforma sin consola propia en el MVP (no opera dentro de tenant).
+
+# --------------------------------------------------------------------------
+# Criterios de aceptación globales del MVP (§12 del spec)
+# --------------------------------------------------------------------------
+acceptance_criteria:
+  - Operador se da de alta, crea residencia + vivienda tutelada, da de alta plazas y residentes.
+  - Auxiliar registra atención desde tablet sin red; datos aparecen al volver online sin duplicados.
+  - Sanitario prescribe medicación y ve alertas de no-administración.
+  - Copiloto convierte frase libre en registros estructurados (es y ca) y redacta borrador de PIA con aprobación.
+  - Familiar ve solo el resumen de su residente.
+  - Aislamiento total entre tenants demostrado por test.
+  - Toda acción sobre datos personales en AuditLog. Datos alojados en la UE.

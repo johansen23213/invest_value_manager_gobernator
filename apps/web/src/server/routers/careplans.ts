@@ -1,0 +1,90 @@
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { GoalStatus } from '@vetlla/db';
+import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
+
+export const carePlansRouter = createTRPCRouter({
+  listByResident: permissionProcedure('careplan:read')
+    .input(z.object({ residentId: z.string() }))
+    .query(({ ctx, input }) =>
+      ctx.db.carePlan.findMany({
+        where: { residentId: input.residentId },
+        orderBy: { startDate: 'desc' },
+        include: {
+          goals: { orderBy: { createdAt: 'asc' } },
+          reviews: { orderBy: { reviewDate: 'desc' } },
+        },
+      }),
+    ),
+
+  create: permissionProcedure('careplan:write')
+    .input(
+      z.object({
+        residentId: z.string(),
+        title: z.string().min(1).max(160),
+        notes: z.string().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const resident = await ctx.db.resident.findUnique({ where: { id: input.residentId } });
+      if (!resident) throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
+      return ctx.db.carePlan.create({
+        data: {
+          tenantId: ctx.tenantId,
+          residentId: input.residentId,
+          title: input.title,
+          notes: input.notes,
+          createdById: ctx.session.user.id,
+        },
+      });
+    }),
+
+  addGoal: permissionProcedure('careplan:write')
+    .input(
+      z.object({
+        carePlanId: z.string(),
+        description: z.string().min(1).max(300),
+        targetDate: z.coerce.date().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const plan = await ctx.db.carePlan.findUnique({ where: { id: input.carePlanId } });
+      if (!plan) throw new TRPCError({ code: 'NOT_FOUND', message: 'PIA no encontrado.' });
+      return ctx.db.carePlanGoal.create({
+        data: {
+          tenantId: ctx.tenantId,
+          carePlanId: input.carePlanId,
+          description: input.description,
+          targetDate: input.targetDate,
+        },
+      });
+    }),
+
+  updateGoal: permissionProcedure('careplan:write')
+    .input(
+      z.object({
+        id: z.string(),
+        status: z.nativeEnum(GoalStatus).optional(),
+        progressNotes: z.string().max(1000).optional(),
+      }),
+    )
+    .mutation(({ ctx, input }) => {
+      const { id, ...data } = input;
+      return ctx.db.carePlanGoal.update({ where: { id }, data });
+    }),
+
+  addReview: permissionProcedure('careplan:write')
+    .input(z.object({ carePlanId: z.string(), summary: z.string().min(1).max(2000) }))
+    .mutation(async ({ ctx, input }) => {
+      const plan = await ctx.db.carePlan.findUnique({ where: { id: input.carePlanId } });
+      if (!plan) throw new TRPCError({ code: 'NOT_FOUND', message: 'PIA no encontrado.' });
+      return ctx.db.carePlanReview.create({
+        data: {
+          tenantId: ctx.tenantId,
+          carePlanId: input.carePlanId,
+          summary: input.summary,
+          reviewedById: ctx.session.user.id,
+        },
+      });
+    }),
+});
