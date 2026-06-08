@@ -9,6 +9,9 @@ project:
   last_updated: 2026-06-07
   # 2026-06-07: cerrada deuda de UX en estado "doing": UX-10 (paginación de
   # listados) y UX-17 (MAR por turno + motivo en no-administrado). 54 tests verde.
+  # 2026-06-07: UX-08 design system accesible sobre Radix (Dialog/Tabs/Toast en
+  # @vetlla/ui); confirm y toast reimplementados sobre las primitivas (focus-trap,
+  # scroll-lock, retorno de foco, aria-live gestionada). Tabs queda lista para UX-12.
 
 # --------------------------------------------------------------------------
 # Decisiones tomadas (las no triviales también van a docs/adr/)
@@ -280,7 +283,7 @@ ux_backlog:
     - { id: UX-05, titulo: "Estados de carga (skeletons) y vacíos con CTA", prioridad: sprint1, estado: done }
     - { id: UX-06, titulo: "Reequilibrar el Panel + accesos rápidos por rol", prioridad: sprint1, estado: done }
     - { id: UX-07, titulo: "Identidad visual / tokens de marca (Vetlla teal)", prioridad: sprint1, estado: done }
-    - { id: UX-08, titulo: "Design system accesible (Radix/shadcn): Dialog, Toast, Tabs…", prioridad: sprint1, estado: todo }
+    - { id: UX-08, titulo: "Design system accesible (Radix): Dialog, Toast, Tabs", prioridad: sprint1, estado: done }
     - { id: UX-09, titulo: "Patrón de formularios con validación inline (Zod en cliente)", prioridad: sprint1, estado: todo }
     - { id: UX-10, titulo: "Búsqueda y filtros en listados + paginación", prioridad: sprint1, estado: done }
     - { id: UX-11, titulo: "Migas de pan y cabecera de residente persistente", prioridad: backlog, estado: todo }
