@@ -6,7 +6,10 @@ project:
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
   current_milestone: H5      # único pendiente (diferido); resto del MVP completo
-  last_updated: 2026-06-07
+  last_updated: 2026-06-08
+  # 2026-06-08: análisis de modelo de negocio (5 informes en docs/negocio/) con
+  # investigación de mercado propia. Surface una tensión estratégica: el diferencial
+  # declarado (IA Copilot) está en H5 diferido -> decisión pendiente (ver Q-001).
   # 2026-06-07: cerrada deuda de UX en estado "doing": UX-10 (paginación de
   # listados) y UX-17 (MAR por turno + motivo en no-administrado). 54 tests verde.
   # 2026-06-07: UX-08 design system accesible sobre Radix (Dialog/Tabs/Toast en
@@ -29,6 +32,15 @@ decisions:
       Stack confirmado del spec: monorepo pnpm+Turborepo, Next.js App Router + TS,
       tRPC, Prisma + Postgres con RLS, Auth.js, PWA offline (IndexedDB + cola sync),
       Tailwind + shadcn/ui, Zod, Vitest + Playwright, @anthropic-ai/sdk. Todo en UE.
+  - id: D-003
+    date: 2026-06-08
+    decision: >-
+      Se documenta el modelo de negocio de Vetlla en docs/negocio/ (5 informes +
+      metodología y un dossier ejecutivo), adaptando un framework de análisis de
+      empresas cotizadas al caso de una startup pre-ingresos. Fuente de verdad del
+      análisis: evidencia de sector/competidores/cliente/regulación; el spec es
+      hipótesis, no hecho. Sustenta investigación web de junio 2026 con fuentes
+      citadas y datos etiquetados (Confirmado/Estimado/Hipótesis/No confirmado).
 
 # --------------------------------------------------------------------------
 # Supuestos pendientes de confirmar (ver chat de planificación)
@@ -46,6 +58,55 @@ assumptions:
   - id: A-004
     text: 2FA opcional se modela en datos pero su implementación completa puede caer en H1 o roadmap según esfuerzo.
     status: pending_confirmation
+
+# --------------------------------------------------------------------------
+# Análisis de modelo de negocio (docs/negocio/)
+# --------------------------------------------------------------------------
+business_analysis:
+  date: 2026-06-08
+  location: docs/negocio/
+  method: >-
+    Framework de análisis de empresas cotizadas adaptado a startup pre-ingresos.
+    Investigación web propia en 4 líneas (estructura del sector, financiación/
+    regulación/personal, competidores/pricing, benchmarks SaaS) + dossier ejecutivo.
+  documents:
+    - docs/negocio/00-metodologia.md
+    - docs/negocio/01-sector-map.md
+    - docs/negocio/02-business-model.md
+    - docs/negocio/03-economics-engine.md
+    - docs/negocio/04-strategy-map.md
+    - docs/negocio/05-contradiction-check.md
+    - docs/negocio/06-dossier-ejecutivo.md
+  key_findings:
+    - "Hueco real: el líder (ResiPlus, +2.750 centros) sigue siendo escritorio cliente-servidor, no cloud-native."
+    - "Diferencial de IA libre: ningún competidor de gestión tiene copiloto agéntico administrativo (la IA del sector es visión/sensores para caídas)."
+    - "Dolor del cliente confirmado: escasez de personal + carga documental/inspección + UNE 158101 obligatoria (Madrid nov-2026)."
+    - "Único precio público del mercado: GdR = 59 EUR/centro + 2 EUR/residente/mes. ResiPlus/Resilife/Resiges no publican precio."
+    - "Mercado fragmentado: ~78% de las camas fuera del top-15 -> beachhead natural en centros pequeños/independientes y nuevos."
+    - "Economía atractiva pero CONDICIONAL: el LTV:CAC depende de pricing y churn reales aún sin validar."
+  tension: >-
+    Palabras vs. actos: el diferencial declarado (IA Copilot) está en H5 diferido.
+    A corto, Vetlla compite solo por arquitectura+UX, terreno más fácil de igualar.
+
+# --------------------------------------------------------------------------
+# Preguntas abiertas (decisiones pendientes de Angel)
+# --------------------------------------------------------------------------
+open_questions:
+  - id: Q-001
+    date: 2026-06-08
+    question: >-
+      Rumbo del diferencial de IA: ¿reactivar H5 (decidir modelo UE/coste y
+      construir el copiloto) o reposicionar el relato a "cloud + cumplimiento ahora,
+      IA en roadmap" mientras tanto? Es la principal tensión del análisis de negocio.
+    status: open
+    related: [H5, D-003]
+  - id: Q-002
+    date: 2026-06-08
+    question: >-
+      Validar las dos incógnitas que mueven la economía (informe 03): precio real
+      por plaza/mes y adopción/churn real, idealmente con 3-5 centros piloto.
+    status: open
+    related: [D-003]
 
 # --------------------------------------------------------------------------
 # Hitos
