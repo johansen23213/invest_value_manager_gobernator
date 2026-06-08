@@ -6,7 +6,9 @@
 #   ./scripts/dev-setup.sh             prepara todo y arranca la app (pnpm dev)
 #   ./scripts/dev-setup.sh --no-start  prepara todo pero no arranca el servidor
 #
-# Requisitos: Node 20+, pnpm 10+, Docker (con Docker Compose v2).
+# Base de datos: usa un Postgres local si ya está corriendo en localhost:5432
+# (p. ej. Postgres.app o Homebrew); si no, lo levanta con Docker si está
+# disponible. Requisitos: Node 20+, pnpm 10+, y Postgres.app/Homebrew o Docker.
 # Al terminar tendrás la app en http://localhost:3000 con datos demo.
 # ---------------------------------------------------------------------------
 set -euo pipefail
@@ -22,15 +24,16 @@ die()  { printf "${c_err}✗ %s${c_off}\n" "$1" >&2; exit 1; }
 START=1
 [ "${1:-}" = "--no-start" ] && START=0
 
-# --- 1. Prerrequisitos --------------------------------------------------------
+PG_HOST=localhost
+PG_PORT=5432
+
+# --- 1. Prerrequisitos (Node + pnpm) -----------------------------------------
 log "Comprobando prerrequisitos…"
-command -v node   >/dev/null 2>&1 || die "Falta Node.js 20+  → https://nodejs.org"
+command -v node >/dev/null 2>&1 || die "Falta Node.js 20+  → https://nodejs.org"
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
 [ "$NODE_MAJOR" -ge 20 ] || die "Node $NODE_MAJOR detectado; se requiere 20 o superior."
-command -v pnpm   >/dev/null 2>&1 || die "Falta pnpm 10+  → 'corepack enable' o 'npm i -g pnpm'"
-command -v docker >/dev/null 2>&1 || die "Falta Docker  → https://docs.docker.com/get-docker"
-docker compose version >/dev/null 2>&1 || die "Falta Docker Compose v2 ('docker compose')."
-ok "Node $(node -v), pnpm $(pnpm -v), Docker disponible."
+command -v pnpm >/dev/null 2>&1 || die "Falta pnpm 10+  → 'corepack enable' o 'npm i -g pnpm'"
+ok "Node $(node -v), pnpm $(pnpm -v)."
 
 # --- 2. Fichero .env ----------------------------------------------------------
 if [ ! -f .env ]; then
@@ -52,18 +55,53 @@ if ! grep -q '^AUTH_SECRET=' .env \
   ok "AUTH_SECRET generado."
 fi
 
-# --- 3. Postgres (Docker) -----------------------------------------------------
-log "Levantando Postgres (docker compose)…"
-docker compose up -d postgres
-log "Esperando a que Postgres esté listo…"
-for i in $(seq 1 30); do
-  if docker compose exec -T postgres pg_isready -U "${POSTGRES_USER:-vetlla}" -d "${POSTGRES_DB:-vetlla}" >/dev/null 2>&1; then
-    ok "Postgres aceptando conexiones."
-    break
+# --- 3. Postgres --------------------------------------------------------------
+pg_reachable() { (exec 3<>"/dev/tcp/${PG_HOST}/${PG_PORT}") 2>/dev/null; }
+
+if pg_reachable; then
+  log "Postgres detectado en ${PG_HOST}:${PG_PORT} (no uso Docker)."
+  if command -v psql >/dev/null 2>&1; then
+    # Crear rol 'vetlla' (no superusuario, para que la RLS se aplique) si falta.
+    if ! psql -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='vetlla'" 2>/dev/null | grep -q 1; then
+      log "Creando rol 'vetlla'…"
+      psql -d postgres -v ON_ERROR_STOP=1 \
+        -c "CREATE ROLE vetlla LOGIN PASSWORD 'vetlla_dev_password';" \
+        || die "No pude crear el rol 'vetlla'. Créalo a mano:  psql -d postgres -c \"CREATE ROLE vetlla LOGIN PASSWORD 'vetlla_dev_password';\""
+    fi
+    # Crear base de datos 'vetlla' (propiedad del rol) si falta.
+    if ! psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='vetlla'" 2>/dev/null | grep -q 1; then
+      log "Creando base de datos 'vetlla'…"
+      createdb -O vetlla vetlla || die "No pude crear la BD 'vetlla'.  Créala a mano:  createdb -O vetlla vetlla"
+    fi
+    ok "Rol y base de datos 'vetlla' listos."
+  else
+    log "Postgres está corriendo pero no encuentro 'psql' en el PATH."
+    log "Si usas Postgres.app, añade sus binarios al PATH y reintenta:"
+    log '  export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"'
+    log "Continúo asumiendo que ya existen el rol 'vetlla' y la BD 'vetlla'."
   fi
-  [ "$i" -eq 30 ] && die "Postgres no respondió a tiempo. Revisa 'docker compose logs postgres'."
-  sleep 2
-done
+elif docker compose version >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  log "No hay Postgres local; lo levanto con Docker…"
+  docker compose up -d postgres
+  log "Esperando a que Postgres esté listo…"
+  for i in $(seq 1 30); do
+    if docker compose exec -T postgres pg_isready -U vetlla -d vetlla >/dev/null 2>&1; then
+      ok "Postgres (Docker) aceptando conexiones."
+      break
+    fi
+    [ "$i" -eq 30 ] && die "Postgres (Docker) no respondió. Revisa 'docker compose logs postgres'."
+    sleep 2
+  done
+else
+  die "No encuentro Postgres en ${PG_HOST}:${PG_PORT} ni Docker en marcha.
+  Opción sin Docker (recomendada en Mac):
+    1) Instala Postgres.app  → https://postgresapp.com
+    2) Ábrelo y pulsa 'Initialize' / 'Start'
+    3) (una vez) añade sus binarios al PATH:
+         export PATH=\"/Applications/Postgres.app/Contents/Versions/latest/bin:\$PATH\"
+    4) Vuelve a ejecutar:  pnpm setup
+  Alternativa con Homebrew:  brew install postgresql@16 && brew services start postgresql@16"
+fi
 
 # --- 4. Dependencias ----------------------------------------------------------
 log "Instalando dependencias (pnpm install)…"
