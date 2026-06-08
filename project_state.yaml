@@ -99,7 +99,13 @@ open_questions:
       construir el copiloto) o reposicionar el relato a "cloud + cumplimiento ahora,
       IA en roadmap" mientras tanto? Es la principal tensión del análisis de negocio.
     status: open
-    related: [H5, D-003]
+    update_2026-06-08: >-
+      Resuelta la incógnita técnica de "qué modelo UE" (docs/adr/0008): hay vía viable
+      (Claude en Bedrock/Vertex UE). Queda la decisión de Angel: (a) reactivar H5 ahora
+      construyendo packages/ai sobre esa vía, o (b) mantener diferido y reposicionar el
+      relato a "cloud+cumplimiento ahora, IA en roadmap". Y, si (a), elegir vía de hosting
+      (ligada a A-003).
+    related: [H5, D-003, ADR-0008]
   - id: Q-002
     date: 2026-06-08
     question: >-
@@ -271,6 +277,19 @@ milestones:
         tipados (centers/residents/care/medications/carePlans), que ya validan rol,
         tenant y RLS. Faltará packages/ai (definición de tools + prompts + SDK) y los
         endpoints de confirmación/aprobación (human-in-the-loop) + AuditLog.
+      analisis_2026-06-08: >-
+        Resuelto el "qué modelo" en docs/adr/0008 (estado: Propuesta). HALLAZGO CLAVE:
+        la API 1P de Anthropic NO ofrece residencia UE (solo us/global) -> incompatible
+        con el principio "datos de salud no salen de la UE". Solución: acceder a Claude
+        vía AWS Bedrock UE in-region (Fráncfort) o Google Vertex AI (endpoint eu); ambos
+        confirmados (datos en UE, no compartidos con Anthropic, retención cero). Modelos:
+        Sonnet 4.6 (copiloto) + Haiku 4.5 (extracción). Bedrock/Vertex no soportan Managed
+        Agents/server-tools -> usar tool use con bucle manual (encaja con human-in-the-loop).
+        El desempate Bedrock vs Vertex sigue a A-003 (dónde vivan app+Postgres). AI Act:
+        mantener "asistencia administrativa con humano en el bucle" (riesgo limitado +
+        transparencia art. 50 desde 2-ago-2026); evitar apoyo a decisión clínica (alto riesgo).
+        Voz: Whisper auto-hospedado en UE. Pendiente para pasar a "Aceptada": modelos exactos
+        por región en consola, DPA/SCC con el cloud, y decidir A-003.
 
   - id: H6
     name: Portal de familias + pulido
