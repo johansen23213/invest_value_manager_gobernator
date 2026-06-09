@@ -125,24 +125,32 @@ pnpm --filter @vetlla/db migrate:deploy
 log "Sembrando datos demo…"
 pnpm db:seed
 
-# --- 6. Listo -----------------------------------------------------------------
+# --- 6. Puerto + arranque -----------------------------------------------------
+# Puerto de la app: respeta $PORT si lo defines; si no, usa 3000 y, si está
+# ocupado, salta al 3100 automáticamente. AUTH_URL se alinea al puerto elegido
+# (si no, el login de Auth.js rompe los redirects).
+port_busy() { (exec 3<>"/dev/tcp/localhost/$1") 2>/dev/null; }
+APP_PORT="${PORT:-3000}"
+if [ -z "${PORT:-}" ] && port_busy 3000; then
+  APP_PORT=3100
+  log "El puerto 3000 está ocupado; usaré el ${APP_PORT}."
+fi
+
+printf '\n──────────────────────────────────────────────────────────────────────\n'
+printf '  ✓ Entorno listo.  App → http://localhost:%s\n\n' "$APP_PORT"
 cat <<'EOF'
-
-──────────────────────────────────────────────────────────────────────
-  ✓ Entorno listo.  App → http://localhost:3000
-
   Usuarios demo (contraseña común: vetlla1234)
     Dirección  direccion@demo.vetlla.dev   (ve todo)
     Sanitario  sanitario@demo.vetlla.dev   (medicación / PIA)
     Auxiliar   auxiliar@demo.vetlla.dev    (atención a pie de cama)
     Familiar   familiar@demo.vetlla.dev    (portal solo lectura)
     Superadmin superadmin@vetlla.dev       (plataforma)
-──────────────────────────────────────────────────────────────────────
 EOF
+printf '──────────────────────────────────────────────────────────────────────\n\n'
 
 if [ "$START" -eq 1 ]; then
-  log "Arrancando la app (pnpm dev)…  (Ctrl+C para parar)"
-  exec pnpm dev
+  log "Arrancando en http://localhost:${APP_PORT} …  (Ctrl+C para parar)"
+  exec env PORT="$APP_PORT" AUTH_URL="http://localhost:${APP_PORT}" pnpm --filter @vetlla/web dev
 else
-  log "Listo. Arranca cuando quieras con:  pnpm dev"
+  log "Listo. Arranca con:  PORT=${APP_PORT} AUTH_URL=http://localhost:${APP_PORT} pnpm --filter @vetlla/web dev"
 fi

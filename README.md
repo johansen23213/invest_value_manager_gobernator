@@ -19,10 +19,10 @@ Monorepo (pnpm + Turborepo) · Next.js (App Router) + TypeScript · tRPC · Pris
 **Un solo comando** (prepara todo y arranca la app):
 
 ```bash
-pnpm setup
+pnpm run bootstrap          # o, equivalente:  bash scripts/dev-setup.sh
 ```
 
-Comprueba prerrequisitos → crea `.env` (genera `AUTH_SECRET`) → levanta Postgres en Docker → `pnpm install` → migraciones → datos demo → `pnpm dev`. Es **idempotente** (puedes repetirlo). Usa `pnpm setup --no-start` para preparar sin arrancar.
+Comprueba prerrequisitos → crea `.env` (genera `AUTH_SECRET`) → provisiona Postgres (usa uno local o en la nube si existe; si no, lo levanta con Docker) → `pnpm install` → migraciones → datos demo → arranca la app. Es **idempotente** (puedes repetirlo). Si el puerto 3000 está ocupado, usa el 3100 automáticamente; o fuerza uno con `PORT=4000 pnpm run bootstrap`. Usa `pnpm run bootstrap --no-start` para preparar sin arrancar.
 
 ### Manual (paso a paso)
 
@@ -59,18 +59,18 @@ Tras el seed (contraseña común `vetlla1234`):
 
 ## Comandos
 
-| Comando           | Descripción                               |
-| ----------------- | ----------------------------------------- |
-| `pnpm setup`      | Bootstrap local completo (un comando)     |
-| `pnpm dev`        | Arranca la app en desarrollo              |
-| `pnpm build`      | Build de producción                       |
-| `pnpm lint`       | ESLint                                    |
-| `pnpm typecheck`  | Comprobación de tipos                     |
-| `pnpm test`       | Tests unitarios (Vitest)                  |
-| `pnpm test:e2e`   | Tests e2e (Playwright; requiere app + BD) |
-| `pnpm format`     | Formatea con Prettier                     |
-| `pnpm db:migrate` | Aplica migraciones Prisma                 |
-| `pnpm db:seed`    | Carga datos demo                          |
+| Comando              | Descripción                               |
+| -------------------- | ----------------------------------------- |
+| `pnpm run bootstrap` | Bootstrap local completo (un comando)     |
+| `pnpm dev`           | Arranca la app en desarrollo              |
+| `pnpm build`         | Build de producción                       |
+| `pnpm lint`          | ESLint                                    |
+| `pnpm typecheck`     | Comprobación de tipos                     |
+| `pnpm test`          | Tests unitarios (Vitest)                  |
+| `pnpm test:e2e`      | Tests e2e (Playwright; requiere app + BD) |
+| `pnpm format`        | Formatea con Prettier                     |
+| `pnpm db:migrate`    | Aplica migraciones Prisma                 |
+| `pnpm db:seed`       | Carga datos demo                          |
 
 ## Estructura
 
