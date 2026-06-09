@@ -47,6 +47,7 @@ model User {
   role         UserRole  @default(AUXILIAR)
   tenantId     String?   @map("tenant_id")
   tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  jobTitle     String?   @map("job_title") // etiqueta de función libre (Fisioterapeuta, DUE…)
   lastLoginAt  DateTime? @map("last_login_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")

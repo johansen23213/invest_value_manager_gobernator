@@ -67,3 +67,54 @@ describe('paridad es/ca — Sprint M (medicación)', () => {
     }
   });
 });
+
+describe('paridad es/ca — Wave B Sprint M (equipo + RBAC R-01/R-03)', () => {
+  const waveBKeys = [
+    'nav.team',
+    'action.cancel',
+    'action.save',
+    'action.close',
+    'state.loading',
+    'team.title',
+    'team.subtitle',
+    'team.rolesReference',
+    'team.filterByRole',
+    'team.filterByTitle',
+    'team.allRoles',
+    'team.empty',
+    'team.viewAccess',
+    'team.editFunction',
+    'team.roleChanged',
+    'team.profileUpdated',
+    'team.familiarNote',
+    'team.accessDialog.title',
+    'team.changeRole.title',
+    'team.changeRole.button',
+    'team.changeRole.confirm',
+    'team.changeRole.confirmTitle',
+    'team.editJobTitle.title',
+    'team.editJobTitle.label',
+    'team.editJobTitle.placeholder',
+    'team.editJobTitle.presetNote',
+  ];
+
+  it('todas las claves Wave B existen en es', () => {
+    for (const key of waveBKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves Wave B existen en ca', () => {
+    for (const key of waveBKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de equipo difieren entre es y ca', () => {
+    const narrativeKeys = ['team.title', 'team.subtitle', 'team.familiarNote'];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+    }
+  });
+});

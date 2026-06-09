@@ -205,7 +205,7 @@ export default function PrescribirPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  // ── M-08: flujo de confirmación para alergia GRAVE ────────────────────────
+  // ── M-08 cierre: flujo de confirmación para alergia GRAVE ───────────────
   async function handlePrescribeGrave() {
     const result = await confirm({
       title: t('med.allergy.block'),
@@ -222,10 +222,21 @@ export default function PrescribirPage() {
     });
     if (!result) return;
     setAllergyOverrideConfirmed(true);
-    submitPrescription(result.reason);
+    submitPrescription({
+      allergyOverride:
+        allergyMatch && result.reason
+          ? {
+              substance: allergyMatch.substance,
+              severity: allergyMatch.severity ?? 'DESCONOCIDA',
+              reason: result.reason,
+            }
+          : undefined,
+    });
   }
 
-  function submitPrescription(overrideReason?: string) {
+  function submitPrescription(opts?: {
+    allergyOverride?: { substance: string; severity: string; reason: string };
+  }) {
     const isPrn = form.type === MedicationType.PRN;
     prescribe.mutate({
       residentId,
@@ -238,9 +249,10 @@ export default function PrescribirPage() {
       daysOfWeek: form.daysOfWeek ?? undefined,
       startDate: form.startDate ? new Date(form.startDate) : new Date(),
       endDate: form.endDate ? new Date(form.endDate) : undefined,
-      instructions: overrideReason
-        ? `[Override alergia: ${overrideReason}] ${form.instructions}`.trim()
+      instructions: opts?.allergyOverride
+        ? `[Override alergia: ${opts.allergyOverride.reason}] ${form.instructions}`.trim()
         : form.instructions || undefined,
+      allergyOverride: opts?.allergyOverride,
     });
   }
 
@@ -250,7 +262,7 @@ export default function PrescribirPage() {
       await handlePrescribeGrave();
       return;
     }
-    submitPrescription();
+    submitPrescription(undefined);
   }
 
   // ── Toggle days of week ───────────────────────────────────────────────────

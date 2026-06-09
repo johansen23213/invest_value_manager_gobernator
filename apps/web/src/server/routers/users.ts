@@ -1,13 +1,11 @@
 /**
- * Router de usuarios del tenant (R-04).
+ * Router de usuarios del tenant (R-04, R-01, R-03 Wave B).
  *
- * Incluye la mutación `updateRole` con auditoría RGPD completa:
- * action: 'UPDATE', entity: 'User', summary con prev/new role,
- * metadata con prevRole, newRole y actorEmail.
- *
- * La pantalla de gestión de usuarios (/usuarios) es R-03, fuera del
- * alcance de la Semana 1. Esta mutación queda lista para cuando R-03
- * se implemente; mientras tanto es alcanzable vía tRPC directamente.
+ * Incluye:
+ * - `list`: devuelve también jobTitle (R-01) y excluye FAMILIAR por defecto.
+ * - `listJobTitles`: devuelve los jobTitle únicos del tenant (mitigación R4).
+ * - `updateRole`: mutación auditada (R-04).
+ * - `updateProfile`: cambia jobTitle con auditoría (R-01, R-03).
  */
 
 import { z } from 'zod';
@@ -16,13 +14,32 @@ import { UserRole } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 
 export const usersRouter = createTRPCRouter({
-  /** Usuarios del tenant. Aislados por RLS; requiere permiso users:read. */
+  /**
+   * Usuarios del equipo del tenant.
+   * - Aislados por RLS; requiere permiso users:read.
+   * - Excluye FAMILIAR por defecto (tienen su propia sección en R-05).
+   * - Devuelve jobTitle (R-01) para la pantalla de gestión de equipo (R-03).
+   */
   list: permissionProcedure('users:read').query(({ ctx }) =>
     ctx.db.user.findMany({
-      select: { id: true, email: true, name: true, role: true },
+      where: { role: { not: UserRole.FAMILIAR } },
+      select: { id: true, email: true, name: true, role: true, jobTitle: true },
       orderBy: { email: 'asc' },
     }),
   ),
+
+  /**
+   * Devuelve los jobTitle únicos ya en uso en el tenant.
+   * Usado para el Combobox de sugerencias al crear/editar usuarios (mitigación R4).
+   */
+  listJobTitles: permissionProcedure('users:read').query(async ({ ctx }) => {
+    const users = await ctx.db.user.findMany({
+      where: { jobTitle: { not: null } },
+      select: { jobTitle: true },
+    });
+    const unique = [...new Set(users.map((u) => u.jobTitle).filter(Boolean))] as string[];
+    return unique.sort();
+  }),
 
   /**
    * Cambia el rol de un usuario del tenant (R-04).
@@ -70,6 +87,56 @@ export const usersRouter = createTRPCRouter({
         metadata: {
           prevRole,
           newRole: input.newRole,
+          targetUserEmail: user.email,
+        },
+      });
+
+      return updated;
+    }),
+
+  /**
+   * Actualiza el jobTitle (etiqueta de función) de un usuario (R-01, R-03).
+   *
+   * Requiere users:write. Registra en AuditLog con prev/new jobTitle.
+   * El campo es libre (String?) pero la UI lo sugiere desde presets del tenant.
+   */
+  updateProfile: permissionProcedure('users:write')
+    .input(
+      z.object({
+        userId: z.string(),
+        jobTitle: z.string().max(100).nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: { id: true, email: true, jobTitle: true },
+      });
+      if (!user) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Usuario no encontrado.' });
+      }
+
+      const prevJobTitle = user.jobTitle;
+      const newJobTitle = input.jobTitle ?? null;
+
+      if (prevJobTitle === newJobTitle) {
+        return user;
+      }
+
+      const updated = await ctx.db.user.update({
+        where: { id: input.userId },
+        data: { jobTitle: newJobTitle },
+        select: { id: true, email: true, jobTitle: true },
+      });
+
+      await ctx.audit({
+        action: 'UPDATE',
+        entity: 'User',
+        entityId: input.userId,
+        summary: `Función cambiada de "${prevJobTitle ?? '—'}" a "${newJobTitle ?? '—'}" en usuario ${user.email} por ${ctx.session.user.email}`,
+        metadata: {
+          prevJobTitle,
+          newJobTitle,
           targetUserEmail: user.email,
         },
       });

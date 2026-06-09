@@ -44,17 +44,18 @@ function pick<T>(arr: T[], i: number): T {
 
 async function seedUsers(tenantId: string) {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  // R-01: jobTitle coherente por usuario demo para que la pantalla de equipo se vea poblada.
   const users = [
-    { email: 'superadmin@vetlla.dev', name: 'Plataforma', role: UserRole.SUPERADMIN, tenantId: null },
-    { email: 'direccion@demo.vetlla.dev', name: 'Dirección Demo', role: UserRole.DIRECTOR, tenantId },
-    { email: 'sanitario@demo.vetlla.dev', name: 'Enfermería Demo', role: UserRole.SANITARIO, tenantId },
-    { email: 'auxiliar@demo.vetlla.dev', name: 'Auxiliar Demo', role: UserRole.AUXILIAR, tenantId },
-    { email: 'familiar@demo.vetlla.dev', name: 'Familiar Demo', role: UserRole.FAMILIAR, tenantId },
+    { email: 'superadmin@vetlla.dev',   name: 'Plataforma',      role: UserRole.SUPERADMIN, tenantId: null,    jobTitle: null },
+    { email: 'direccion@demo.vetlla.dev', name: 'Dirección Demo', role: UserRole.DIRECTOR,   tenantId,          jobTitle: 'Director/a' },
+    { email: 'sanitario@demo.vetlla.dev', name: 'Enfermería Demo',role: UserRole.SANITARIO,  tenantId,          jobTitle: 'Enfermero/a (DUE)' },
+    { email: 'auxiliar@demo.vetlla.dev',  name: 'Auxiliar Demo',  role: UserRole.AUXILIAR,   tenantId,          jobTitle: 'Auxiliar de atención directa' },
+    { email: 'familiar@demo.vetlla.dev',  name: 'Familiar Demo',  role: UserRole.FAMILIAR,   tenantId,          jobTitle: null },
   ];
   for (const u of users) {
     await db.user.upsert({
       where: { email: u.email },
-      update: { name: u.name, role: u.role, tenantId: u.tenantId },
+      update: { name: u.name, role: u.role, tenantId: u.tenantId, jobTitle: u.jobTitle },
       create: { ...u, passwordHash },
     });
   }

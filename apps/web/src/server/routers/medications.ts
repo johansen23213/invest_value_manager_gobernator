@@ -40,6 +40,19 @@ export const medicationsRouter = createTRPCRouter({
         startDate: z.coerce.date(),
         endDate: z.coerce.date().optional(),
         instructions: z.string().max(500).optional(),
+        /**
+         * M-08 cierre: override de alergia GRAVE.
+         * Si el sanitario confirma la prescripción sobre una alergia GRAVE,
+         * el cliente envía este objeto con sustancia, severidad y motivo clínico.
+         * El router registra un AuditLog adicional con action OVERRIDE_ALLERGY.
+         */
+        allergyOverride: z
+          .object({
+            substance: z.string().min(1).max(160),
+            severity: z.string().min(1).max(40),
+            reason: z.string().min(1).max(500),
+          })
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -75,6 +88,24 @@ export const medicationsRouter = createTRPCRouter({
         summary: `Prescripción: ${input.name} ${input.dose}`,
         metadata: { route: input.route, type: input.type, unit: input.unit },
       });
+
+      // M-08 cierre: si hubo override de alergia GRAVE, registrar audit adicional.
+      if (input.allergyOverride) {
+        await ctx.audit({
+          action: 'OVERRIDE_ALLERGY',
+          entity: 'Medication',
+          entityId: medication.id,
+          summary: `Override de alergia ${input.allergyOverride.severity} (${input.allergyOverride.substance}) para prescripción de ${input.name}`,
+          metadata: {
+            substance: input.allergyOverride.substance,
+            severity: input.allergyOverride.severity,
+            reason: input.allergyOverride.reason,
+            medicationName: input.name,
+            medicationDose: input.dose,
+          },
+        });
+      }
+
       return medication;
     }),
 
