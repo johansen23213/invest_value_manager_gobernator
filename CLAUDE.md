@@ -34,7 +34,7 @@ El MVP demuestra el **bucle de uso diario** + el **diferencial de IA**, no el ER
 - **ORM/DB:** Prisma + **PostgreSQL** con **Row-Level Security (RLS)**.
 - **Auth:** Auth.js (NextAuth) con adaptador Postgres. Sesiones seguras, contraseña + 2FA opcional.
 - **Offline:** IndexedDB local + cola de sincronización. Resolución de conflictos: last-write-wins por campo + registro de conflictos, para `CareRecord`.
-- **IA:** SDK oficial de Anthropic (`@anthropic-ai/sdk`). **Último Claude Sonnet** para el copiloto, **Haiku** para extracción/clasificación de bajo coste. Los identificadores de modelo se resuelven contra `docs.claude.com` (no hardcodear a ciegas); se centralizan en `packages/ai`. Transcripción de voz: motor con despliegue UE/on-prem (nunca enviar audio de salud fuera de la UE).
+- **IA:** capa **provider-agnóstica** en `packages/ai` (interfaz `ModelProvider`; IDs por proveedor resueltos por entorno; `StubProvider` para dev/tests sin modelo). **Lidera open-source auto-alojado en la UE** (p. ej. Mistral/Llama vía vLLM en cloud EU-soberano) por soberanía RGPD; **Claude vía Bedrock/Vertex UE** queda como **fallback/ruta** para razonamiento de alta exigencia, detrás de la misma interfaz. Se elige modelo por tarea (extracción barata vs razonamiento) midiendo sobre prompts reales es/ca. Transcripción de voz: Whisper auto-alojado UE (nunca enviar audio de salud fuera de la UE). Ver `docs/adr/0010` (estrategia) y `docs/adr/0008` (vía gestionada).
 - **Validación:** Zod en todas las entradas.
 - **Tests:** Vitest (unidad) + Playwright (e2e de flujos críticos).
 - **Hosting:** todo en **región UE** (Postgres en proveedor EU; app con datos en UE). Requisito legal.

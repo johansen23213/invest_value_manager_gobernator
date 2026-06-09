@@ -5,7 +5,7 @@ project:
   name: Vetlla
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
-  current_milestone: H5      # único pendiente (diferido); resto del MVP completo
+  current_milestone: H5      # en construcción (reactivado 2026-06-09, ADR-0010); resto del MVP completo
   last_updated: 2026-06-09
   # 2026-06-09: refinamiento UX-first de Medicación y RBAC a partir del análisis
   # competitivo de ResiPlus. Diseño priorizado (docs/ux/medicacion-y-rbac.md) +
@@ -106,7 +106,12 @@ open_questions:
       Rumbo del diferencial de IA: ¿reactivar H5 (decidir modelo UE/coste y
       construir el copiloto) o reposicionar el relato a "cloud + cumplimiento ahora,
       IA en roadmap" mientras tanto? Es la principal tensión del análisis de negocio.
-    status: open
+    status: resolved           # 2026-06-09: reactivar H5, estrategia open-source soberano (ADR-0010)
+    resolution_2026-06-09: >-
+      RESUELTA. Angel confirma reactivar H5 con estrategia open-source soberano
+      (docs/adr/0010, enmienda ADR-0008): capa provider-agnóstica liderando LLM
+      open-source auto-alojados en la UE; Claude-UE como fallback. Pendiente solo la
+      elección de proveedor/modelo concretos (ligada a A-003), que no bloquea el Slice 1.
     update_2026-06-08: >-
       Resuelta la incógnita técnica de "qué modelo UE" (docs/adr/0008): hay vía viable
       (Claude en Bedrock/Vertex UE). Queda la decisión de Angel: (a) reactivar H5 ahora
@@ -119,7 +124,7 @@ open_questions:
       provider-agnóstico. Mientras tanto se ha avanzado en refinamiento UX (Sprint M:
       medicación + RBAC). La construcción de H5 (packages/ai) sigue siendo el próximo
       gran hito pendiente.
-    related: [H5, D-003, ADR-0008]
+    related: [H5, D-003, ADR-0008, ADR-0010]
   - id: Q-002
     date: 2026-06-08
     question: >-
@@ -275,8 +280,15 @@ milestones:
 
   - id: H5
     name: IA Copilot
-    status: deferred           # diferido por decisión de Angel (2026-06-07)
+    status: in_progress        # reactivado 2026-06-09 con estrategia open-source soberano (ADR-0010)
     effort: XL
+    strategy_2026-06-09: >-
+      Reactivado. Estrategia de modelos en docs/adr/0010: capa provider-agnóstica en
+      packages/ai (ModelProvider + StubProvider), liderando open-source auto-alojado en
+      la UE (Mistral/Llama vía vLLM en cloud EU-soberano) por soberanía RGPD; Claude vía
+      Bedrock/Vertex UE como fallback para razonamiento de alta exigencia. Se mide por
+      feature sobre prompts es/ca. Casos de uso del copiloto catalogados en el ADR-0010.
+      Construcción: Slice 1 (fundación provider-agnóstica, testeable sin modelo) primero.
     goal: Las 2 features estrella con tool use y human-in-the-loop.
     exit_criteria:
       - Lenguaje natural -> CareRecord estructurados, con confirmación previa (es y ca).
