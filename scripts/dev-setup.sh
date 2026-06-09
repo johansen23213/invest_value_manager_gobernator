@@ -56,52 +56,62 @@ if ! grep -q '^AUTH_SECRET=' .env \
 fi
 
 # --- 3. Postgres --------------------------------------------------------------
+# Si DATABASE_URL apunta a una BD remota/gestionada (no localhost), no se
+# provisiona nada en local: ni Postgres local ni Docker. Solo se migra y siembra.
+DBURL="$(grep -E '^DATABASE_URL=' .env | head -1 | sed -E 's/^DATABASE_URL=//; s/^"//; s/"$//')"
+DBHOST="$(printf '%s' "$DBURL" | sed -E 's#^[a-zA-Z+]+://[^@]*@([^:/?]+).*#\1#')"
+
 pg_reachable() { (exec 3<>"/dev/tcp/${PG_HOST}/${PG_PORT}") 2>/dev/null; }
 
-if pg_reachable; then
-  log "Postgres detectado en ${PG_HOST}:${PG_PORT} (no uso Docker)."
-  if command -v psql >/dev/null 2>&1; then
-    # Crear rol 'vetlla' (no superusuario, para que la RLS se aplique) si falta.
-    if ! psql -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='vetlla'" 2>/dev/null | grep -q 1; then
-      log "Creando rol 'vetlla'…"
-      psql -d postgres -v ON_ERROR_STOP=1 \
-        -c "CREATE ROLE vetlla LOGIN PASSWORD 'vetlla_dev_password';" \
-        || die "No pude crear el rol 'vetlla'. Créalo a mano:  psql -d postgres -c \"CREATE ROLE vetlla LOGIN PASSWORD 'vetlla_dev_password';\""
+case "$DBHOST" in
+  localhost | 127.0.0.1 | ::1 | "")
+    if pg_reachable; then
+      log "Postgres detectado en ${PG_HOST}:${PG_PORT} (no uso Docker)."
+      if command -v psql >/dev/null 2>&1; then
+        # Crear rol 'vetlla' (no superusuario, para que la RLS se aplique) si falta.
+        if ! psql -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='vetlla'" 2>/dev/null | grep -q 1; then
+          log "Creando rol 'vetlla'…"
+          psql -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE vetlla LOGIN PASSWORD 'vetlla_dev_password';" \
+            || die "No pude crear el rol 'vetlla'. Créalo a mano:  psql -d postgres -c \"CREATE ROLE vetlla LOGIN PASSWORD 'vetlla_dev_password';\""
+        fi
+        # Crear base de datos 'vetlla' (propiedad del rol) si falta.
+        if ! psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='vetlla'" 2>/dev/null | grep -q 1; then
+          log "Creando base de datos 'vetlla'…"
+          createdb -O vetlla vetlla || die "No pude crear la BD 'vetlla'.  Créala a mano:  createdb -O vetlla vetlla"
+        fi
+        ok "Rol y base de datos 'vetlla' listos."
+      else
+        log "Postgres está corriendo pero no encuentro 'psql' en el PATH."
+        log "Si usas Postgres.app, añade sus binarios al PATH y reintenta:"
+        log '  export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"'
+        log "Continúo asumiendo que ya existen el rol 'vetlla' y la BD 'vetlla'."
+      fi
+    elif docker compose version >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+      log "No hay Postgres local; lo levanto con Docker…"
+      docker compose up -d postgres
+      log "Esperando a que Postgres esté listo…"
+      for i in $(seq 1 30); do
+        if docker compose exec -T postgres pg_isready -U vetlla -d vetlla >/dev/null 2>&1; then
+          ok "Postgres (Docker) aceptando conexiones."
+          break
+        fi
+        [ "$i" -eq 30 ] && die "Postgres (Docker) no respondió. Revisa 'docker compose logs postgres'."
+        sleep 2
+      done
+    else
+      die "No encuentro Postgres en ${PG_HOST}:${PG_PORT} ni Docker en marcha.
+  Tienes tres opciones (elige una):
+    A) BD en la nube (sin instalar nada): pon su cadena en DATABASE_URL del .env
+       (p. ej. Neon/Supabase en región UE) y vuelve a ejecutar 'pnpm setup'.
+    B) Postgres.app  → https://postgresapp.com  (ábrelo y 'Initialize'/'Start')
+    C) Homebrew:  brew install postgresql@16 && brew services start postgresql@16"
     fi
-    # Crear base de datos 'vetlla' (propiedad del rol) si falta.
-    if ! psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='vetlla'" 2>/dev/null | grep -q 1; then
-      log "Creando base de datos 'vetlla'…"
-      createdb -O vetlla vetlla || die "No pude crear la BD 'vetlla'.  Créala a mano:  createdb -O vetlla vetlla"
-    fi
-    ok "Rol y base de datos 'vetlla' listos."
-  else
-    log "Postgres está corriendo pero no encuentro 'psql' en el PATH."
-    log "Si usas Postgres.app, añade sus binarios al PATH y reintenta:"
-    log '  export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"'
-    log "Continúo asumiendo que ya existen el rol 'vetlla' y la BD 'vetlla'."
-  fi
-elif docker compose version >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-  log "No hay Postgres local; lo levanto con Docker…"
-  docker compose up -d postgres
-  log "Esperando a que Postgres esté listo…"
-  for i in $(seq 1 30); do
-    if docker compose exec -T postgres pg_isready -U vetlla -d vetlla >/dev/null 2>&1; then
-      ok "Postgres (Docker) aceptando conexiones."
-      break
-    fi
-    [ "$i" -eq 30 ] && die "Postgres (Docker) no respondió. Revisa 'docker compose logs postgres'."
-    sleep 2
-  done
-else
-  die "No encuentro Postgres en ${PG_HOST}:${PG_PORT} ni Docker en marcha.
-  Opción sin Docker (recomendada en Mac):
-    1) Instala Postgres.app  → https://postgresapp.com
-    2) Ábrelo y pulsa 'Initialize' / 'Start'
-    3) (una vez) añade sus binarios al PATH:
-         export PATH=\"/Applications/Postgres.app/Contents/Versions/latest/bin:\$PATH\"
-    4) Vuelve a ejecutar:  pnpm setup
-  Alternativa con Homebrew:  brew install postgresql@16 && brew services start postgresql@16"
-fi
+    ;;
+  *)
+    log "DATABASE_URL apunta a una BD remota/gestionada (${DBHOST}): no provisiono nada local ni Docker."
+    ;;
+esac
 
 # --- 4. Dependencias ----------------------------------------------------------
 log "Instalando dependencias (pnpm install)…"
