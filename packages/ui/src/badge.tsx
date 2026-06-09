@@ -1,9 +1,9 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from './cn';
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+  'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
   {
     variants: {
       tone: {
@@ -20,8 +20,20 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {}
+    VariantProps<typeof badgeVariants> {
+  /**
+   * Icono decorativo que se renderiza como prefijo del texto.
+   * Debe llevar aria-hidden="true" en el propio elemento SVG/imagen.
+   * El texto del Badge es el canal principal de información (WCAG 1.4.1).
+   */
+  icon?: ReactNode;
+}
 
-export function Badge({ className, tone, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ tone }), className)} {...props} />;
+export function Badge({ className, tone, icon, children, ...props }: BadgeProps) {
+  return (
+    <span className={cn(badgeVariants({ tone }), className)} {...props}>
+      {icon}
+      {children}
+    </span>
+  );
 }

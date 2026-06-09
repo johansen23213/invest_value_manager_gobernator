@@ -22,6 +22,7 @@
 
 - [`informes/2026-06-07-auditoria-ux.md`](informes/2026-06-07-auditoria-ux.md) — Auditoría inicial y backlog priorizado.
 - [`arquetipos.md`](arquetipos.md) — Arquetipos de usuario (personas) y mapa de mejoras.
+- [`medicacion-y-rbac.md`](medicacion-y-rbac.md) — Diseño priorizado de medicación (prescripción + MAR) y RBAC, con análisis del competidor (ResiPlus), delta de modelo, asistencia IA (H5) y decisiones arquitectónicas abiertas.
 
 El backlog vivo está en `project_state.yaml` (sección `ux_backlog`). Sprint 1 (UX-01…04)
 implementado: fechas/horas localizadas, editor de horas de medicación, confirmación en

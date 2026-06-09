@@ -1,6 +1,5 @@
 import {
   createTRPCRouter,
-  permissionProcedure,
   protectedProcedure,
   publicProcedure,
   tenantProcedure,
@@ -15,6 +14,7 @@ import { medicationsRouter } from '@/server/routers/medications';
 import { carePlansRouter } from '@/server/routers/careplans';
 import { familyRouter } from '@/server/routers/family';
 import { auditRouter } from '@/server/routers/audit';
+import { usersRouter } from '@/server/routers/users';
 
 // Router raíz de la API tipada. Cada hito añade sus routers
 // (centros, residentes, atención, medicación, copiloto...).
@@ -40,15 +40,7 @@ export const appRouter = createTRPCRouter({
     current: tenantProcedure.query(({ ctx }) => ctx.db.tenant.findFirst()),
   }),
 
-  users: createTRPCRouter({
-    /** Usuarios del tenant. Aislados por RLS; requiere permiso users:read. */
-    list: permissionProcedure('users:read').query(({ ctx }) =>
-      ctx.db.user.findMany({
-        select: { id: true, email: true, name: true, role: true },
-        orderBy: { email: 'asc' },
-      }),
-    ),
-  }),
+  users: usersRouter,
 
   centers: centersRouter,
   units: unitsRouter,
