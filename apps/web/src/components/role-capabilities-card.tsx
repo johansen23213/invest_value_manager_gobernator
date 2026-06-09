@@ -90,7 +90,7 @@ export function RoleCapabilitiesCard({ role }: RoleCapabilitiesCardProps) {
         </CardTitle>
 
         {/* PUEDE */}
-        <section aria-label={`${roleLabel} — ${t('rbac.card.can')}`}>
+        <section aria-label={`${roleLabel} — ${t('rbac.card.can')}`} data-testid="capabilities-can">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">
             {t('rbac.card.can')}
           </h3>
@@ -106,7 +106,7 @@ export function RoleCapabilitiesCard({ role }: RoleCapabilitiesCardProps) {
 
         {/* NO PUEDE */}
         {cannot.length > 0 && (
-          <section aria-label={`${roleLabel} — ${t('rbac.card.cannot')}`} className="mt-4">
+          <section aria-label={`${roleLabel} — ${t('rbac.card.cannot')}`} className="mt-4" data-testid="capabilities-cannot">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
               {t('rbac.card.cannot')}
             </h3>

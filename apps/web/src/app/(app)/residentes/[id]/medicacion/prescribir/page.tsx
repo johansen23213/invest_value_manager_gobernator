@@ -324,6 +324,7 @@ export default function PrescribirPage() {
       {allergies.length > 0 && (
         <div
           role="alert"
+          data-testid="prescribe-allergy-context"
           className="flex flex-wrap items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
           aria-label="Alergias del residente"
         >
@@ -347,6 +348,8 @@ export default function PrescribirPage() {
             <div
               role="alert"
               aria-live="polite"
+              data-testid="allergy-match-banner"
+              data-severity={allergyMatch.severity ?? 'unknown'}
               className={`mb-4 flex items-start gap-3 rounded-md border px-4 py-3 text-sm ${
                 isGraveAllergy
                   ? 'border-red-300 bg-red-50 text-red-900'
@@ -410,6 +413,7 @@ export default function PrescribirPage() {
                   <Label htmlFor="route">{t('med.prescribe.field.route')}</Label>
                   <Select
                     id="route"
+                    data-testid="select-route"
                     value={form.route}
                     onChange={(e) =>
                       setForm((s) => ({ ...s, route: e.target.value as MedicationRoute | '' }))
@@ -429,6 +433,7 @@ export default function PrescribirPage() {
                   <Label htmlFor="unit">{t('med.prescribe.field.unit')}</Label>
                   <Select
                     id="unit"
+                    data-testid="select-unit"
                     value={form.unit}
                     onChange={(e) =>
                       setForm((s) => ({ ...s, unit: e.target.value as UnitKey | '' }))
@@ -448,6 +453,7 @@ export default function PrescribirPage() {
                   <Label htmlFor="type">{t('med.prescribe.field.type')}</Label>
                   <Select
                     id="type"
+                    data-testid="select-type"
                     value={form.type}
                     onChange={(e) =>
                       setForm((s) => ({ ...s, type: e.target.value as MedicationType | '' }))
@@ -493,7 +499,7 @@ export default function PrescribirPage() {
                 <p className="mb-1 font-medium text-slate-700">
                   {t('med.prescribe.field.daysOfWeek')}
                 </p>
-                <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('med.prescribe.field.daysOfWeek')}>
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('med.prescribe.field.daysOfWeek')} data-testid="days-of-week-group">
                   {/* Botón "Todos los días" */}
                   <button
                     type="button"

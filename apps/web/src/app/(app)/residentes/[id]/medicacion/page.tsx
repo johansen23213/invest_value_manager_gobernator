@@ -118,6 +118,7 @@ function AllergyBanner({ allergies, t }: { allergies: AllergyChip[]; t: (k: stri
       className="flex flex-wrap gap-2"
       role="list"
       aria-label={t('med.allergies.label')}
+      data-testid="allergy-banner"
     >
       {allergies.map((al) => (
         <Badge
@@ -159,6 +160,7 @@ function ResidentStickyHeader({ firstName, lastName, bedCode, unitName, allergie
     <header
       className="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 shadow-sm"
       aria-label="Datos del residente"
+      data-testid="resident-sticky-header"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         {/* Nombre + plaza */}
@@ -341,6 +343,7 @@ export default function MedicationPage() {
           {canPrescribe && (
             <Link
               href={`/residentes/${residentId}/medicacion/prescribir`}
+              data-testid="prescribir-link"
               className="inline-flex min-h-[48px] items-center gap-2 rounded-md border border-brand-600 bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <IconPlus />
@@ -372,6 +375,8 @@ export default function MedicationPage() {
                           <li
                             key={`${d.medicationId}-${d.scheduledAt}`}
                             aria-label={ariaLabel}
+                            data-testid="dose-item"
+                            data-status={d.status}
                             className={`flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${
                               d.overdue && d.status === 'PENDIENTE'
                                 ? 'bg-amber-50'
@@ -449,7 +454,7 @@ export default function MedicationPage() {
         </Card>
 
         {/* M-07 — Sección A demanda (PRN) */}
-        <Card>
+        <Card data-testid="prn-section">
           <CardContent>
             <CardTitle className="mb-3 flex items-center gap-2 text-base">
               <IconZap className="text-blue-600" />

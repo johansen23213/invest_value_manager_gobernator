@@ -367,6 +367,8 @@ export default function EquipoPage() {
         {filteredUsers.map((user) => (
           <li
             key={user.id}
+            data-testid="team-user-row"
+            data-user-role={user.role}
             className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
           >
             {/* Info */}
@@ -399,6 +401,7 @@ export default function EquipoPage() {
                 onClick={() => setAccessUser(user as TeamUser)}
                 className="min-h-[44px] text-sm"
                 aria-label={`${t('team.viewAccess')} — ${user.name ?? user.email}`}
+                data-testid="btn-view-access"
               >
                 {t('team.viewAccess')}
               </Button>
