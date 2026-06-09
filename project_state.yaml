@@ -6,7 +6,15 @@ project:
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
   current_milestone: H5      # único pendiente (diferido); resto del MVP completo
-  last_updated: 2026-06-08
+  last_updated: 2026-06-09
+  # 2026-06-09: refinamiento UX-first de Medicación y RBAC a partir del análisis
+  # competitivo de ResiPlus. Diseño priorizado (docs/ux/medicacion-y-rbac.md) +
+  # ADR-0009 (modelo de pauta de medicación). Implementado y verificado (79 tests,
+  # build OK): quick wins (alergias visibles, estados accesibles, cabecera sticky,
+  # tarjetas de rol PUEDE/NO-PUEDE, auditoría de cambio de rol) y Sprint M
+  # (prescripción separada del MAR, vía/forma como enum, pauta por días, PRN,
+  # alergia bloqueante con AuditLog OVERRIDE_ALLERGY, /equipo con jobTitle). Tooling:
+  # `pnpm run bootstrap` (arranque local de un comando, sin depender de Docker).
   # 2026-06-08: análisis de modelo de negocio (5 informes en docs/negocio/) con
   # investigación de mercado propia. Surface una tensión estratégica: el diferencial
   # declarado (IA Copilot) está en H5 diferido -> decisión pendiente (ver Q-001).
@@ -105,6 +113,12 @@ open_questions:
       construyendo packages/ai sobre esa vía, o (b) mantener diferido y reposicionar el
       relato a "cloud+cumplimiento ahora, IA en roadmap". Y, si (a), elegir vía de hosting
       (ligada a A-003).
+    update_2026-06-09: >-
+      Angel inclina a (a) reactivar H5 sobre la vía cloud-EU, dejando el proveedor
+      cloud (Bedrock vs Vertex / A-003) por decidir; por eso packages/ai se diseñará
+      provider-agnóstico. Mientras tanto se ha avanzado en refinamiento UX (Sprint M:
+      medicación + RBAC). La construcción de H5 (packages/ai) sigue siendo el próximo
+      gran hito pendiente.
     related: [H5, D-003, ADR-0008]
   - id: Q-002
     date: 2026-06-08
@@ -376,3 +390,36 @@ ux_backlog:
     - { id: UX-18, titulo: "Centro de alertas priorizado", prioridad: backlog, estado: todo }
     - { id: UX-19, titulo: "Dirección: plano de ocupación + KPIs", prioridad: backlog, estado: todo }
     - { id: UX-20, titulo: "Portal de familias más humano + control de privacidad", prioridad: backlog, estado: todo }
+
+# --------------------------------------------------------------------------
+# Rediseño UX de Medicación + RBAC (2026-06-09, a partir del análisis de ResiPlus)
+# Diseño: docs/ux/medicacion-y-rbac.md · Decisión de modelo: docs/adr/0009
+# Owner: Elena (UX Lead).
+# --------------------------------------------------------------------------
+medication_rbac_redesign:
+  design: docs/ux/medicacion-y-rbac.md
+  adr: docs/adr/0009-modelo-pauta-medicacion.md
+  done:
+    - { id: M-01, titulo: "Alergias visibles (banner sticky en MAR y prescripción)" }
+    - { id: M-02, titulo: "Estados del MAR accesibles (icono+texto+color, aria-label)" }
+    - { id: M-03, titulo: "Cabecera sticky del residente en medicación" }
+    - { id: M-04, titulo: "Separar prescripción (/medicacion/prescribir) del MAR" }
+    - { id: M-05, titulo: "Vía y forma farmacéutica como enum (MedicationRoute)" }
+    - { id: M-06, titulo: "Pauta por días de la semana (daysOfWeek)" }
+    - { id: M-07, titulo: "Tipo Crónico/Agudo/PRN + sección 'A demanda' en el MAR" }
+    - { id: M-08, titulo: "Alergia bloqueante en prescripción + AuditLog OVERRIDE_ALLERGY" }
+    - { id: R-01, titulo: "User.jobTitle + presets función→rol" }
+    - { id: R-02, titulo: "Tarjetas de rol PUEDE/NO-PUEDE (RoleCapabilitiesCard)" }
+    - { id: R-03, titulo: "Pantalla /equipo (gestión + 'ver acceso efectivo')" }
+    - { id: R-04, titulo: "Auditoría de cambio de rol y de función (RGPD)" }
+  backlog:
+    - { id: M-09, titulo: "Cabecera de tratamiento (Treatment) que agrupa líneas" }
+    - { id: M-10, titulo: "Vínculo de prescripción a diagnóstico (diagnosisId)" }
+    - { id: M-11, titulo: "Dosis por franja del día (momentDoses)" }
+    - { id: R-05, titulo: "Sección 'acceso familiar' + vinculación desde UI" }
+    - { id: R-06, titulo: "Custom roles por tenant (solo con demanda real; ADR propio)" }
+  pendientes_menores:
+    - "lastLoginAt sin tracking en el login (Auth.js) -> 'último acceso' en /equipo."
+    - "Alta/invitación de usuario desde /equipo (requiere endpoint invite + email)."
+  adr_pendiente:
+    - "ADR-C: MAR offline para administraciones (conflicto LWW específico de medicación)."
