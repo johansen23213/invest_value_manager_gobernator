@@ -126,14 +126,22 @@ log "Sembrando datos demo…"
 pnpm db:seed
 
 # --- 6. Puerto + arranque -----------------------------------------------------
-# Puerto de la app: respeta $PORT si lo defines; si no, usa 3000 y, si está
-# ocupado, salta al 3100 automáticamente. AUTH_URL se alinea al puerto elegido
-# (si no, el login de Auth.js rompe los redirects).
+# Puerto de la app: respeta $PORT si lo defines; si no, elige el primer puerto
+# libre de la lista. AUTH_URL se alinea al puerto elegido (si no, el login de
+# Auth.js rompe los redirects).
 port_busy() { (exec 3<>"/dev/tcp/localhost/$1") 2>/dev/null; }
-APP_PORT="${PORT:-3000}"
-if [ -z "${PORT:-}" ] && port_busy 3000; then
-  APP_PORT=3100
-  log "El puerto 3000 está ocupado; usaré el ${APP_PORT}."
+if [ -n "${PORT:-}" ]; then
+  APP_PORT="$PORT"
+  port_busy "$APP_PORT" && log "Aviso: el puerto $APP_PORT (forzado por \$PORT) parece ocupado; lo intento igualmente."
+else
+  APP_PORT=""
+  for p in 3000 3100 3200 3300 4000; do
+    if ! port_busy "$p"; then APP_PORT="$p"; break; fi
+  done
+  if [ -z "$APP_PORT" ]; then
+    die "Puertos 3000/3100/3200/3300/4000 ocupados. Libera uno (p. ej. 'lsof -ti :3100 | xargs kill -9') o fuerza otro: PORT=5000 pnpm run bootstrap"
+  fi
+  [ "$APP_PORT" != "3000" ] && log "El puerto 3000 está ocupado; uso el ${APP_PORT}."
 fi
 
 printf '\n──────────────────────────────────────────────────────────────────────\n'
