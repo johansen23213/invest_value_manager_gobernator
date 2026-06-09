@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeAlerts,
+  computePrn,
   computeSchedule,
   groupByShift,
   shiftOf,
@@ -107,5 +108,84 @@ describe('groupByShift', () => {
 
   it('devuelve vacío si no hay dosis', () => {
     expect(groupByShift([])).toEqual([]);
+  });
+});
+
+// ── Nuevos casos Sprint M ─────────────────────────────────────────────────────
+
+describe('computeSchedule — daysOfWeek', () => {
+  // DATE = 2026-06-07 = domingo (day 0).
+  const medLMX: MedForSchedule = {
+    ...med,
+    id: 'm-lmx',
+    daysOfWeek: [1, 3, 5], // lunes, miércoles, viernes
+  };
+
+  it('no genera dosis cuando el día no está en daysOfWeek', () => {
+    // 2026-06-07 = domingo (0), no está en [1,3,5]
+    const doses = computeSchedule([medLMX], [], DATE, new Date('2026-06-07T12:00:00'));
+    expect(doses).toHaveLength(0);
+  });
+
+  it('genera dosis cuando el día sí está en daysOfWeek', () => {
+    // 2026-06-08 = lunes (1), sí está en [1,3,5]
+    const monday = new Date('2026-06-08T00:00:00');
+    const doses = computeSchedule([medLMX], [], monday, new Date('2026-06-08T12:00:00'));
+    expect(doses).toHaveLength(2);
+  });
+
+  it('trata null como todos los días', () => {
+    const medAllDays: MedForSchedule = { ...med, id: 'm-all', daysOfWeek: null };
+    const doses = computeSchedule([medAllDays], [], DATE, new Date('2026-06-07T12:00:00'));
+    expect(doses).toHaveLength(2);
+  });
+
+  it('trata undefined como todos los días', () => {
+    const medNoDow: MedForSchedule = { ...med, id: 'm-undef' };
+    const doses = computeSchedule([medNoDow], [], DATE, new Date('2026-06-07T12:00:00'));
+    expect(doses).toHaveLength(2);
+  });
+});
+
+describe('computeSchedule — PRN', () => {
+  const medPrn: MedForSchedule = {
+    ...med,
+    id: 'm-prn',
+    type: 'PRN',
+    times: ['08:00'],
+  };
+
+  it('excluye de la agenda fija las medicaciones PRN', () => {
+    const doses = computeSchedule([medPrn], [], DATE, new Date('2026-06-07T12:00:00'));
+    expect(doses).toHaveLength(0);
+  });
+
+  it('las medicaciones no-PRN siguen apareciendo junto a las PRN', () => {
+    const doses = computeSchedule([med, medPrn], [], DATE, new Date('2026-06-07T12:00:00'));
+    // Solo las dosis del medicamento no-PRN
+    expect(doses).toHaveLength(2);
+    expect(doses.every((d) => d.medicationId !== medPrn.id)).toBe(true);
+  });
+});
+
+describe('computePrn', () => {
+  const medPrn: MedForSchedule = {
+    ...med,
+    id: 'm-prn',
+    type: 'PRN',
+    times: [],
+  };
+  const medCronico: MedForSchedule = { ...med, id: 'm-cron', type: 'CRONICO' };
+
+  it('devuelve solo las medicaciones PRN activas', () => {
+    const prn = computePrn([med, medPrn, medCronico], DATE);
+    expect(prn).toHaveLength(1);
+    expect(prn[0]?.id).toBe('m-prn');
+  });
+
+  it('excluye PRN fuera de periodo', () => {
+    const ended: MedForSchedule = { ...medPrn, id: 'm-prn-ended', endDate: new Date('2026-06-05T23:59:59Z') };
+    const prn = computePrn([ended], DATE);
+    expect(prn).toHaveLength(0);
   });
 });

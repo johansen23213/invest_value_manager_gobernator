@@ -363,6 +363,27 @@ model SyncConflict {
 // H4 — Medicación (prescripción + MAR) y PIA (plan individualizado)
 // ---------------------------------------------------------------------------
 
+enum MedicationRoute {
+  ORAL
+  SUBLINGUAL
+  SUBCUTANEA
+  INTRAMUSCULAR
+  INTRAVENOSA
+  TOPICA
+  INHALATORIA
+  TRANSDERMICA
+  RECTAL
+  OCULAR
+  NASAL
+  OTRA
+}
+
+enum MedicationType {
+  CRONICO
+  AGUDO
+  PRN
+}
+
 enum MedAdminStatus {
   ADMINISTRADO
   NO_ADMINISTRADO
@@ -383,21 +404,24 @@ enum GoalStatus {
 
 /// Prescripción de medicación. `times` son las horas de pauta (HH:MM) del día.
 model Medication {
-  id            String    @id @default(cuid())
-  tenantId      String    @map("tenant_id")
-  residentId    String    @map("resident_id")
-  resident      Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
-  name          String
-  dose          String
-  route         String?
-  times         Json // array de "HH:MM"
-  startDate     DateTime  @map("start_date")
-  endDate       DateTime? @map("end_date")
-  instructions  String?
-  active        Boolean   @default(true)
-  prescribedById String?  @map("prescribed_by_id")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id             String           @id @default(cuid())
+  tenantId       String           @map("tenant_id")
+  residentId     String           @map("resident_id")
+  resident       Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  name           String
+  dose           String
+  route          MedicationRoute?
+  unit           String?          // forma farmacéutica: comprimido, cápsula, solución…
+  times          Json             // array de "HH:MM"
+  daysOfWeek     Json?            @map("days_of_week") // array [0–6] (0=domingo); null=todos los días
+  type           MedicationType?
+  startDate      DateTime         @map("start_date")
+  endDate        DateTime?        @map("end_date")
+  instructions   String?
+  active         Boolean          @default(true)
+  prescribedById String?          @map("prescribed_by_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
 
   administrations MedicationAdministration[]
 

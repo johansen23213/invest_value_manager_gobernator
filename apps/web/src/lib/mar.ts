@@ -11,6 +11,10 @@ export interface MedForSchedule {
   times: string[]; // "HH:MM"
   startDate: Date;
   endDate: Date | null;
+  /** Array [0–6] (0=domingo). null o undefined = todos los días. */
+  daysOfWeek?: number[] | null;
+  /** CRONICO | AGUDO | PRN. PRN se excluye de la agenda fija. */
+  type?: string | null;
   residentId?: string;
   residentName?: string;
 }
@@ -108,6 +112,10 @@ export function computeSchedule(
 
   for (const med of meds) {
     if (!activeOn(med, date)) continue;
+    // PRN (a demanda) no tiene agenda fija: se excluye del schedule estándar.
+    if (med.type === 'PRN') continue;
+    // daysOfWeek: si está definido, solo incluir si el día de la semana de `date` está en el array.
+    if (Array.isArray(med.daysOfWeek) && !med.daysOfWeek.includes(date.getDay())) continue;
     for (const time of med.times) {
       const scheduledAt = atTime(date, time);
       if (!scheduledAt) continue;
@@ -144,6 +152,14 @@ export function computeSchedule(
   }
 
   return doses.sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+}
+
+/**
+ * Devuelve las medicaciones PRN (a demanda) activas para `date`.
+ * No generan dosis pautadas; se registran cuando ocurren.
+ */
+export function computePrn(meds: MedForSchedule[], date: Date): MedForSchedule[] {
+  return meds.filter((m) => m.type === 'PRN' && activeOn(m, date));
 }
 
 /** Dosis no administradas (alertas). */

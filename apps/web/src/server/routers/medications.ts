@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { MedAdminStatus } from '@vetlla/db';
+import { MedAdminStatus, MedicationRoute, MedicationType } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
-import { computeAlerts, computeSchedule, type AdminForSchedule, type MedForSchedule } from '@/lib/mar';
+import { computeAlerts, computePrn, computeSchedule, type AdminForSchedule, type MedForSchedule } from '@/lib/mar';
 
 function dayBounds(date: Date) {
   const start = new Date(date);
@@ -28,8 +28,15 @@ export const medicationsRouter = createTRPCRouter({
         residentId: z.string(),
         name: z.string().min(1).max(160),
         dose: z.string().min(1).max(80),
-        route: z.string().max(60).optional(),
-        times: z.array(z.string().regex(/^\d{2}:\d{2}$/)).min(1).max(12),
+        route: z.nativeEnum(MedicationRoute).optional(),
+        unit: z.string().max(80).optional(),
+        times: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(12),
+        daysOfWeek: z
+          .array(z.number().int().min(0).max(6))
+          .min(1)
+          .max(7)
+          .optional(),
+        type: z.nativeEnum(MedicationType).optional(),
         startDate: z.coerce.date(),
         endDate: z.coerce.date().optional(),
         instructions: z.string().max(500).optional(),
@@ -38,6 +45,10 @@ export const medicationsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const resident = await ctx.db.resident.findUnique({ where: { id: input.residentId } });
       if (!resident) throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
+      // PRN no requiere horas fijas; otros tipos necesitan al menos 1 hora
+      if (input.type !== MedicationType.PRN && input.times.length === 0) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Indica al menos una hora de pauta o selecciona el tipo A demanda (PRN).' });
+      }
       const medication = await ctx.db.medication.create({
         data: {
           tenantId: ctx.tenantId,
@@ -45,7 +56,12 @@ export const medicationsRouter = createTRPCRouter({
           name: input.name,
           dose: input.dose,
           route: input.route,
+          unit: input.unit,
           times: input.times,
+          // null en Prisma Json? requiere Prisma.DbNull; undefined omite el campo
+          // y deja el DEFAULT (null) de la columna. Ambos son equivalentes aquí.
+          daysOfWeek: input.daysOfWeek ?? undefined,
+          type: input.type,
           startDate: input.startDate,
           endDate: input.endDate,
           instructions: input.instructions,
@@ -57,6 +73,7 @@ export const medicationsRouter = createTRPCRouter({
         entity: 'Medication',
         entityId: input.residentId,
         summary: `Prescripción: ${input.name} ${input.dose}`,
+        metadata: { route: input.route, type: input.type, unit: input.unit },
       });
       return medication;
     }),
@@ -67,7 +84,7 @@ export const medicationsRouter = createTRPCRouter({
       ctx.db.medication.update({ where: { id: input.id }, data: { active: input.active } }),
     ),
 
-  /** Pauta del día para un residente, con el estado de cada dosis. */
+  /** Pauta del día para un residente, con el estado de cada dosis. Excluye PRN. */
   schedule: permissionProcedure('medication:read')
     .input(z.object({ residentId: z.string(), date: z.coerce.date().optional() }))
     .query(async ({ ctx, input }) => {
@@ -83,6 +100,17 @@ export const medicationsRouter = createTRPCRouter({
         date,
         new Date(),
       );
+    }),
+
+  /** Medicaciones PRN (a demanda) activas para un residente en la fecha dada. */
+  prnMeds: permissionProcedure('medication:read')
+    .input(z.object({ residentId: z.string(), date: z.coerce.date().optional() }))
+    .query(async ({ ctx, input }) => {
+      const date = input.date ?? new Date();
+      const meds = await ctx.db.medication.findMany({
+        where: { residentId: input.residentId, active: true },
+      });
+      return computePrn(meds.map(toMedForSchedule), date);
     }),
 
   /** Registra (o corrige) la administración de una dosis. Idempotente por dosis. */
@@ -163,6 +191,8 @@ function toMedForSchedule(m: {
   name: string;
   dose: string;
   times: unknown;
+  daysOfWeek?: unknown;
+  type?: string | null;
   startDate: Date;
   endDate: Date | null;
 }): MedForSchedule {
@@ -171,6 +201,8 @@ function toMedForSchedule(m: {
     name: m.name,
     dose: m.dose,
     times: Array.isArray(m.times) ? (m.times as string[]) : [],
+    daysOfWeek: Array.isArray(m.daysOfWeek) ? (m.daysOfWeek as number[]) : null,
+    type: m.type ?? null,
     startDate: m.startDate,
     endDate: m.endDate,
   };

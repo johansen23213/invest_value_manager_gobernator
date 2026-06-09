@@ -2,16 +2,15 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import { Badge, Button, Card, CardContent, CardTitle, Input, Label } from '@vetlla/ui';
+import { useMemo } from 'react';
+import { Badge, Button, Card, CardContent, CardTitle } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { SHIFT_LABELS, ALLERGY_SEVERITY_LABELS } from '@/lib/labels';
-import { groupByShift, type DoseStatus } from '@/lib/mar';
+import { groupByShift, type DoseStatus, type MedForSchedule } from '@/lib/mar';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
 import { useT } from '@/i18n/provider';
 import { formatTime } from '@/lib/format';
-import { TimeListField } from '@/components/time-list-field';
 import { doseStatusLabel, doseTone } from '@/lib/mar-ui';
 
 // Iconos SVG inline — todos con aria-hidden para que el texto sea el canal de información
@@ -61,6 +60,23 @@ function IconArrowLeft({ className }: { className?: string }) {
     <svg aria-hidden="true" focusable="false" className={className} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
       <polyline points="14 8 10 12 14 16" />
+    </svg>
+  );
+}
+
+function IconZap({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" focusable="false" className={className} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function IconPlus({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" focusable="false" className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
   );
 }
@@ -171,6 +187,51 @@ function ResidentStickyHeader({ firstName, lastName, bedCode, unitName, allergie
   );
 }
 
+// ── Sección PRN — medicaciones a demanda (M-07) ──────────────────────────────
+
+interface PrnSectionProps {
+  prnMeds: MedForSchedule[];
+  residentId: string;
+  canAdminister: boolean;
+  t: (k: string, vars?: Record<string, string | number>) => string;
+  onRecord: (medicationId: string) => void;
+}
+
+function PrnSection({ prnMeds, canAdminister, t, onRecord }: PrnSectionProps) {
+  if (prnMeds.length === 0) {
+    return <p className="text-sm text-slate-500">{t('med.prn.empty')}</p>;
+  }
+  return (
+    <ul className="flex flex-col gap-2">
+      {prnMeds.map((m) => (
+        <li
+          key={m.id}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-blue-50 px-3 py-2 text-sm"
+          aria-label={`${m.name} ${m.dose} — a demanda`}
+        >
+          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <strong className="shrink-0">{m.name}</strong>
+            <span className="text-slate-500">({m.dose})</span>
+            <Badge tone="blue" icon={<IconZap />}>
+              {t('med.type.PRN')}
+            </Badge>
+          </span>
+          {canAdminister && (
+            <Button
+              size="sm"
+              className="min-h-[48px] px-4"
+              onClick={() => onRecord(m.id)}
+              aria-label={`Registrar dosis de ${m.name}`}
+            >
+              {t('med.prn.recordDose')}
+            </Button>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // ── Página principal ─────────────────────────────────────────────────────────
 
 export default function MedicationPage() {
@@ -189,29 +250,16 @@ export default function MedicationPage() {
   const resident = api.residents.get.useQuery({ id: residentId });
   const meds = api.medications.listByResident.useQuery({ residentId });
   const schedule = api.medications.schedule.useQuery({ residentId });
-
-  const [form, setForm] = useState<{ name: string; dose: string; times: string[]; startDate: string }>({
-    name: '',
-    dose: '',
-    times: ['08:00', '20:00'],
-    startDate: '',
-  });
+  const prnMeds = api.medications.prnMeds.useQuery({ residentId });
 
   const refresh = async () => {
     await Promise.all([
       utils.medications.listByResident.invalidate({ residentId }),
       utils.medications.schedule.invalidate({ residentId }),
+      utils.medications.prnMeds.invalidate({ residentId }),
     ]);
   };
 
-  const prescribe = api.medications.prescribe.useMutation({
-    onSuccess: async () => {
-      setForm({ name: '', dose: '', times: ['08:00', '20:00'], startDate: '' });
-      await refresh();
-      toast.success(t('med.prescriptions') + ' — prescrita.');
-    },
-    onError: (e) => toast.error(e.message),
-  });
   const record = api.medications.record.useMutation({
     onSuccess: async () => {
       await refresh();
@@ -219,6 +267,25 @@ export default function MedicationPage() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  // M-07: registrar dosis PRN — pide la dosis real con motivo
+  async function recordPrn(medicationId: string) {
+    const result = await confirm({
+      title: t('med.prn.recordDose'),
+      description: t('med.prn.doseLabel'),
+      confirmLabel: 'Registrar',
+      tone: 'default',
+      reason: { label: t('med.prn.doseLabel'), required: true, placeholder: 'p. ej. 500 mg' },
+    });
+    if (result) {
+      record.mutate({
+        medicationId,
+        scheduledAt: new Date(),
+        status: 'ADMINISTRADO',
+        notes: result.reason,
+      });
+    }
+  }
 
   async function reject(medicationId: string, scheduledAt: string) {
     const result = await confirm({
@@ -266,10 +333,20 @@ export default function MedicationPage() {
       ) : null}
 
       <div className="flex flex-col gap-6 pt-4">
-        <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Link href={`/residentes/${residentId}`} className="text-sm text-brand-700 hover:underline">
             ← Expediente
           </Link>
+          {/* M-04: enlace a prescripción solo si el usuario puede prescribir */}
+          {canPrescribe && (
+            <Link
+              href={`/residentes/${residentId}/medicacion/prescribir`}
+              className="inline-flex min-h-[48px] items-center gap-2 rounded-md border border-brand-600 bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              <IconPlus />
+              {t('med.prescribe.link')}
+            </Link>
+          )}
         </div>
 
         {/* MAR de hoy */}
@@ -371,67 +448,22 @@ export default function MedicationPage() {
           </CardContent>
         </Card>
 
-        {/* Prescripción */}
-        {canPrescribe && (
-          <Card>
-            <CardContent>
-              <CardTitle className="mb-3 text-base">{t('med.prescribe')}</CardTitle>
-              <form
-                className="flex flex-col gap-3"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  prescribe.mutate({
-                    residentId,
-                    name: form.name,
-                    dose: form.dose,
-                    times: form.times,
-                    startDate: form.startDate ? new Date(form.startDate) : new Date(),
-                  });
-                }}
-              >
-                <div className="flex flex-wrap items-end gap-3">
-                  <div>
-                    <Label htmlFor="name">Fármaco</Label>
-                    <Input
-                      id="name"
-                      value={form.name}
-                      onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="dose">Dosis</Label>
-                    <Input
-                      id="dose"
-                      value={form.dose}
-                      onChange={(e) => setForm((s) => ({ ...s, dose: e.target.value }))}
-                      required
-                      placeholder="1g"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="start">Inicio</Label>
-                    <Input
-                      id="start"
-                      type="date"
-                      value={form.startDate}
-                      onChange={(e) => setForm((s) => ({ ...s, startDate: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Horas de pauta</Label>
-                  <TimeListField value={form.times} onChange={(times) => setForm((s) => ({ ...s, times }))} />
-                </div>
-                <div>
-                  <Button type="submit" disabled={prescribe.isPending || form.times.length === 0}>
-                    {t('med.prescribe')}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+        {/* M-07 — Sección A demanda (PRN) */}
+        <Card>
+          <CardContent>
+            <CardTitle className="mb-3 flex items-center gap-2 text-base">
+              <IconZap className="text-blue-600" />
+              {t('med.prn.title')}
+            </CardTitle>
+            <PrnSection
+              prnMeds={prnMeds.data ?? []}
+              residentId={residentId}
+              canAdminister={canAdminister}
+              t={t}
+              onRecord={recordPrn}
+            />
+          </CardContent>
+        </Card>
 
         {/* Listado de prescripciones */}
         <Card>
@@ -440,14 +472,29 @@ export default function MedicationPage() {
             {meds.data && meds.data.length > 0 ? (
               <ul className="flex flex-col gap-1 text-sm">
                 {meds.data.map((m) => (
-                  <li key={m.id}>
-                    <strong>{m.name}</strong> · {m.dose} · {(m.times as string[]).join(', ')}{' '}
+                  <li key={m.id} className="flex flex-wrap items-center gap-2 py-0.5">
+                    <strong>{m.name}</strong>
+                    <span className="text-slate-500">· {m.dose}</span>
+                    {m.route && (
+                      <Badge tone="neutral">{m.route as string}</Badge>
+                    )}
+                    {m.type === 'PRN' && (
+                      <Badge tone="blue" icon={<IconZap />}>
+                        {t('med.type.PRN')}
+                      </Badge>
+                    )}
+                    {m.type && m.type !== 'PRN' && (
+                      <Badge tone="neutral">{t(`med.type.${m.type as string}`)}</Badge>
+                    )}
                     {!m.active && (
-                      <Badge tone="neutral" icon={
-                        <svg aria-hidden="true" focusable="false" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10" />
-                        </svg>
-                      }>
+                      <Badge
+                        tone="neutral"
+                        icon={
+                          <svg aria-hidden="true" focusable="false" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                          </svg>
+                        }
+                      >
                         Inactiva
                       </Badge>
                     )}
