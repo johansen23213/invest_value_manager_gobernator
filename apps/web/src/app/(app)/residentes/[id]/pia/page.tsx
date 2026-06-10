@@ -9,6 +9,7 @@ import { CARE_PLAN_STATUS_LABELS, GOAL_STATUS_LABELS } from '@/lib/labels';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
 import { useToast } from '@/components/toast';
+import { CopilotPiaCard } from './copilot-pia-card';
 import type { GoalStatus } from '@vetlla/db';
 
 const GOAL_STATUSES: GoalStatus[] = ['PENDIENTE', 'EN_PROGRESO', 'CONSEGUIDO', 'CANCELADO'];
@@ -62,6 +63,8 @@ export default function CarePlanPage() {
           PIA{resident.data ? ` · ${resident.data.firstName} ${resident.data.lastName}` : ''}
         </h1>
       </div>
+
+      {canWrite && <CopilotPiaCard residentId={residentId} onCreated={() => void refresh()} />}
 
       {canWrite && (
         <Card>

@@ -6,9 +6,13 @@ import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import {
   CopilotDraftError,
   careDraftSchema,
+  carePlanDraftSchema,
   draftToCareRecord,
   generateCareDraft,
+  generateCarePlanDraft,
+  type ResidentDossier,
 } from '@/lib/copilot';
+import { createCarePlanWithGoals } from '@/server/services/careplans';
 
 // Router del copiloto (H5 Slice 2 — Feature 1: lenguaje natural → CareRecord).
 //
@@ -126,5 +130,141 @@ export const copilotRouter = createTRPCRouter({
       });
 
       return saved;
+    }),
+
+  // -------------------------------------------------------------------------
+  // Feature 2 (H5 Slice 3) — Borrador de PIA/PAI (tier reasoning).
+  // -------------------------------------------------------------------------
+  //
+  // Mismo patrón draft→confirm, con permiso `careplan:write` (SANITARIO/DIRECTOR;
+  // el AUXILIAR NO lo tiene). El modelo recibe un RESUMEN MINIMIZADO del expediente
+  // (sin PII directa: nombres/contactos seudonimizados) y devuelve un JSON validado.
+
+  /** Genera un BORRADOR de PIA a partir del expediente minimizado. No persiste. */
+  draftCarePlan: permissionProcedure('careplan:write')
+    .input(
+      z.object({
+        residentId: z.string(),
+        /** Indicaciones libres del profesional para guiar el borrador (opcional). */
+        guidance: z.string().trim().max(1000).optional(),
+        locale: z.enum(['es', 'ca']).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // (a) El residente debe existir y pertenecer al tenant (acotado por RLS).
+      const resident = await ctx.db.resident.findUnique({ where: { id: input.residentId } });
+      if (!resident) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
+      }
+
+      // (b) Compone el expediente MINIMIZADO con lecturas vía ctx (RLS). Solo datos
+      //     clínicos relevantes para el PIA; los nombres se seudonimizan en la lib.
+      const [assessments, diagnoses, allergies] = await Promise.all([
+        ctx.db.assessment.findMany({
+          where: { residentId: input.residentId },
+          orderBy: { assessedAt: 'desc' },
+          take: 6,
+        }),
+        ctx.db.diagnosis.findMany({ where: { residentId: input.residentId } }),
+        ctx.db.allergy.findMany({ where: { residentId: input.residentId } }),
+      ]);
+
+      const dossier: ResidentDossier = {
+        knownNames: [
+          `${resident.firstName} ${resident.lastName}`,
+          resident.firstName,
+          resident.lastName,
+        ],
+        dependencyGrade: resident.dependencyGrade,
+        assessments: assessments.map((a) => ({
+          type: a.type,
+          score: a.score,
+          assessedAt: a.assessedAt.toISOString(),
+        })),
+        diagnoses: diagnoses.map((d) => ({ description: d.description, code: d.code })),
+        allergies: allergies.map((a) => ({ substance: a.substance, severity: a.severity })),
+        guidance: input.guidance,
+      };
+
+      // (c)+(d)+(e) Minimiza PII → provider (tier reasoning, JSON) → valida → rehidrata.
+      const provider = createProvider(process.env);
+      let result;
+      try {
+        result = await generateCarePlanDraft(provider, { dossier, locale: input.locale });
+      } catch (error) {
+        if (error instanceof CopilotDraftError) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+        }
+        throw error;
+      }
+
+      // (g) Trazabilidad RGPD/AI-Act: borrador generado (sin entityId: aún no existe).
+      // metadata SIN PII cruda: solo el resumen seudonimizado y la trazabilidad del modelo.
+      await ctx.audit({
+        action: 'COPILOT_DRAFT',
+        entity: 'CarePlan',
+        summary: 'Borrador de PIA propuesto por el copiloto',
+        metadata: {
+          residentId: input.residentId,
+          model: result.model,
+          promptVersion: result.promptVersion,
+          locale: input.locale ?? 'es',
+          summaryRedacted: result.redactedSummary,
+        },
+      });
+
+      // (f) NO persiste nada: el borrador vuelve a la UI para confirmación humana.
+      return { draft: result.draft, model: result.model, promptVersion: result.promptVersion };
+    }),
+
+  /** Persiste un borrador de PIA REVISADO Y CONFIRMADO por el profesional. */
+  confirmCarePlan: permissionProcedure('careplan:write')
+    .input(
+      z.object({
+        residentId: z.string(),
+        draft: carePlanDraftSchema,
+        model: z.string().max(120),
+        promptVersion: z.string().max(120),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Reutiliza la lógica compartida (misma que carePlans.create + addGoal).
+      let plan;
+      try {
+        plan = await createCarePlanWithGoals(ctx.db, {
+          tenantId: ctx.tenantId,
+          createdById: ctx.session.user.id,
+          input: {
+            residentId: input.residentId,
+            title: input.draft.title,
+            notes: input.draft.notes,
+            goals: input.draft.goals.map((g) => ({
+              description: g.description,
+              targetDate: g.targetDate ? new Date(g.targetDate) : undefined,
+            })),
+          },
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'RESIDENT_NOT_FOUND') {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
+        }
+        throw error;
+      }
+
+      await ctx.audit({
+        action: 'COPILOT_CONFIRM',
+        entity: 'CarePlan',
+        entityId: plan.id,
+        summary: `PIA del copiloto confirmado y creado: ${plan.title}`,
+        metadata: {
+          aiSuggested: true,
+          model: input.model,
+          promptVersion: input.promptVersion,
+          goalsCount: plan.goals.length,
+          confirmedBy: ctx.session.user.email,
+        },
+      });
+
+      return plan;
     }),
 });

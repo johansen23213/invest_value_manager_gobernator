@@ -113,6 +113,86 @@ describe('StubProvider — extracción JSON de utterances típicos (feature 1)',
   });
 });
 
+describe('StubProvider — borrador de PIA en JSON (feature 2, tier reasoning)', () => {
+  const p = new StubProvider();
+  const SYSTEM_PIA =
+    'Eres un asistente que redacta un borrador de Plan Individualizado de Atención (PIA/PAI).';
+
+  const draftPia = async (summary: string) => {
+    const r = await p.complete({
+      system: SYSTEM_PIA,
+      messages: [{ role: 'user', content: summary }],
+      tier: 'reasoning',
+      maxTokens: 1024,
+      responseFormat: { type: 'json' },
+    });
+    return {
+      result: r,
+      json: JSON.parse(r.text) as {
+        title: string;
+        goals: { description: string }[];
+        notes?: string;
+      },
+    };
+  };
+
+  it('resumen con dependencia/Barthel → objetivo de ABVD', async () => {
+    const { result, json } = await draftPia(
+      'Dependencia grado II. Barthel 45. Diagnósticos: HTA.',
+    );
+    expect(result.model).toBe('stub-reasoning');
+    expect(json.title).toMatch(/PIA|Plan Individualizado/);
+    expect(json.goals.length).toBeGreaterThanOrEqual(1);
+    expect(json.goals.length).toBeLessThanOrEqual(3);
+    expect(json.goals.some((g) => /ABVD|autonomía|Barthel/i.test(g.description))).toBe(true);
+  });
+
+  it('resumen con caídas/Tinetti → objetivo de prevención de caídas', async () => {
+    const { json } = await draftPia('Tinetti 12. Antecedentes de caídas. Movilidad reducida.');
+    expect(json.goals.some((g) => /caída|marcha|equilibrio/i.test(g.description))).toBe(true);
+  });
+
+  it('combina varias señales clínicas en objetivos distintos (tope 3)', async () => {
+    const { json } = await draftPia(
+      'Dependencia grado III, Barthel 20, Tinetti 8, riesgo de úlceras por presión, desnutrición.',
+    );
+    expect(json.goals.length).toBe(3);
+    const all = json.goals.map((g) => g.description).join(' | ');
+    expect(all).toMatch(/ABVD|autonomía/i);
+    expect(all).toMatch(/caída|marcha|equilibrio/i);
+  });
+
+  it('resumen sin señales claras devuelve al menos un objetivo (esquema exige 1..10)', async () => {
+    const { json } = await draftPia('Persona estable sin incidencias relevantes.');
+    expect(json.goals.length).toBe(1);
+    expect(json.goals[0]?.description.length).toBeGreaterThan(0);
+  });
+
+  it('catalán: "dependència, Barthel" → objetivo de ABVD', async () => {
+    const { json } = await draftPia('Dependència grau II. Barthel 50. Diagnòstics: diabetis.');
+    expect(json.goals.some((g) => /ABVD|autonomía|Barthel/i.test(g.description))).toBe(true);
+  });
+
+  it('texto seudonimizado ([[PERSONA_1]]) no rompe la derivación', async () => {
+    const { json } = await draftPia('[[PERSONA_1]] con dependencia y antecedentes de caídas.');
+    expect(json.goals.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('NO confunde una petición extraction (feature 1) con un PIA', async () => {
+    // Mismo texto pero tier extraction y sin plantilla de PIA → CareRecord, no PIA.
+    const r = await p.complete({
+      system: 'Conviertes notas en CareRecord.',
+      messages: [{ role: 'user', content: 'dependencia y caídas' }],
+      tier: 'extraction',
+      maxTokens: 512,
+      responseFormat: { type: 'json' },
+    });
+    const json = JSON.parse(r.text) as { type?: string; title?: string };
+    expect(json.type).toBeDefined();
+    expect(json.title).toBeUndefined();
+  });
+});
+
 describe('StubProvider — emisión de toolCalls', () => {
   const tools = copilotToolDefinitions();
 

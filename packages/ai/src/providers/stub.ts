@@ -91,6 +91,90 @@ function deriveIntake(text: string, lower: string): Record<string, unknown> {
   return payload;
 }
 
+// ---------------------------------------------------------------------------
+// Feature 2 — Borrador de PIA/PAI (tier reasoning, responseFormat json).
+// ---------------------------------------------------------------------------
+
+// Señales clínicas del resumen minimizado del expediente → objetivos plausibles.
+// El resumen llega seudonimizado (sin nombres); solo se buscan términos clínicos.
+const DEPENDENCY_KEYWORDS = ['dependencia', 'dependència', 'barthel', 'abvd', 'autonom'];
+const FALL_KEYWORDS = ['caíd', 'caid', 'caigud', 'tinetti', 'marcha', 'equilibri', 'movilidad', 'mobilitat'];
+const NUTRITION_KEYWORDS = ['nutric', 'ingesta', 'desnutric', 'disfagia', 'peso', 'pes ', 'dieta'];
+const COGNITIVE_KEYWORDS = ['demencia', 'demència', 'alzheimer', 'cognit', 'desorient', 'confus'];
+const SKIN_KEYWORDS = ['úlcer', 'ulcer', 'piel', 'pell', 'upp', 'encamad', 'enllitat'];
+
+/**
+ * Deriva un borrador de PIA determinista a partir del resumen minimizado del
+ * expediente. Devuelve título plausible + 2-3 objetivos concretos según señales
+ * clínicas detectadas (dependencia→ABVD, caídas/Tinetti→prevención, etc.). Sin red.
+ * Garantiza siempre ≥1 objetivo (esquema `carePlanDraftSchema` exige 1..10).
+ */
+function deriveCarePlan(text: string): {
+  title: string;
+  goals: { description: string }[];
+  notes?: string;
+} {
+  const lower = text.toLowerCase();
+  const goals: { description: string }[] = [];
+
+  if (matchesAny(lower, DEPENDENCY_KEYWORDS)) {
+    goals.push({
+      description:
+        'Mantener y estimular la autonomía en las actividades básicas de la vida diaria (ABVD), con apoyo gradual según la escala Barthel.',
+    });
+  }
+  if (matchesAny(lower, FALL_KEYWORDS)) {
+    goals.push({
+      description:
+        'Prevenir caídas mediante ejercicios de marcha y equilibrio, revisión del entorno y seguimiento de la escala Tinetti.',
+    });
+  }
+  if (matchesAny(lower, NUTRITION_KEYWORDS)) {
+    goals.push({
+      description:
+        'Asegurar un estado nutricional y de hidratación adecuado, adaptando la dieta y registrando la ingesta diaria.',
+    });
+  }
+  if (matchesAny(lower, COGNITIVE_KEYWORDS)) {
+    goals.push({
+      description:
+        'Estimular las capacidades cognitivas y la orientación con actividades terapéuticas adaptadas a la persona.',
+    });
+  }
+  if (matchesAny(lower, SKIN_KEYWORDS)) {
+    goals.push({
+      description:
+        'Prevenir y vigilar las úlceras por presión con cambios posturales programados y cuidado de la piel.',
+    });
+  }
+
+  // Garantía de ≥1 objetivo y tope de 3 para un borrador manejable.
+  if (goals.length === 0) {
+    goals.push({
+      description:
+        'Promover el bienestar integral y la participación de la persona en la vida del centro, con seguimiento periódico.',
+    });
+  }
+  const trimmed = goals.slice(0, 3);
+
+  return {
+    title: 'Plan Individualizado de Atención (PIA)',
+    goals: trimmed,
+    notes: 'Borrador generado por el copiloto a partir del expediente. Requiere revisión profesional.',
+  };
+}
+
+/** ¿La petición JSON busca un borrador de PIA? (señal en el system prompt de la plantilla). */
+function isCarePlanRequest(input: CompletionInput): boolean {
+  const system = input.system.toLowerCase();
+  return (
+    input.tier === 'reasoning' &&
+    (system.includes('pia') ||
+      system.includes('plan individualizado') ||
+      system.includes('pla individualitzat'))
+  );
+}
+
 /**
  * Extracción determinista frase→`CareRecord` (feature 1, demo/test).
  * Reglas por palabras clave es/ca y campos derivados coherentes con los payloads
@@ -179,9 +263,13 @@ export class StubProvider implements ModelProvider {
 
     // Salida estructurada JSON solicitada: devolvemos un objeto derivado por reglas.
     if (input.responseFormat?.type === 'json') {
-      const record = deriveCareRecord(lastUserMessage(input.messages));
+      const userText = lastUserMessage(input.messages);
+      // Feature 2 (tier reasoning + plantilla de PIA): borrador de PIA/PAI.
+      const structured = isCarePlanRequest(input)
+        ? deriveCarePlan(userText)
+        : deriveCareRecord(userText);
       return Promise.resolve({
-        text: JSON.stringify(record),
+        text: JSON.stringify(structured),
         toolCalls: [],
         usage,
         stopReason: 'end',

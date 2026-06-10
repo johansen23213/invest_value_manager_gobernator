@@ -3,11 +3,17 @@ import { StubProvider } from '@vetlla/ai';
 import {
   CARE_DRAFT_FIELDS,
   CopilotDraftError,
+  buildDossierSummary,
   careDraftSchema,
+  carePlanDraftSchema,
   draftToCareRecord,
   generateCareDraft,
+  generateCarePlanDraft,
+  parseCarePlanDraft,
   parseCareDraft,
+  rehydrateCarePlanDraft,
   rehydrateDraft,
+  type ResidentDossier,
 } from './copilot';
 
 describe('careDraftSchema — validación del borrador', () => {
@@ -198,5 +204,180 @@ describe('draftToCareRecord — borrador confirmado → registro de care.push', 
     const record = draftToCareRecord(sparse, { residentId: 'r', clientId: 'c' });
     expect(record.payload).toEqual({ nota: 'aseo' });
     expect(Object.keys(record.fieldTimestamps)).toEqual(['nota']);
+  });
+});
+
+// ===========================================================================
+// Feature 2 — Borrador de PIA/PAI
+// ===========================================================================
+
+describe('carePlanDraftSchema — validación del borrador de PIA', () => {
+  it('acepta un PIA con título y un objetivo', () => {
+    const parsed = carePlanDraftSchema.parse({
+      title: 'PIA 2026',
+      goals: [{ description: 'Mantener autonomía en ABVD' }],
+    });
+    expect(parsed.title).toBe('PIA 2026');
+    expect(parsed.goals).toHaveLength(1);
+  });
+
+  it('acepta objetivos con targetDate opcional y notas', () => {
+    const parsed = carePlanDraftSchema.parse({
+      title: 'Plan',
+      goals: [{ description: 'Prevenir caídas', targetDate: '2026-12-31' }],
+      notes: 'Borrador IA',
+    });
+    expect(parsed.goals[0]?.targetDate).toBe('2026-12-31');
+    expect(parsed.notes).toBe('Borrador IA');
+  });
+
+  it('rechaza un PIA sin objetivos (mínimo 1)', () => {
+    expect(carePlanDraftSchema.safeParse({ title: 'X', goals: [] }).success).toBe(false);
+  });
+
+  it('rechaza más de 10 objetivos', () => {
+    const goals = Array.from({ length: 11 }, (_, i) => ({ description: `Objetivo ${i}` }));
+    expect(carePlanDraftSchema.safeParse({ title: 'X', goals }).success).toBe(false);
+  });
+
+  it('rechaza título vacío y objetivo con descripción vacía', () => {
+    expect(carePlanDraftSchema.safeParse({ title: '', goals: [{ description: 'x' }] }).success).toBe(
+      false,
+    );
+    expect(carePlanDraftSchema.safeParse({ title: 'X', goals: [{ description: '' }] }).success).toBe(
+      false,
+    );
+  });
+
+  it('rechaza título y objetivos demasiado largos', () => {
+    expect(
+      carePlanDraftSchema.safeParse({
+        title: 'a'.repeat(161),
+        goals: [{ description: 'x' }],
+      }).success,
+    ).toBe(false);
+    expect(
+      carePlanDraftSchema.safeParse({
+        title: 'X',
+        goals: [{ description: 'a'.repeat(301) }],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('parseCarePlanDraft — salida del modelo', () => {
+  it('parsea JSON válido conforme al esquema', () => {
+    const draft = parseCarePlanDraft('{"title":"PIA","goals":[{"description":"obj"}]}');
+    expect(draft.title).toBe('PIA');
+  });
+
+  it('lanza CopilotDraftError con JSON roto', () => {
+    expect(() => parseCarePlanDraft('no es json')).toThrow(CopilotDraftError);
+  });
+
+  it('lanza CopilotDraftError con JSON fuera de esquema (no guarda nada)', () => {
+    expect(() => parseCarePlanDraft('{"title":"X","goals":[]}')).toThrow(CopilotDraftError);
+  });
+});
+
+describe('rehydrateCarePlanDraft — los tokens PII vuelven a sus valores', () => {
+  it('rehidrata título, objetivos y notas', () => {
+    const draft = parseCarePlanDraft(
+      '{"title":"PIA de [[PERSONA_1]]","goals":[{"description":"acompañar a [[PERSONA_1]]"}],"notes":"contacto [[PERSONA_2]]"}',
+    );
+    const map = [
+      { token: '[[PERSONA_1]]', value: 'María García', category: 'PERSONA' as const },
+      { token: '[[PERSONA_2]]', value: 'Joan', category: 'PERSONA' as const },
+    ];
+    const r = rehydrateCarePlanDraft(draft, map);
+    expect(r.title).toBe('PIA de María García');
+    expect(r.goals[0]?.description).toBe('acompañar a María García');
+    expect(r.notes).toBe('contacto Joan');
+  });
+
+  it('sin mapa devuelve el borrador intacto', () => {
+    const draft = parseCarePlanDraft('{"title":"PIA","goals":[{"description":"obj"}]}');
+    expect(rehydrateCarePlanDraft(draft, [])).toBe(draft);
+  });
+});
+
+describe('buildDossierSummary — resumen minimizado del expediente', () => {
+  it('concatena dependencia, escalas, diagnósticos y alergias', () => {
+    const summary = buildDossierSummary({
+      dependencyGrade: 'GRADO_II',
+      assessments: [{ type: 'BARTHEL', score: 45 }, { type: 'TINETTI', score: 12 }],
+      diagnoses: [{ description: 'Demencia', code: 'F03' }],
+      allergies: [{ substance: 'Penicilina', severity: 'GRAVE' }],
+    });
+    expect(summary).toContain('grado II');
+    expect(summary).toContain('BARTHEL 45');
+    expect(summary).toContain('TINETTI 12');
+    expect(summary).toContain('Demencia (F03)');
+    expect(summary).toContain('Penicilina (GRAVE)');
+  });
+
+  it('incluye las indicaciones del profesional', () => {
+    const summary = buildDossierSummary({ guidance: 'Centrar en movilidad' });
+    expect(summary).toContain('Centrar en movilidad');
+  });
+
+  it('da un resumen no vacío cuando no hay datos', () => {
+    expect(buildDossierSummary({})).toContain('Sin datos clínicos');
+  });
+});
+
+describe('generateCarePlanDraft — flujo completo con StubProvider (sin red, sin BD)', () => {
+  const provider = new StubProvider();
+
+  it('expediente con dependencia/Barthel → PIA con objetivo de ABVD (tier reasoning)', async () => {
+    const result = await generateCarePlanDraft(provider, {
+      dossier: {
+        dependencyGrade: 'GRADO_II',
+        assessments: [{ type: 'BARTHEL', score: 45 }],
+      },
+    });
+    expect(result.model).toBe('stub-reasoning');
+    expect(result.promptVersion).toBe('carePlanDraft.v1');
+    expect(result.draft.goals.length).toBeGreaterThanOrEqual(1);
+    expect(
+      result.draft.goals.some((g) => /ABVD|autonomía|Barthel/i.test(g.description)),
+    ).toBe(true);
+    // El borrador valida contra el esquema (contrato modelo↔servidor↔UI).
+    expect(carePlanDraftSchema.safeParse(result.draft).success).toBe(true);
+  });
+
+  it('expediente con Tinetti/caídas → objetivo de prevención de caídas', async () => {
+    const result = await generateCarePlanDraft(provider, {
+      dossier: { assessments: [{ type: 'TINETTI', score: 10 }] },
+    });
+    expect(result.draft.goals.some((g) => /caída|marcha|equilibrio/i.test(g.description))).toBe(
+      true,
+    );
+  });
+
+  it('minimiza PII antes del provider (nombres y contactos seudonimizados)', async () => {
+    const dossier: ResidentDossier = {
+      knownNames: ['María García', 'María', 'García'],
+      dependencyGrade: 'GRADO_II',
+      // PII colada en una indicación libre: nombre + teléfono.
+      guidance: 'Coordinar con María García, tel. 612345678',
+    };
+    const result = await generateCarePlanDraft(provider, { dossier });
+    // Lo ÚNICO que vio el modelo: resumen seudonimizado, sin el nombre ni el teléfono.
+    expect(result.redactedSummary).not.toContain('María');
+    expect(result.redactedSummary).not.toContain('612345678');
+    expect(result.redactedSummary).toContain('[[PERSONA_1]]');
+    expect(result.redactedSummary).toContain('[[TELEFONO_1]]');
+    // El borrador devuelto sigue siendo válido.
+    expect(carePlanDraftSchema.safeParse(result.draft).success).toBe(true);
+  });
+
+  it('selecciona la plantilla por locale sin romper el flujo (ca)', async () => {
+    const result = await generateCarePlanDraft(provider, {
+      dossier: { dependencyGrade: 'GRADO_I' },
+      locale: 'ca',
+    });
+    expect(result.draft.goals.length).toBeGreaterThanOrEqual(1);
+    expect(carePlanDraftSchema.safeParse(result.draft).success).toBe(true);
   });
 });

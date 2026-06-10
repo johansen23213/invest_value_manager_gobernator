@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { GoalStatus } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
+import { createCarePlanWithGoals } from '@/server/services/careplans';
 
 export const carePlansRouter = createTRPCRouter({
   listByResident: permissionProcedure('careplan:read')
@@ -26,17 +27,19 @@ export const carePlansRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const resident = await ctx.db.resident.findUnique({ where: { id: input.residentId } });
-      if (!resident) throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
-      const plan = await ctx.db.carePlan.create({
-        data: {
+      let plan;
+      try {
+        plan = await createCarePlanWithGoals(ctx.db, {
           tenantId: ctx.tenantId,
-          residentId: input.residentId,
-          title: input.title,
-          notes: input.notes,
           createdById: ctx.session.user.id,
-        },
-      });
+          input: { residentId: input.residentId, title: input.title, notes: input.notes },
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'RESIDENT_NOT_FOUND') {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
+        }
+        throw error;
+      }
       await ctx.audit({ action: 'CREATE', entity: 'CarePlan', entityId: input.residentId, summary: `PIA creado: ${input.title}` });
       return plan;
     }),

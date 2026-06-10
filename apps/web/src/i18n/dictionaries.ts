@@ -185,6 +185,34 @@ const es: Record<string, string> = {
   'copilot.field.descripcion': 'Descripción',
   'copilot.field.actividad': 'Actividad',
 
+  // Copiloto — Feature 2: borrador de PIA (H5 Slice 3)
+  'copilotPia.title': 'Copiloto · Proponer PIA',
+  'copilotPia.intro':
+    'El copiloto redacta un borrador de PIA a partir del expediente (dependencia, escalas, diagnósticos). Lo revisas y confirmas tú.',
+  'copilotPia.guidanceLabel': 'Indicaciones (opcional)',
+  'copilotPia.guidancePlaceholder': 'Ej.: centrar el plan en la movilidad y la prevención de caídas…',
+  'copilotPia.generate': 'Proponer PIA con el copiloto',
+  'copilotPia.generating': 'Redactando borrador…',
+  'copilotPia.badge': 'Borrador del copiloto — revisa antes de crear el PIA',
+  'copilotPia.transparency':
+    'Generado por IA a partir del expediente. Revisa y corrige el título y los objetivos antes de crearlo.',
+  'copilotPia.titleLabel': 'Título del PIA',
+  'copilotPia.goalsLabel': 'Objetivos',
+  'copilotPia.goalLabel': 'Objetivo',
+  'copilotPia.addGoal': 'Añadir objetivo',
+  'copilotPia.removeGoal': 'Quitar objetivo',
+  'copilotPia.notesLabel': 'Notas del copiloto',
+  'copilotPia.confirm': 'Confirmar y crear PIA',
+  'copilotPia.creating': 'Creando PIA…',
+  'copilotPia.discard': 'Descartar',
+  'copilotPia.saved': 'PIA creado a partir del borrador del copiloto.',
+  'copilotPia.discarded': 'Borrador descartado. No se ha creado ningún PIA.',
+  'copilotPia.error.draft':
+    'No se pudo generar el borrador del PIA. Inténtalo de nuevo o créalo manualmente.',
+  'copilotPia.error.confirm': 'No se pudo crear el PIA. Revisa el título y los objetivos.',
+  'copilotPia.error.invalid':
+    'Revisa el borrador: el título y al menos un objetivo no pueden estar vacíos.',
+
   // RBAC — tarjetas de rol (R-02)
   'rbac.roles.title': 'Roles del equipo',
   'rbac.roles.subtitle': 'Permisos efectivos por cada rol del sistema.',
@@ -391,6 +419,34 @@ const ca: Record<string, string> = {
   'copilot.field.deposicion': 'Deposició',
   'copilot.field.descripcion': 'Descripció',
   'copilot.field.actividad': 'Activitat',
+
+  // Copilot — Feature 2: esborrany de PIA (H5 Slice 3)
+  'copilotPia.title': 'Copilot · Proposar PIA',
+  'copilotPia.intro':
+    "El copilot redacta un esborrany de PIA a partir de l'expedient (dependència, escales, diagnòstics). El revises i el confirmes tu.",
+  'copilotPia.guidanceLabel': 'Indicacions (opcional)',
+  'copilotPia.guidancePlaceholder': 'Ex.: centrar el pla en la mobilitat i la prevenció de caigudes…',
+  'copilotPia.generate': 'Proposar PIA amb el copilot',
+  'copilotPia.generating': 'Redactant esborrany…',
+  'copilotPia.badge': 'Esborrany del copilot — revisa abans de crear el PIA',
+  'copilotPia.transparency':
+    "Generat per IA a partir de l'expedient. Revisa i corregeix el títol i els objectius abans de crear-lo.",
+  'copilotPia.titleLabel': 'Títol del PIA',
+  'copilotPia.goalsLabel': 'Objectius',
+  'copilotPia.goalLabel': 'Objectiu',
+  'copilotPia.addGoal': 'Afegir objectiu',
+  'copilotPia.removeGoal': 'Treure objectiu',
+  'copilotPia.notesLabel': 'Notes del copilot',
+  'copilotPia.confirm': 'Confirmar i crear PIA',
+  'copilotPia.creating': 'Creant PIA…',
+  'copilotPia.discard': 'Descartar',
+  'copilotPia.saved': 'PIA creat a partir de l\'esborrany del copilot.',
+  'copilotPia.discarded': "Esborrany descartat. No s'ha creat cap PIA.",
+  'copilotPia.error.draft':
+    "No s'ha pogut generar l'esborrany del PIA. Torna-ho a provar o crea'l manualment.",
+  'copilotPia.error.confirm': "No s'ha pogut crear el PIA. Revisa el títol i els objectius.",
+  'copilotPia.error.invalid':
+    'Revisa l\'esborrany: el títol i almenys un objectiu no poden estar buits.',
 
   // RBAC — targetes de rol (R-02)
   'rbac.roles.title': "Rols de l'equip",

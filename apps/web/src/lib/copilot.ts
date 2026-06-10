@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 import {
+  carePlanDraftV1,
   careRecordExtractionV1,
   getSystemPrompt,
   redactPii,
@@ -219,5 +220,187 @@ export function draftToCareRecord(
     recordedAt,
     payload,
     fieldTimestamps,
+  };
+}
+
+// ===========================================================================
+// Feature 2 (H5 Slice 3) — Borrador de PIA/PAI con confirmación humana
+// ===========================================================================
+//
+// Mismo patrón draft→confirm que la Feature 1, pero con el tier `reasoning` y sobre
+// el PIA. El modelo recibe un RESUMEN MINIMIZADO del expediente (dependencia, escalas,
+// diagnósticos, alergias — sin PII directa: nombres/contactos seudonimizados con
+// `redactPii`) y devuelve un JSON con título + objetivos. NO persiste nada: el borrador
+// vuelve a la UI para que un profesional (SANITARIO/DIRECTOR) lo revise y confirme.
+
+/** Objetivo de un borrador de PIA: descripción + fecha objetivo opcional (ISO). */
+const carePlanGoalSchema = z.object({
+  description: z.string().trim().min(1).max(300),
+  targetDate: z.string().trim().min(1).optional(),
+});
+
+/**
+ * Borrador de PIA propuesto por el copiloto: título + 1..10 objetivos + notas
+ * opcionales. Es el contrato modelo ↔ servidor ↔ UI de revisión (Feature 2).
+ */
+export const carePlanDraftSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  goals: z.array(carePlanGoalSchema).min(1).max(10),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+export type CarePlanDraft = z.infer<typeof carePlanDraftSchema>;
+
+/** Parsea y valida el JSON del modelo para un PIA. Lanza `CopilotDraftError`. */
+export function parseCarePlanDraft(text: string): CarePlanDraft {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new CopilotDraftError('La salida del modelo no es JSON válido.');
+  }
+  const parsed = carePlanDraftSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new CopilotDraftError(
+      `La salida del modelo no cumple el esquema de PIA: ${parsed.error.issues
+        .map((i) => `${i.path.join('.')}: ${i.message}`)
+        .join('; ')}`,
+    );
+  }
+  return parsed.data;
+}
+
+/** Rehidrata los tokens PII en los campos de texto del borrador de PIA. */
+export function rehydrateCarePlanDraft(draft: CarePlanDraft, map: PiiMapEntry[]): CarePlanDraft {
+  if (map.length === 0) return draft;
+  return {
+    title: rehydrate(draft.title, map),
+    goals: draft.goals.map((g) => ({ ...g, description: rehydrate(g.description, map) })),
+    notes: draft.notes === undefined ? undefined : rehydrate(draft.notes, map),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Resumen minimizado del expediente (lo ÚNICO que ve el modelo)
+// ---------------------------------------------------------------------------
+
+/**
+ * Expediente del residente tal como lo compone el router (lecturas vía ctx/RLS).
+ * Contiene SOLO los datos clínicos relevantes para el PIA; los identificadores
+ * directos (nombre/apellidos/contactos) se seudonimizan antes de salir al modelo.
+ */
+export interface ResidentDossier {
+  /** Nombre/apellidos conocidos a seudonimizar (nunca llegan crudos al modelo). */
+  knownNames?: string[];
+  dependencyGrade?: string | null;
+  /** Escalas: tipo (BARTHEL/TINETTI) + puntuación + fecha opcional. */
+  assessments?: { type: string; score: number; assessedAt?: string }[];
+  diagnoses?: { description: string; code?: string | null }[];
+  allergies?: { substance: string; severity?: string | null }[];
+  /** Indicaciones libres que el profesional escribe para guiar el borrador. */
+  guidance?: string;
+}
+
+/** Mapa de etiquetas legibles para el grado de dependencia (entra en el resumen). */
+const DEPENDENCY_LABELS: Record<string, string> = {
+  SIN_VALORAR: 'sin valorar',
+  GRADO_I: 'grado I',
+  GRADO_II: 'grado II',
+  GRADO_III: 'grado III',
+};
+
+/**
+ * Construye el resumen textual minimizado del expediente que se manda al modelo.
+ * Función pura: solo concatena datos clínicos en frases es; NO incluye PII directa
+ * (el seudonimizado se aplica después con `redactPii` sobre `guidance` y nombres).
+ */
+export function buildDossierSummary(dossier: ResidentDossier): string {
+  const lines: string[] = [];
+
+  if (dossier.dependencyGrade) {
+    const label = DEPENDENCY_LABELS[dossier.dependencyGrade] ?? dossier.dependencyGrade;
+    lines.push(`Dependencia: ${label}.`);
+  }
+
+  if (dossier.assessments && dossier.assessments.length > 0) {
+    const scales = dossier.assessments.map((a) => `${a.type} ${a.score}`).join(', ');
+    lines.push(`Escalas: ${scales}.`);
+  }
+
+  if (dossier.diagnoses && dossier.diagnoses.length > 0) {
+    const dx = dossier.diagnoses
+      .map((d) => (d.code ? `${d.description} (${d.code})` : d.description))
+      .join('; ');
+    lines.push(`Diagnósticos: ${dx}.`);
+  }
+
+  if (dossier.allergies && dossier.allergies.length > 0) {
+    const al = dossier.allergies
+      .map((a) => (a.severity ? `${a.substance} (${a.severity})` : a.substance))
+      .join('; ');
+    lines.push(`Alergias: ${al}.`);
+  }
+
+  if (dossier.guidance && dossier.guidance.trim() !== '') {
+    lines.push(`Indicaciones del profesional: ${dossier.guidance.trim()}`);
+  }
+
+  if (lines.length === 0) {
+    lines.push('Sin datos clínicos relevantes registrados en el expediente.');
+  }
+
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Generación del borrador de PIA (provider inyectado; sin BD)
+// ---------------------------------------------------------------------------
+
+export interface GenerateCarePlanDraftInput {
+  dossier: ResidentDossier;
+  /** Locale del usuario ('es' | 'ca'); selecciona la plantilla de prompt. */
+  locale?: string;
+}
+
+export interface GenerateCarePlanDraftResult {
+  draft: CarePlanDraft;
+  /** Id de modelo usado (trazabilidad → AuditLog). */
+  model: string;
+  /** Versión de la plantilla de prompt (trazabilidad → AuditLog). */
+  promptVersion: string;
+  /** Resumen seudonimizado, lo ÚNICO que vio el modelo (trazable sin PII). */
+  redactedSummary: string;
+}
+
+/**
+ * Genera un borrador de PIA a partir del expediente minimizado del residente.
+ * Minimiza PII (seudonimiza nombres/contactos y cualquier identificador directo en el
+ * resumen) ANTES de llamar al provider (tier `reasoning`, JSON) y rehidrata la salida
+ * validada. NO persiste nada: el resultado vuelve a la UI para confirmación humana.
+ */
+export async function generateCarePlanDraft(
+  provider: ModelProvider,
+  input: GenerateCarePlanDraftInput,
+): Promise<GenerateCarePlanDraftResult> {
+  const summary = buildDossierSummary(input.dossier);
+  // Minimización PII: seudonimiza nombres conocidos + identificadores estructurados
+  // (DNI/NIE, teléfono, email) que pudieran colarse en diagnósticos/indicaciones.
+  const { redacted, map } = redactPii(summary, { names: input.dossier.knownNames });
+
+  const result = await provider.complete({
+    system: getSystemPrompt(carePlanDraftV1, input.locale),
+    messages: [{ role: 'user', content: redacted }],
+    tier: 'reasoning',
+    maxTokens: 1024,
+    temperature: 0,
+    responseFormat: { type: 'json' },
+  });
+
+  const draft = parseCarePlanDraft(result.text);
+  return {
+    draft: rehydrateCarePlanDraft(draft, map),
+    model: result.model,
+    promptVersion: carePlanDraftV1.id,
+    redactedSummary: redacted,
   };
 }

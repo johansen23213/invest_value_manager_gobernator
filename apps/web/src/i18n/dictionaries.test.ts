@@ -126,6 +126,61 @@ describe('paridad es/ca — H5 Slice 2 (copiloto: NL → CareRecord)', () => {
   });
 });
 
+describe('paridad es/ca — H5 Slice 3 (copiloto: borrador de PIA)', () => {
+  const copilotPiaKeys = [
+    'copilotPia.title',
+    'copilotPia.intro',
+    'copilotPia.guidanceLabel',
+    'copilotPia.guidancePlaceholder',
+    'copilotPia.generate',
+    'copilotPia.generating',
+    'copilotPia.badge',
+    'copilotPia.transparency',
+    'copilotPia.titleLabel',
+    'copilotPia.goalsLabel',
+    'copilotPia.goalLabel',
+    'copilotPia.addGoal',
+    'copilotPia.removeGoal',
+    'copilotPia.notesLabel',
+    'copilotPia.confirm',
+    'copilotPia.creating',
+    'copilotPia.discard',
+    'copilotPia.saved',
+    'copilotPia.discarded',
+    'copilotPia.error.draft',
+    'copilotPia.error.confirm',
+    'copilotPia.error.invalid',
+  ];
+
+  it('todas las claves del copiloto-PIA existen en es', () => {
+    for (const key of copilotPiaKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves del copiloto-PIA existen en ca', () => {
+    for (const key of copilotPiaKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('las claves narrativas del copiloto-PIA difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'copilotPia.badge',
+      'copilotPia.transparency',
+      'copilotPia.saved',
+      'copilotPia.intro',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
 describe('paridad es/ca — Wave B Sprint M (equipo + RBAC R-01/R-03)', () => {
   const waveBKeys = [
     'nav.team',
