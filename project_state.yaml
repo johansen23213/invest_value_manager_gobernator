@@ -288,7 +288,24 @@ milestones:
       la UE (Mistral/Llama vía vLLM en cloud EU-soberano) por soberanía RGPD; Claude vía
       Bedrock/Vertex UE como fallback para razonamiento de alta exigencia. Se mide por
       feature sobre prompts es/ca. Casos de uso del copiloto catalogados en el ADR-0010.
-      Construcción: Slice 1 (fundación provider-agnóstica, testeable sin modelo) primero.
+    progress_2026-06-09:
+      - "Slice 1 — Fundación @vetlla/ai provider-agnóstica (ModelProvider, StubProvider,
+        registro de modelos por tier, redactPii/rehydrate, tools Zod, prompts es/ca).
+        Testeable sin modelo. 48 tests."
+      - "Slice 2 — Feature 1: NL -> CareRecord con confirmación humana en /atencion.
+        Router copilot (draftCareRecord/confirmCareRecord), PII minimizada, AuditLog
+        COPILOT_DRAFT/CONFIRM, reutiliza care.push idempotente. UI tablet con badge art.50."
+      - "Slice 3 — Feature 2: borrador de PIA (tier razonamiento) en /residentes/[id]/pia.
+        draftCarePlan/confirmCarePlan, helper createCarePlanWithGoals, título+objetivos
+        editables, mismas garantías."
+      - "Verificación: 62 tests @vetlla/ai · 123 web · typecheck 5/5 · suite E2E Playwright
+        31/31 con navegador real (incl. copiloto y copiloto-pia)."
+    pendiente_para_cerrar_H5:
+      - "Cablear proveedor real (vLLM open-source UE / Claude-UE fallback) — solo config
+        (AI_PROVIDER + AI_MODEL_*); depende de A-003. Benchmark es/ca del PIA con modelo real."
+      - "Transparencia art.50 en UI ya presente; revisar checklist DPIA/RoPA y pasar
+        ADR-0008/0010 a 'Aceptada' definitiva cuando se elija proveedor."
+      - "Entrada por voz (Whisper UE) — A-002, hoy stub/texto."
     goal: Las 2 features estrella con tool use y human-in-the-loop.
     exit_criteria:
       - Lenguaje natural -> CareRecord estructurados, con confirmación previa (es y ca).
