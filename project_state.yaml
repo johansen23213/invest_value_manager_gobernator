@@ -62,7 +62,12 @@ assumptions:
     status: pending_confirmation
   - id: A-003
     text: Despliegue concreto (proveedor app + Postgres EU) se decide en H0/ADR; el MVP corre en local con docker-compose para Postgres.
-    status: pending_confirmation
+    status: resolved
+    resolution_2026-06-09: >-
+      DECIDIDO: OVHcloud (HDS desde 2015 + SecNumCloud) para app + Postgres gestionado +
+      inferencia (AI Endpoints open-weight). Scaleway, también HDS, queda como alternativa
+      equivalente (cambio = AI_VLLM_BASE_URL). Ver ADR-0011. Pendiente: credenciales +
+      benchmark es/ca; verificar ENS para sector público español. (En local sigue docker-compose.)
   - id: A-004
     text: 2FA opcional se modela en datos pero su implementación completa puede caer en H1 o roadmap según esfuerzo.
     status: pending_confirmation

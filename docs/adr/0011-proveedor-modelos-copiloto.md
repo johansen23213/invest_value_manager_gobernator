@@ -1,7 +1,7 @@
 # ADR 0011 — Proveedor y modelos del Copiloto (cierre de A-003)
 
-- **Estado:** Aceptada (estrategia + proveedor por defecto). Pendiente: benchmark
-  es/ca de calidad sobre prompts reales y elección final de proveedor de hosting.
+- **Estado:** Aceptada. **Proveedor elegido: OVHcloud** (HDS). Pendiente solo:
+  credenciales + benchmark es/ca de calidad sobre prompts reales.
 - **Fecha:** 2026-06-09
 - **Relacionado:** **concreta ADR-0010** (estrategia provider-agnóstica) y cierra el
   supuesto **A-003** (dónde viven app + Postgres + inferencia). Datos de mercado de
@@ -65,12 +65,15 @@ para extracción y razonamiento medio.
    ya lo permite por feature.
 5. **Tier B (GPU dedicada)** solo cuando el volumen sostenido lo justifique
    económicamente o se exija que el dato no toque ni siquiera un proveedor gestionado.
-6. **A-003 (hosting app + Postgres):** alojar en el **mismo proveedor EU soberano** que la
-   inferencia para un stack coherente. Candidatos: **OVHcloud** o **Scaleway** (ambos FR,
-   con Postgres gestionado y cómputo UE). **Criterio de desempate:** certificaciones para
-   sector público español (**ENS**, SecNumCloud) y experiencia de despliegue. Recomendación
-   inicial: **OVHcloud** (mayor presencia/soberanía declarada) o **Scaleway** (DX y "no
-   reutilización de datos" explícita) — confirmar contra requisitos de cliente/ENS.
+6. **A-003 (hosting app + Postgres + inferencia) — DECIDIDO (2026-06-09): OVHcloud.**
+   Ambos candidatos están **certificados HDS** (Hébergeur de Données de Santé — requisito
+   para datos de salud), así que los dos cumplen el principio RGPD. Desempata OVHcloud por:
+   **HDS desde 2015** (las 6 actividades) + **SecNumCloud ya obtenido** (Scaleway aún en
+   proceso); **stack completo HDS** (AI Endpoints open-weight + PostgreSQL gestionado + GPU);
+   y mejor relación calidad/precio para HDS completo. **Scaleway** queda como alternativa
+   equivalente (su selección para el Health Data Hub es señal fuerte); cambiar de uno a otro
+   es modificar `AI_VLLM_BASE_URL`, no código. **Verificar ENS** para clientes del sector
+   público español antes de contratar.
 
 ## Ilustración de coste
 
