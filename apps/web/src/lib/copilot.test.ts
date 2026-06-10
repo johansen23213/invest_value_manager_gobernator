@@ -102,6 +102,22 @@ describe('parseCareDraft — salida del modelo', () => {
   it('lanza CopilotDraftError con JSON fuera de esquema (no guarda nada)', () => {
     expect(() => parseCareDraft('{"type":"DIAGNOSTICO","payload":{}}')).toThrow(CopilotDraftError);
   });
+
+  it('tolera JSON envuelto en vallas de código (```json … ```) de un modelo local', () => {
+    const draft = parseCareDraft(
+      '```json\n{"type":"CONSTANTES","payload":{"tension":"130/85","temperatura":36.8}}\n```',
+    );
+    expect(draft.type).toBe('CONSTANTES');
+    expect(draft.payload).toMatchObject({ tension: '130/85', temperatura: 36.8 });
+  });
+
+  it('tolera texto antes/después del objeto JSON', () => {
+    const draft = parseCareDraft(
+      'Claro, aquí tienes el registro: {"type":"INGESTA","payload":{"comida":"Comida","porcentaje":50}} ¡Listo!',
+    );
+    expect(draft.type).toBe('INGESTA');
+    expect(draft.payload).toMatchObject({ comida: 'Comida', porcentaje: 50 });
+  });
 });
 
 describe('rehydrateDraft — los tokens PII vuelven a sus valores', () => {
@@ -132,7 +148,7 @@ describe('generateCareDraft — flujo completo con StubProvider (sin red, sin BD
     expect(result.draft.type).toBe('INGESTA');
     expect(result.draft.payload).toMatchObject({ porcentaje: 50 });
     expect(result.model).toBe('stub-extraction');
-    expect(result.promptVersion).toBe('careRecordExtraction.v1');
+    expect(result.promptVersion).toBe('careRecordExtraction.v2');
   });
 
   it('"tensión 120/80, 36.5ºC" → borrador CONSTANTES con tensión y temperatura', async () => {
@@ -337,7 +353,7 @@ describe('generateCarePlanDraft — flujo completo con StubProvider (sin red, si
       },
     });
     expect(result.model).toBe('stub-reasoning');
-    expect(result.promptVersion).toBe('carePlanDraft.v1');
+    expect(result.promptVersion).toBe('carePlanDraft.v2');
     expect(result.draft.goals.length).toBeGreaterThanOrEqual(1);
     expect(
       result.draft.goals.some((g) => /ABVD|autonomía|Barthel/i.test(g.description)),

@@ -305,6 +305,18 @@ milestones:
         editables, mismas garantías."
       - "Verificación: 62 tests @vetlla/ai · 123 web · typecheck 5/5 · suite E2E Playwright
         31/31 con navegador real (incl. copiloto y copiloto-pia)."
+    progress_2026-06-10:
+      - "Validación con modelo real (Ollama qwen2.5:14b) destapó un fallo que el
+        StubProvider enmascaraba: las plantillas de prompt (v1) NO describían el contrato
+        de salida JSON y aún pedían 'usar herramientas tipadas', pero la ruta de inferencia
+        usa responseFormat:json y parsea el texto (sin tool-calling). Un modelo real
+        devolvía JSON con otra forma -> careDraftSchema/carePlanDraftSchema lo rechazaban
+        (CopilotDraftError -> BAD_REQUEST, toast rojo al 'Generar')."
+      - "Arreglo: prompts reescritos a v2 (careRecordExtraction.v2 / carePlanDraft.v2) con
+        el contrato JSON explícito por tipo + ejemplos few-shot es/ca y 'responde solo JSON,
+        sin markdown'. Parseo del modelo endurecido (parseModelJson): tolera vallas ```json
+        y texto alrededor del objeto. promptVersion en AuditLog pasa a .v2. 88 @vetlla/ai +
+        125 web (2 nuevos de tolerancia de parseo) · typecheck/lint verde."
     pendiente_para_cerrar_H5:
       - "Cablear proveedor real (vLLM open-source UE / Claude-UE fallback) — solo config
         (AI_PROVIDER + AI_MODEL_*); depende de A-003. Benchmark es/ca del PIA con modelo real."

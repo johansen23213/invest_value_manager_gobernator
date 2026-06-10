@@ -80,8 +80,8 @@ export {
   SUPPORTED_LOCALES,
   DEFAULT_LOCALE,
   PROMPT_TEMPLATES,
-  careRecordExtractionV1,
-  carePlanDraftV1,
+  careRecordExtractionV2,
+  carePlanDraftV2,
   resolveLocale,
   getSystemPrompt,
 } from './prompts';

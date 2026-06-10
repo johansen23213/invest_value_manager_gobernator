@@ -13,8 +13,8 @@
 
 import { z } from 'zod';
 import {
-  carePlanDraftV1,
-  careRecordExtractionV1,
+  carePlanDraftV2,
+  careRecordExtractionV2,
   getSystemPrompt,
   redactPii,
   rehydrate,
@@ -107,14 +107,39 @@ export class CopilotDraftError extends Error {
   }
 }
 
-/** Parsea y valida el texto JSON devuelto por el modelo. Lanza `CopilotDraftError`. */
-export function parseCareDraft(text: string): CareDraft {
-  let raw: unknown;
+/**
+ * Parsea el JSON de la salida del modelo de forma tolerante. Aunque pedimos
+ * `response_format: json`, los modelos pequeños auto-alojados a veces envuelven el
+ * objeto en vallas de código (```json … ```) o le añaden texto alrededor; aquí lo
+ * desenvolvemos y, si hace falta, recortamos al primer objeto `{ … }` balanceado.
+ * No "arregla" JSON inválido: solo deslastra adornos antes de `JSON.parse`.
+ */
+function parseModelJson(text: string): unknown {
+  const stripped = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
   try {
-    raw = JSON.parse(text);
+    return JSON.parse(stripped);
   } catch {
+    // Fallback: recorta entre la primera '{' y la última '}' (texto antes/después).
+    const start = stripped.indexOf('{');
+    const end = stripped.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(stripped.slice(start, end + 1));
+      } catch {
+        throw new CopilotDraftError('La salida del modelo no es JSON válido.');
+      }
+    }
     throw new CopilotDraftError('La salida del modelo no es JSON válido.');
   }
+}
+
+/** Parsea y valida el texto JSON devuelto por el modelo. Lanza `CopilotDraftError`. */
+export function parseCareDraft(text: string): CareDraft {
+  const raw = parseModelJson(text);
   const parsed = careDraftSchema.safeParse(raw);
   if (!parsed.success) {
     throw new CopilotDraftError(
@@ -176,7 +201,7 @@ export async function generateCareDraft(
 ): Promise<GenerateCareDraftResult> {
   const { redacted, map } = redactPii(input.utterance, { names: input.knownNames });
   const result = await provider.complete({
-    system: getSystemPrompt(careRecordExtractionV1, input.locale),
+    system: getSystemPrompt(careRecordExtractionV2, input.locale),
     messages: [{ role: 'user', content: redacted }],
     tier: 'extraction',
     maxTokens: 512,
@@ -187,7 +212,7 @@ export async function generateCareDraft(
   return {
     draft: rehydrateDraft(draft, map),
     model: result.model,
-    promptVersion: careRecordExtractionV1.id,
+    promptVersion: careRecordExtractionV2.id,
     redactedUtterance: redacted,
   };
 }
@@ -253,12 +278,7 @@ export type CarePlanDraft = z.infer<typeof carePlanDraftSchema>;
 
 /** Parsea y valida el JSON del modelo para un PIA. Lanza `CopilotDraftError`. */
 export function parseCarePlanDraft(text: string): CarePlanDraft {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    throw new CopilotDraftError('La salida del modelo no es JSON válido.');
-  }
+  const raw = parseModelJson(text);
   const parsed = carePlanDraftSchema.safeParse(raw);
   if (!parsed.success) {
     throw new CopilotDraftError(
@@ -388,7 +408,7 @@ export async function generateCarePlanDraft(
   const { redacted, map } = redactPii(summary, { names: input.dossier.knownNames });
 
   const result = await provider.complete({
-    system: getSystemPrompt(carePlanDraftV1, input.locale),
+    system: getSystemPrompt(carePlanDraftV2, input.locale),
     messages: [{ role: 'user', content: redacted }],
     tier: 'reasoning',
     maxTokens: 1024,
@@ -400,7 +420,7 @@ export async function generateCarePlanDraft(
   return {
     draft: rehydrateCarePlanDraft(draft, map),
     model: result.model,
-    promptVersion: carePlanDraftV1.id,
+    promptVersion: carePlanDraftV2.id,
     redactedSummary: redacted,
   };
 }
