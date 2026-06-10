@@ -6,7 +6,12 @@ project:
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
   current_milestone: H5      # en construcción (reactivado 2026-06-09, ADR-0010); resto del MVP completo
-  last_updated: 2026-06-09
+  last_updated: 2026-06-10
+  # 2026-06-10: (1) copiloto: arreglo de prompts v2 (contrato JSON explícito para modelos
+  # reales) tras fallar la validación con Ollama; queda pendiente de re-validar es/ca.
+  # (2) Sprint Dirección: UX-19 (plano de ocupación + KPIs, /ocupacion) y UX-18 (centro de
+  # alertas priorizado, /alertas). Router overview (occupancy/alerts), lógica pura
+  # occupancy.ts + alerts.ts con tests. 137 tests web · typecheck/lint/build verde.
   # 2026-06-09: refinamiento UX-first de Medicación y RBAC a partir del análisis
   # competitivo de ResiPlus. Diseño priorizado (docs/ux/medicacion-y-rbac.md) +
   # ADR-0009 (modelo de pauta de medicación). Implementado y verificado (79 tests,
@@ -437,8 +442,8 @@ ux_backlog:
     - { id: UX-15, titulo: "Entrada táctil (inputMode, steppers, botones grandes)", prioridad: sprint1, estado: done }
     - { id: UX-16, titulo: "Indicador offline visible y educativo", prioridad: backlog, estado: done }
     - { id: UX-17, titulo: "MAR como pase por turno + motivo en no-administrado", prioridad: sprint1, estado: done }
-    - { id: UX-18, titulo: "Centro de alertas priorizado", prioridad: backlog, estado: todo }
-    - { id: UX-19, titulo: "Dirección: plano de ocupación + KPIs", prioridad: backlog, estado: todo }
+    - { id: UX-18, titulo: "Centro de alertas priorizado", prioridad: backlog, estado: done }
+    - { id: UX-19, titulo: "Dirección: plano de ocupación + KPIs", prioridad: backlog, estado: done }
     - { id: UX-20, titulo: "Portal de familias más humano + control de privacidad", prioridad: backlog, estado: todo }
 
 # --------------------------------------------------------------------------

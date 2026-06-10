@@ -42,12 +42,22 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                     <Link href="/centros" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.centers')}
                     </Link>
+                    {hasPermission(user.role, 'centers:read') && (
+                      <Link href="/ocupacion" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.occupancy')}
+                      </Link>
+                    )}
                     <Link href="/residentes" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.residents')}
                     </Link>
                     <Link href="/atencion" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.care')}
                     </Link>
+                    {hasPermission(user.role, 'care:read') && (
+                      <Link href="/alertas" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.alerts')}
+                      </Link>
+                    )}
                     {hasPermission(user.role, 'users:read') && (
                       <Link href="/equipo" className="rounded-md px-3 py-2 hover:bg-slate-100">
                         {t('nav.team')}

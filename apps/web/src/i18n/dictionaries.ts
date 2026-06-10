@@ -13,8 +13,10 @@ const es: Record<string, string> = {
 
   'nav.home': 'Inicio',
   'nav.centers': 'Centros',
+  'nav.occupancy': 'Ocupación',
   'nav.residents': 'Residentes',
   'nav.care': 'Atención',
+  'nav.alerts': 'Alertas',
   'nav.portal': 'Portal',
 
   'login.subtitle': 'Gestión sociosanitaria. Inicia sesión.',
@@ -248,8 +250,10 @@ const ca: Record<string, string> = {
 
   'nav.home': 'Inici',
   'nav.centers': 'Centres',
+  'nav.occupancy': 'Ocupació',
   'nav.residents': 'Residents',
   'nav.care': 'Atenció',
+  'nav.alerts': 'Alertes',
   'nav.portal': 'Portal',
 
   'login.subtitle': 'Gestió sociosanitària. Inicia la sessió.',
