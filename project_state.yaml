@@ -444,7 +444,7 @@ ux_backlog:
     - { id: UX-17, titulo: "MAR como pase por turno + motivo en no-administrado", prioridad: sprint1, estado: done }
     - { id: UX-18, titulo: "Centro de alertas priorizado", prioridad: backlog, estado: done }
     - { id: UX-19, titulo: "Dirección: plano de ocupación + KPIs", prioridad: backlog, estado: done }
-    - { id: UX-20, titulo: "Portal de familias más humano + control de privacidad", prioridad: backlog, estado: todo }
+    - { id: UX-20, titulo: "Portal de familias más humano + control de privacidad", prioridad: backlog, estado: done }
 
 # --------------------------------------------------------------------------
 # Rediseño UX de Medicación + RBAC (2026-06-09, a partir del análisis de ResiPlus)
@@ -467,11 +467,11 @@ medication_rbac_redesign:
     - { id: R-02, titulo: "Tarjetas de rol PUEDE/NO-PUEDE (RoleCapabilitiesCard)" }
     - { id: R-03, titulo: "Pantalla /equipo (gestión + 'ver acceso efectivo')" }
     - { id: R-04, titulo: "Auditoría de cambio de rol y de función (RGPD)" }
+    - { id: R-05, titulo: "Acceso familiar: vinculación desde UI + control de privacidad por sección (UX-20)" }
   backlog:
     - { id: M-09, titulo: "Cabecera de tratamiento (Treatment) que agrupa líneas" }
     - { id: M-10, titulo: "Vínculo de prescripción a diagnóstico (diagnosisId)" }
     - { id: M-11, titulo: "Dosis por franja del día (momentDoses)" }
-    - { id: R-05, titulo: "Sección 'acceso familiar' + vinculación desde UI" }
     - { id: R-06, titulo: "Custom roles por tenant (solo con demanda real; ADR propio)" }
   pendientes_menores:
     - "lastLoginAt sin tracking en el login (Auth.js) -> 'último acceso' en /equipo."

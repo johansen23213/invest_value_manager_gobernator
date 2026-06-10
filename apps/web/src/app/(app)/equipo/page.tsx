@@ -319,12 +319,20 @@ export default function EquipoPage() {
           <h1 className="text-2xl font-bold">{t('team.title')}</h1>
           <p className="mt-1 text-sm text-slate-500">{t('team.subtitle')}</p>
         </div>
-        <Link
-          href="/equipo/roles"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
-          {t('team.rolesReference')}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/equipo/familias"
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            Acceso de familias
+          </Link>
+          <Link
+            href="/equipo/roles"
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            {t('team.rolesReference')}
+          </Link>
+        </div>
       </div>
 
       {/* Filtros */}

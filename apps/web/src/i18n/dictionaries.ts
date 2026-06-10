@@ -34,6 +34,8 @@ const es: Record<string, string> = {
   'role.FAMILIAR': 'Familiar',
 
   'portal.title': 'Portal de familias',
+  'portal.intro': 'Un resumen cercano del día a día de tu familiar, preparado por el equipo del centro.',
+  'portal.privacyHidden': 'El centro no ha habilitado esta sección para tu acceso.',
   'portal.noResident': 'No hay ningún residente vinculado a tu cuenta.',
   'portal.center': 'Centro',
   'portal.bed': 'Plaza',
@@ -271,6 +273,8 @@ const ca: Record<string, string> = {
   'role.FAMILIAR': 'Familiar',
 
   'portal.title': 'Portal de famílies',
+  'portal.intro': "Un resum proper del dia a dia del teu familiar, preparat per l'equip del centre.",
+  'portal.privacyHidden': "El centre no ha habilitat aquesta secció per al teu accés.",
   'portal.noResident': 'No hi ha cap resident vinculat al teu compte.',
   'portal.center': 'Centre',
   'portal.bed': 'Plaça',

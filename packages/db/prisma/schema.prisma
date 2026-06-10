@@ -67,6 +67,10 @@ model FamilyLink {
   residentId   String   @map("resident_id")
   resident     Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
   relationship String? // p. ej. "hijo", "cónyuge"
+  // Control de privacidad (UX-20): el centro decide qué secciones ve la familia.
+  canSeeCare         Boolean  @default(true) @map("can_see_care") // novedades de atención
+  canSeeMedication   Boolean  @default(true) @map("can_see_medication")
+  canSeeAssessments  Boolean  @default(true) @map("can_see_assessments")
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@unique([userId, residentId])
