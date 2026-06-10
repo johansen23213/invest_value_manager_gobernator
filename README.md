@@ -57,6 +57,31 @@ Tras el seed (contraseña común `vetlla1234`):
 | Auxiliar   | `auxiliar@demo.vetlla.dev`  |
 | Familiar   | `familiar@demo.vetlla.dev`  |
 
+## Copiloto de IA en local (gratis, con Ollama)
+
+Por defecto el copiloto usa un `StubProvider` determinista (sin red, para dev/tests).
+Para probarlo con un **modelo open-weight real sin pagar nada**, usa [Ollama](https://ollama.com)
+(endpoint OpenAI-compatible). El mismo adaptador sirve luego para el proveedor UE de
+producción (OVHcloud) cambiando solo la URL — ver `docs/adr/0011`.
+
+```bash
+# 1. Instalar Ollama y descargar un modelo (elige según tu RAM)
+brew install ollama && ollama serve &
+ollama pull qwen2.5:14b        # ~9 GB · va bien en un Mac de 32 GB para ambos tiers
+
+# 2. En tu .env (no en .env.example), descomenta/añade:
+#   AI_PROVIDER=vllm
+#   AI_VLLM_BASE_URL=http://localhost:11434/v1
+#   AI_VLLM_API_KEY=ollama
+#   AI_MODEL_VLLM_EXTRACTION=qwen2.5:14b   # ajusta al tag de tu `ollama list`
+#   AI_MODEL_VLLM_REASONING=qwen2.5:14b
+
+# 3. Reinicia la app y prueba el copiloto en /atencion (frase→registro) y en el PIA.
+```
+
+> El 70B necesita ≥40 GB de RAM; en 32 GB usa un 14B. El catalán puede flojear en modelos
+> pequeños — el benchmark definitivo se hace con los modelos grandes en OVHcloud.
+
 ## Comandos
 
 | Comando              | Descripción                               |
