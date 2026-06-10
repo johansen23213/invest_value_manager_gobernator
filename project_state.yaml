@@ -478,3 +478,31 @@ medication_rbac_redesign:
     - "Alta de usuario del equipo desde /equipo (users.invite, contraseña provisional; email transaccional diferido)."
   adr_hecho:
     - "ADR-C -> docs/adr/0012-mar-offline-administraciones.md (Propuesta; pendiente de implementar con BD para verificar RLS)."
+
+# --------------------------------------------------------------------------
+# Equipo agéntico (2026-06-10) — plataforma de trabajo para iterar el MVP
+# Definiciones en .claude/agents/ (ver .claude/agents/README.md). El CIO
+# gobierna y desbloquea cuando un especialista se atasca.
+# --------------------------------------------------------------------------
+team:
+  location: .claude/agents/
+  governance: >-
+    El CIO (cio-vetlla) es la autoridad final de criterio técnico: desbloquea
+    atascos, decide arquitectura/seguridad no trivial, arbitra conflictos,
+    custodia los principios (CLAUDE.md) y cierra hitos con checkpoint. Lo de
+    negocio se escala a Angel como open_question.
+  members:
+    - { id: cio-vetlla,      rol: "CIO / Gobernador (desbloquea y decide)", model: opus }
+    - { id: marc-arquitecto, rol: "Tech Lead / Arquitecto (diseño, ADRs, RLS)", model: opus }
+    - { id: pau-product,     rol: "Product Manager (backlog, project_state, criterios)", model: sonnet }
+    - { id: nuria-backend,   rol: "Backend (Prisma, RLS, tRPC+RBAC, dominio puro)", model: sonnet }
+    - { id: dani-frontend,   rol: "Frontend (Next.js, tRPC, PWA/offline, a11y, i18n)", model: sonnet }
+    - { id: iris-ai,         rol: "IA / Copiloto (packages/ai, prompts, tool-use, PII)", model: sonnet }
+    - { id: elena-ux,        rol: "UX Lead (auditoría, design system, flujos tablet)", model: sonnet }
+    - { id: quim-qa,         rol: "QA / Test (Vitest, Playwright, aislamiento RLS)", model: sonnet }
+    - { id: leo-devops,      rol: "DevOps/SRE (CI/CD, deploy UE, migraciones)", model: sonnet }
+    - { id: sofia-dpo,       rol: "DPO / Seguridad & RGPD (art.9, residencia UE, DPIA)", model: sonnet }
+  loop: >-
+    Pau prioriza -> Marc diseña y reparte slices -> Núria/Dani/Iris/Elena construyen ->
+    Sofía revisa privacidad -> Quim prueba (incl. RLS) + Leo CI/deploy -> el CIO cierra
+    el hito con el checkpoint (lint+typecheck+build+test verdes + project_state + ADR).
