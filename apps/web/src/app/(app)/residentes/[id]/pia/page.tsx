@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle, Input, Label, Select } from '@vetlla/ui';
@@ -23,7 +22,6 @@ export default function CarePlanPage() {
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('careplan:write') ?? false;
 
-  const resident = api.residents.get.useQuery({ id: residentId });
   const plans = api.carePlans.listByResident.useQuery({ residentId });
 
   const [title, setTitle] = useState('');
@@ -55,14 +53,7 @@ export default function CarePlanPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href={`/residentes/${residentId}`} className="text-sm text-brand-700 hover:underline">
-          ← Expediente
-        </Link>
-        <h1 className="mt-1 text-2xl font-bold">
-          PIA{resident.data ? ` · ${resident.data.firstName} ${resident.data.lastName}` : ''}
-        </h1>
-      </div>
+      <h1 className="text-2xl font-bold">PIA — Plan Individualizado de Atención</h1>
 
       {canWrite && <CopilotPiaCard residentId={residentId} onCreated={() => void refresh()} />}
 

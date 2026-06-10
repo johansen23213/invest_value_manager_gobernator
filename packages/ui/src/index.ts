@@ -6,6 +6,7 @@ export { Table, Th, Td } from './table';
 export { Badge, type BadgeProps } from './badge';
 export { Skeleton } from './skeleton';
 export { EmptyState } from './empty-state';
+export { FieldError } from './field-error';
 export { Pagination, type PaginationProps } from './pagination';
 export {
   Dialog,

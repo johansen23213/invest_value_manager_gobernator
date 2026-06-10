@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle } from '@vetlla/ui';
 import { api } from '@/trpc/react';
-import { SHIFT_LABELS, ALLERGY_SEVERITY_LABELS } from '@/lib/labels';
+import { SHIFT_LABELS } from '@/lib/labels';
 import { groupByShift, type DoseStatus, type MedForSchedule } from '@/lib/mar';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
@@ -81,15 +81,6 @@ function IconPlus({ className }: { className?: string }) {
   );
 }
 
-function IconAlert({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" focusable="false" className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3" />
-    </svg>
-  );
-}
 
 function DoseStatusIcon({ status, overdue }: { status: DoseStatus; overdue: boolean }) {
   if (status === 'ADMINISTRADO') return <IconCheck />;
@@ -100,94 +91,6 @@ function DoseStatusIcon({ status, overdue }: { status: DoseStatus; overdue: bool
   return <IconClock />;
 }
 
-// ── Cabecera de alergias (M-01) ──────────────────────────────────────────────
-interface AllergyChip {
-  id: string;
-  substance: string;
-  severity?: string | null;
-}
-
-function AllergyBanner({ allergies, t }: { allergies: AllergyChip[]; t: (k: string) => string }) {
-  if (allergies.length === 0) {
-    return (
-      <p className="text-xs text-slate-500 italic">{t('med.allergies.none')}</p>
-    );
-  }
-  return (
-    <div
-      className="flex flex-wrap gap-2"
-      role="list"
-      aria-label={t('med.allergies.label')}
-      data-testid="allergy-banner"
-    >
-      {allergies.map((al) => (
-        <Badge
-          key={al.id}
-          tone="red"
-          role="listitem"
-          icon={<IconAlert />}
-        >
-          {al.substance.toUpperCase()}
-          {al.severity ? ` — ${ALLERGY_SEVERITY_LABELS[al.severity] ?? al.severity}` : ''}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
-// ── Cabecera sticky del residente (M-03) ─────────────────────────────────────
-interface ResidentHeaderProps {
-  firstName: string;
-  lastName: string;
-  bedCode?: string | null;
-  unitName?: string | null;
-  allergies: AllergyChip[];
-  locale: 'es' | 'ca';
-  t: (k: string) => string;
-}
-
-const LOCALE_TAG: Record<'es' | 'ca', string> = { es: 'es-ES', ca: 'ca-ES' };
-
-function ResidentStickyHeader({ firstName, lastName, bedCode, unitName, allergies, locale, t }: ResidentHeaderProps) {
-  const todayLabel = new Intl.DateTimeFormat(LOCALE_TAG[locale], {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date());
-
-  return (
-    <header
-      className="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 shadow-sm"
-      aria-label="Datos del residente"
-      data-testid="resident-sticky-header"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        {/* Nombre + plaza */}
-        <div>
-          <h1 className="text-xl font-bold leading-tight" style={{ fontSize: '1.25rem' }}>
-            {firstName} {lastName}
-          </h1>
-          {(bedCode || unitName) && (
-            <p className="mt-0.5 text-sm text-slate-500">
-              {bedCode ? `Plaza ${bedCode}` : ''}
-              {bedCode && unitName ? ' · ' : ''}
-              {unitName ?? ''}
-            </p>
-          )}
-        </div>
-        {/* Fecha */}
-        <p className="text-sm text-slate-500 capitalize">{todayLabel}</p>
-      </div>
-
-      {/* Alergias activas — siempre visibles, no colapsables */}
-      <div className="mt-2">
-        <span className="sr-only">{t('med.allergies.label')}: </span>
-        <AllergyBanner allergies={allergies} t={t} />
-      </div>
-    </header>
-  );
-}
 
 // ── Sección PRN — medicaciones a demanda (M-07) ──────────────────────────────
 
@@ -248,8 +151,6 @@ export default function MedicationPage() {
   const canPrescribe = me.data?.permissions.includes('medication:prescribe') ?? false;
   const canAdminister = me.data?.permissions.includes('medication:administer') ?? false;
 
-  // residents.get ya incluye alergias (allergies: { id, substance, severity, reaction }[])
-  const resident = api.residents.get.useQuery({ id: residentId });
   const meds = api.medications.listByResident.useQuery({ residentId });
   const schedule = api.medications.schedule.useQuery({ residentId });
   const prnMeds = api.medications.prnMeds.useQuery({ residentId });
@@ -317,30 +218,11 @@ export default function MedicationPage() {
 
   const shiftGroups = useMemo(() => groupByShift(schedule.data ?? []), [schedule.data]);
 
-  const allergies: AllergyChip[] = resident.data?.allergies ?? [];
-
   return (
-    <div className="flex flex-col">
-      {/* M-03 — Cabecera sticky */}
-      {resident.data ? (
-        <ResidentStickyHeader
-          firstName={resident.data.firstName}
-          lastName={resident.data.lastName}
-          bedCode={resident.data.bed?.code}
-          unitName={resident.data.bed?.unit?.name}
-          allergies={allergies}
-          locale={locale}
-          t={t}
-        />
-      ) : null}
-
-      <div className="flex flex-col gap-6 pt-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href={`/residentes/${residentId}`} className="text-sm text-brand-700 hover:underline">
-            ← Expediente
-          </Link>
-          {/* M-04: enlace a prescripción solo si el usuario puede prescribir */}
-          {canPrescribe && (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {/* M-04: enlace a prescripción solo si el usuario puede prescribir */}
+        {canPrescribe && (
             <Link
               href={`/residentes/${residentId}/medicacion/prescribir`}
               data-testid="prescribir-link"
@@ -511,7 +393,6 @@ export default function MedicationPage() {
             )}
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

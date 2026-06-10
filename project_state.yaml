@@ -433,10 +433,10 @@ ux_backlog:
     - { id: UX-06, titulo: "Reequilibrar el Panel + accesos rápidos por rol", prioridad: sprint1, estado: done }
     - { id: UX-07, titulo: "Identidad visual / tokens de marca (Vetlla teal)", prioridad: sprint1, estado: done }
     - { id: UX-08, titulo: "Design system accesible (Radix): Dialog, Toast, Tabs", prioridad: sprint1, estado: done }
-    - { id: UX-09, titulo: "Patrón de formularios con validación inline (Zod en cliente)", prioridad: sprint1, estado: todo }
+    - { id: UX-09, titulo: "Patrón de formularios con validación inline (Zod en cliente)", prioridad: sprint1, estado: done }
     - { id: UX-10, titulo: "Búsqueda y filtros en listados + paginación", prioridad: sprint1, estado: done }
-    - { id: UX-11, titulo: "Migas de pan y cabecera de residente persistente", prioridad: backlog, estado: todo }
-    - { id: UX-12, titulo: "Expediente en pestañas", prioridad: backlog, estado: todo }
+    - { id: UX-11, titulo: "Migas de pan y cabecera de residente persistente", prioridad: backlog, estado: done }
+    - { id: UX-12, titulo: "Expediente en pestañas", prioridad: backlog, estado: done }
     - { id: UX-13, titulo: "Auxiliar: lista 'mi unidad' de 1 toque", prioridad: sprint1, estado: done }
     - { id: UX-14, titulo: "Auxiliar: confirmación con deshacer + pendientes de sync", prioridad: sprint1, estado: done }
     - { id: UX-15, titulo: "Entrada táctil (inputMode, steppers, botones grandes)", prioridad: sprint1, estado: done }
