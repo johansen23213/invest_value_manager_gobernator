@@ -17,6 +17,7 @@ function toMedForSchedule(m: {
   name: string;
   dose: string;
   times: unknown;
+  momentDoses: unknown;
   daysOfWeek: unknown;
   type: string | null;
   startDate: Date;
@@ -27,6 +28,9 @@ function toMedForSchedule(m: {
     name: m.name,
     dose: m.dose,
     times: Array.isArray(m.times) ? (m.times as string[]) : [],
+    momentDoses: Array.isArray(m.momentDoses)
+      ? (m.momentDoses as { time: string; dose: string }[])
+      : null,
     daysOfWeek: Array.isArray(m.daysOfWeek) ? (m.daysOfWeek as number[]) : null,
     type: m.type ?? null,
     startDate: m.startDate,

@@ -19,6 +19,7 @@ export const medicationsRouter = createTRPCRouter({
       ctx.db.medication.findMany({
         where: { residentId: input.residentId },
         orderBy: [{ active: 'desc' }, { name: 'asc' }],
+        include: { diagnosis: { select: { id: true, code: true, description: true } } },
       }),
     ),
 
@@ -31,6 +32,11 @@ export const medicationsRouter = createTRPCRouter({
         route: z.nativeEnum(MedicationRoute).optional(),
         unit: z.string().max(80).optional(),
         times: z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(12),
+        // M-11: dosis por franja (opcional). Si una hora figura aquí, prevalece sobre `dose`.
+        momentDoses: z
+          .array(z.object({ time: z.string().regex(/^\d{2}:\d{2}$/), dose: z.string().min(1).max(80) }))
+          .max(12)
+          .optional(),
         daysOfWeek: z
           .array(z.number().int().min(0).max(6))
           .min(1)
@@ -40,6 +46,8 @@ export const medicationsRouter = createTRPCRouter({
         startDate: z.coerce.date(),
         endDate: z.coerce.date().optional(),
         instructions: z.string().max(500).optional(),
+        // M-10: vínculo opcional a un diagnóstico del residente.
+        diagnosisId: z.string().optional(),
         /**
          * M-08 cierre: override de alergia GRAVE.
          * Si el sanitario confirma la prescripción sobre una alergia GRAVE,
@@ -62,6 +70,16 @@ export const medicationsRouter = createTRPCRouter({
       if (input.type !== MedicationType.PRN && input.times.length === 0) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Indica al menos una hora de pauta o selecciona el tipo A demanda (PRN).' });
       }
+      // M-10: el diagnóstico vinculado debe ser del mismo residente (integridad + RLS).
+      if (input.diagnosisId) {
+        const dx = await ctx.db.diagnosis.findUnique({
+          where: { id: input.diagnosisId },
+          select: { residentId: true },
+        });
+        if (!dx || dx.residentId !== input.residentId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'El diagnóstico no pertenece a este residente.' });
+        }
+      }
       const medication = await ctx.db.medication.create({
         data: {
           tenantId: ctx.tenantId,
@@ -73,11 +91,13 @@ export const medicationsRouter = createTRPCRouter({
           times: input.times,
           // null en Prisma Json? requiere Prisma.DbNull; undefined omite el campo
           // y deja el DEFAULT (null) de la columna. Ambos son equivalentes aquí.
+          momentDoses: input.momentDoses ?? undefined,
           daysOfWeek: input.daysOfWeek ?? undefined,
           type: input.type,
           startDate: input.startDate,
           endDate: input.endDate,
           instructions: input.instructions,
+          diagnosisId: input.diagnosisId,
           prescribedById: ctx.session.user.id,
         },
       });
@@ -222,6 +242,7 @@ function toMedForSchedule(m: {
   name: string;
   dose: string;
   times: unknown;
+  momentDoses?: unknown;
   daysOfWeek?: unknown;
   type?: string | null;
   startDate: Date;
@@ -232,6 +253,9 @@ function toMedForSchedule(m: {
     name: m.name,
     dose: m.dose,
     times: Array.isArray(m.times) ? (m.times as string[]) : [],
+    momentDoses: Array.isArray(m.momentDoses)
+      ? (m.momentDoses as { time: string; dose: string }[])
+      : null,
     daysOfWeek: Array.isArray(m.daysOfWeek) ? (m.daysOfWeek as number[]) : null,
     type: m.type ?? null,
     startDate: m.startDate,

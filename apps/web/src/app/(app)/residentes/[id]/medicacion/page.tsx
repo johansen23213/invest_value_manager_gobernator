@@ -365,6 +365,11 @@ export default function MedicationPage() {
                     {m.route && (
                       <Badge tone="neutral">{m.route as string}</Badge>
                     )}
+                    {m.diagnosis && (
+                      <Badge tone="blue" title={m.diagnosis.description}>
+                        {m.diagnosis.code ? `${m.diagnosis.code}` : m.diagnosis.description}
+                      </Badge>
+                    )}
                     {m.type === 'PRN' && (
                       <Badge tone="blue" icon={<IconZap />}>
                         {t('med.type.PRN')}

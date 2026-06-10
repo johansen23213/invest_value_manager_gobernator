@@ -3,6 +3,7 @@ import {
   computeAlerts,
   computePrn,
   computeSchedule,
+  doseAt,
   groupByShift,
   shiftOf,
   type MedForSchedule,
@@ -187,5 +188,32 @@ describe('computePrn', () => {
     const ended: MedForSchedule = { ...medPrn, id: 'm-prn-ended', endDate: new Date('2026-06-05T23:59:59Z') };
     const prn = computePrn([ended], DATE);
     expect(prn).toHaveLength(0);
+  });
+});
+
+describe('doseAt / momentDoses (M-11)', () => {
+  const medMoment: MedForSchedule = {
+    ...med,
+    momentDoses: [
+      { time: '08:00', dose: '1 comp' },
+      { time: '20:00', dose: '2 comp' },
+    ],
+  };
+
+  it('doseAt usa la dosis de la franja si existe y cae a la base si no', () => {
+    expect(doseAt(medMoment, '08:00')).toBe('1 comp');
+    expect(doseAt(medMoment, '20:00')).toBe('2 comp');
+    // Hora sin override en momentDoses → dosis base.
+    expect(doseAt({ ...medMoment, times: ['08:00', '14:00', '20:00'] }, '14:00')).toBe('1g');
+    // Sin momentDoses → siempre la base.
+    expect(doseAt(med, '08:00')).toBe('1g');
+  });
+
+  it('computeSchedule refleja la dosis por franja en cada dosis', () => {
+    const noon = new Date('2026-06-07T23:00:00');
+    const doses = computeSchedule([medMoment], [], DATE, noon);
+    const byTime = Object.fromEntries(doses.map((d) => [new Date(d.scheduledAt).getHours(), d.dose]));
+    expect(byTime[8]).toBe('1 comp');
+    expect(byTime[20]).toBe('2 comp');
   });
 });

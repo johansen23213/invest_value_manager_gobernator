@@ -275,6 +275,8 @@ model Diagnosis {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  medications Medication[] // M-10: prescripciones vinculadas a este diagnóstico
+
   @@index([tenantId])
   @@index([residentId])
   @@map("diagnoses")
@@ -418,6 +420,9 @@ model Medication {
   route          MedicationRoute?
   unit           String?          // forma farmacéutica: comprimido, cápsula, solución…
   times          Json             // array de "HH:MM"
+  // M-11: dosis distinta por franja/hora. array [{ "time": "HH:MM", "dose": "2 comp" }].
+  // Cuando una hora aparece aquí, su dosis prevalece sobre `dose` (que es la dosis base).
+  momentDoses    Json?            @map("moment_doses")
   daysOfWeek     Json?            @map("days_of_week") // array [0–6] (0=domingo); null=todos los días
   type           MedicationType?
   startDate      DateTime         @map("start_date")
@@ -425,6 +430,9 @@ model Medication {
   instructions   String?
   active         Boolean          @default(true)
   prescribedById String?          @map("prescribed_by_id")
+  // M-10: vínculo opcional de la prescripción a un diagnóstico del residente.
+  diagnosisId    String?          @map("diagnosis_id")
+  diagnosis      Diagnosis?       @relation(fields: [diagnosisId], references: [id], onDelete: SetNull)
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
@@ -432,6 +440,7 @@ model Medication {
 
   @@index([tenantId])
   @@index([residentId])
+  @@index([diagnosisId])
   @@map("medications")
 }
 

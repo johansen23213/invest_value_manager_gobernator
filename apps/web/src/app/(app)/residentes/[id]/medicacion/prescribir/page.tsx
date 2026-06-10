@@ -111,6 +111,7 @@ interface PrescribeForm {
   times: string[];
   daysOfWeek: number[] | null; // null = todos los días
   instructions: string;
+  diagnosisId: string; // M-10: vínculo opcional a un diagnóstico
 }
 
 const INITIAL_FORM: PrescribeForm = {
@@ -124,6 +125,7 @@ const INITIAL_FORM: PrescribeForm = {
   times: ['08:00'],
   daysOfWeek: null,
   instructions: '',
+  diagnosisId: '',
 };
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -252,6 +254,7 @@ export default function PrescribirPage() {
       instructions: opts?.allergyOverride
         ? `[Override alergia: ${opts.allergyOverride.reason}] ${form.instructions}`.trim()
         : form.instructions || undefined,
+      diagnosisId: form.diagnosisId || undefined,
       allergyOverride: opts?.allergyOverride,
     });
   }
@@ -560,6 +563,25 @@ export default function PrescribirPage() {
                   <strong>{t('med.type.PRN')}:</strong> no requiere horas fijas. Se registra cuando ocurre.
                 </p>
               )}
+            </fieldset>
+
+            {/* Diagnóstico relacionado (M-10) */}
+            <fieldset>
+              <legend className="mb-2 font-semibold text-slate-700">Diagnóstico relacionado (opcional)</legend>
+              <Select
+                id="diagnosis"
+                aria-label="Diagnóstico relacionado"
+                value={form.diagnosisId}
+                onChange={(e) => setForm((s) => ({ ...s, diagnosisId: e.target.value }))}
+              >
+                <option value="">Sin vincular</option>
+                {(resident.data?.diagnoses ?? []).map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.code ? `[${d.code}] ` : ''}
+                    {d.description}
+                  </option>
+                ))}
+              </Select>
             </fieldset>
 
             {/* Paso 3 — Instrucciones */}

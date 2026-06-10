@@ -7,8 +7,10 @@ export type DoseStatus = 'PENDIENTE' | 'ADMINISTRADO' | 'NO_ADMINISTRADO' | 'REC
 export interface MedForSchedule {
   id: string;
   name: string;
-  dose: string;
+  dose: string; // dosis base
   times: string[]; // "HH:MM"
+  /** M-11: dosis distinta por hora. Si una hora figura aquí, su dosis prevalece. */
+  momentDoses?: { time: string; dose: string }[] | null;
   startDate: Date;
   endDate: Date | null;
   /** Array [0–6] (0=domingo). null o undefined = todos los días. */
@@ -17,6 +19,12 @@ export interface MedForSchedule {
   type?: string | null;
   residentId?: string;
   residentName?: string;
+}
+
+/** Dosis efectiva de una medicación a una hora dada (M-11: por franja si existe). */
+export function doseAt(med: MedForSchedule, time: string): string {
+  const moment = med.momentDoses?.find((m) => m.time === time);
+  return moment?.dose ?? med.dose;
 }
 
 export interface AdminForSchedule {
@@ -140,7 +148,7 @@ export function computeSchedule(
       doses.push({
         medicationId: med.id,
         medicationName: med.name,
-        dose: med.dose,
+        dose: doseAt(med, time),
         scheduledAt: scheduledAt.toISOString(),
         status,
         overdue,
