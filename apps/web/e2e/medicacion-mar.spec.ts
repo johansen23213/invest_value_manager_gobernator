@@ -24,9 +24,7 @@ import { loginAs } from './helpers/auth';
 // tener al menos uno con alergia) y desde su expediente entra en Medicación.
 // Devuelve la URL final para que las aserciones puedan inspeccionarla.
 // ---------------------------------------------------------------------------
-async function goToFirstResidentMedicacion(
-  page: import('@playwright/test').Page,
-): Promise<string> {
+async function goToFirstResidentMedicacion(page: import('@playwright/test').Page): Promise<string> {
   await page.goto('/residentes');
 
   // Esperar a que cargue la tabla
@@ -64,7 +62,10 @@ test.describe('MAR — como sanitario', () => {
     await expect(header).toBeVisible();
 
     // O bien hay un banner con chips de alergia, o bien el texto "Sin alergias"
-    const hasAllergies = await page.getByTestId('allergy-banner').isVisible().catch(() => false);
+    const hasAllergies = await page
+      .getByTestId('allergy-banner')
+      .isVisible()
+      .catch(() => false);
     if (hasAllergies) {
       // Debe haber al menos un chip de sustancia (role="listitem")
       const chips = page.getByTestId('allergy-banner').getByRole('listitem');
@@ -116,7 +117,10 @@ test.describe('MAR — como sanitario', () => {
       // Buscamos que alguno de los textos de estado esté presente en el ítem
       let foundStatusText = false;
       for (const statusText of validStatusTexts) {
-        const visible = await firstItem.getByText(statusText, { exact: false }).isVisible().catch(() => false);
+        const visible = await firstItem
+          .getByText(statusText, { exact: false })
+          .isVisible()
+          .catch(() => false);
         if (visible) {
           foundStatusText = true;
           break;

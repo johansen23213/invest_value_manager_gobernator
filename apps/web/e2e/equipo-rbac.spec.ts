@@ -113,7 +113,9 @@ test.describe('Equipo — como director', () => {
 
   test('R-04 — cambiar rol abre dialog de confirmación', async ({ page }) => {
     // Buscar una fila de AUXILIAR para cambiar su rol sin riesgos
-    const auxiliarRow = page.locator('[data-testid="team-user-row"][data-user-role="AUXILIAR"]').first();
+    const auxiliarRow = page
+      .locator('[data-testid="team-user-row"][data-user-role="AUXILIAR"]')
+      .first();
     const rowCount = await auxiliarRow.count();
     if (rowCount === 0) {
       test.skip(); // No hay auxiliares en el seed — omitir
@@ -203,10 +205,9 @@ test.describe('Equipo — acceso denegado (familiar)', () => {
     await page.goto('/equipo');
 
     // El familiar es redirigido. Puede ser '/' o '/portal'
-    await page.waitForURL(
-      (url) => url.pathname === '/' || url.pathname.startsWith('/portal'),
-      { timeout: 8_000 },
-    );
+    await page.waitForURL((url) => url.pathname === '/' || url.pathname.startsWith('/portal'), {
+      timeout: 8_000,
+    });
 
     // En ningún caso debe ver filas de usuarios del equipo
     const teamRows = page.getByTestId('team-user-row');

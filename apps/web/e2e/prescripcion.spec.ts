@@ -18,16 +18,13 @@ import { expect, test } from '@playwright/test';
 import { loginAs } from './helpers/auth';
 
 // ---------------------------------------------------------------------------
-// Helper: navega al formulario de prescripción del primer residente con alergia.
-// Estrategia: /residentes → primer residente → Medicación → prescribir.
+// Helper: navega al formulario de prescripción del primer residente de la
+// lista (válido para M-05/06/07, que no dependen de alergias).
 // ---------------------------------------------------------------------------
-async function goToPrescribir(
-  page: import('@playwright/test').Page,
-): Promise<void> {
+async function goToPrescribir(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/residentes');
   await page.waitForSelector('table tbody tr', { timeout: 10_000 });
 
-  // Primer residente de la lista (el seed garantiza que tiene alergia)
   const firstLink = page.locator('table tbody tr').first().getByRole('link').first();
   await firstLink.click();
 
@@ -40,6 +37,39 @@ async function goToPrescribir(
 
   // Esperar a que cargue el formulario de prescripción
   await page.waitForSelector('[data-testid="select-route"]', { timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// Helper para M-08: busca un residente CON alergia registrada (el primero de
+// la lista puede no tenerla) recorriendo la lista, y entra a prescribir.
+// Devuelve false si no encuentra ninguno (el test hará skip).
+// ---------------------------------------------------------------------------
+async function goToPrescribirWithAllergy(page: import('@playwright/test').Page): Promise<boolean> {
+  await page.goto('/residentes');
+  await page.waitForSelector('table tbody tr', { timeout: 10_000 });
+  const total = await page.locator('table tbody tr').count();
+
+  for (let i = 0; i < Math.min(total, 15); i++) {
+    if (i > 0) {
+      await page.goto('/residentes');
+      await page.waitForSelector('table tbody tr', { timeout: 10_000 });
+    }
+    await page.locator('table tbody tr').nth(i).getByRole('link').first().click();
+    await page.getByRole('link', { name: /medicaci/i }).click();
+    await page.waitForSelector('[data-testid="resident-sticky-header"]', { timeout: 10_000 });
+
+    const bannerText =
+      (await page
+        .getByTestId('allergy-banner')
+        .textContent({ timeout: 2_000 })
+        .catch(() => '')) ?? '';
+    if (bannerText && !/sin alergias/i.test(bannerText)) {
+      await page.getByTestId('prescribir-link').click();
+      await page.waitForSelector('[data-testid="select-route"]', { timeout: 10_000 });
+      return true;
+    }
+  }
+  return false;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -141,7 +171,9 @@ test.describe('Prescripción — como sanitario', () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   test('M-08 — escribir una sustancia alérgica muestra el banner de aviso', async ({ page }) => {
-    await goToPrescribir(page);
+    test.setTimeout(90_000); // recorre la lista buscando un residente con alergia
+    const found = await goToPrescribirWithAllergy(page);
+    test.skip(!found, 'El seed no tiene ningún residente con alergia accesible');
 
     // El formulario muestra las alergias del residente en el banner contextual
     // (data-testid="prescribe-allergy-context"). Leemos la primera sustancia.
@@ -149,7 +181,7 @@ test.describe('Prescripción — como sanitario', () => {
     await expect(allergyContext).toBeVisible();
 
     // Extraer el texto de la primera sustancia del banner contextual
-    const contextText = await allergyContext.textContent() ?? '';
+    const contextText = (await allergyContext.textContent()) ?? '';
     // El seed debe tener al menos una alergia; extraemos la primera palabra
     // en mayúsculas (la sustancia aparece en uppercase en el HTML)
     const match = contextText.match(/Alergias:\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+)/i);
@@ -169,13 +201,15 @@ test.describe('Prescripción — como sanitario', () => {
   });
 
   test('M-08 — alergia GRAVE bloquea el botón hasta confirmar con motivo', async ({ page }) => {
-    await goToPrescribir(page);
+    test.setTimeout(90_000); // recorre la lista buscando un residente con alergia
+    const found = await goToPrescribirWithAllergy(page);
+    test.skip(!found, 'El seed no tiene ningún residente con alergia accesible');
 
     // Obtener la sustancia con severidad GRAVE desde el contexto del banner
     // El atributo data-severity del match banner nos lo dirá al aparecer.
     // Primero buscamos la sustancia del banner contextual.
     const allergyContext = page.getByTestId('prescribe-allergy-context');
-    const contextText = await allergyContext.textContent().catch(() => '') ?? '';
+    const contextText = (await allergyContext.textContent().catch(() => '')) ?? '';
 
     // Intentamos obtener la sustancia del residente
     // El seed tiene al menos una alergia; el matching es por substring
@@ -211,6 +245,7 @@ test.describe('Prescripción — como sanitario', () => {
     await expect(submitBtn).toBeDisabled();
 
     // El nota de bloqueo debe ser visible
-    await expect(page.getByRole('alert').filter({ hasText: /alergia grave/i })).toBeVisible();
+    // Nota de bloqueo (id propio: banner y nota comparten role="alert")
+    await expect(page.locator('#allergy-block-note')).toBeVisible();
   });
 });

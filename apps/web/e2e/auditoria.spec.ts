@@ -2,85 +2,92 @@
  * Suite UAT — Auditoría / Registro de actividad
  *
  * Cubre:
- *   - Tras un cambio de rol en /equipo, la traza aparece en /auditoria
- *     con entidad "User" y acción "UPDATE".
+ *   - Tras un cambio de rol en /equipo, la traza aparece en /auditoria.
  *   - El cambio de rol se realiza dentro del mismo test para controlar
- *     la causalidad sin depender del orden de ejecución entre specs.
+ *     la causalidad, y SE REVIERTE al final (try/finally): otros specs
+ *     (MAR, /equipo) dependen de que el auxiliar siga siendo AUXILIAR.
  *
  * Prerequisitos:
  *   - App en :3000 con seed.
  *   - El usuario director tiene audit:read y users:write.
- *   - Debe haber al menos un usuario AUXILIAR en el seed para cambiar su rol
- *     de forma temporal (el test lo cambia a SANITARIO y no lo revierte,
- *     ya que el seed se recrea en cada ejecución de CI).
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { loginAs } from './helpers/auth';
+
+const AUXILIAR_EMAIL = 'auxiliar@demo.vetlla.dev';
+
+/**
+ * Fija el rol de un usuario vía la API tRPC (con la sesión ya autenticada de
+ * la página). Se usa para el TEARDOWN: el revert por UI puede hacer no-op
+ * silencioso (la mutación no audita si el rol no cambia) y es más frágil.
+ */
+async function setRoleViaApi(page: Page, email: string, newRole: string): Promise<void> {
+  const listRes = await page.request.get(
+    '/api/trpc/users.list?batch=1&input=' + encodeURIComponent('{"0":{"json":null}}'),
+  );
+  const listJson = (await listRes.json()) as Array<{
+    result: { data: { json: Array<{ id: string; email: string }> } };
+  }>;
+  const user = listJson[0]?.result.data.json.find((u) => u.email === email);
+  if (!user) throw new Error(`setRoleViaApi: usuario no encontrado: ${email}`);
+  const res = await page.request.post('/api/trpc/users.updateRole?batch=1', {
+    data: { '0': { json: { userId: user.id, newRole } } },
+  });
+  if (!res.ok()) throw new Error(`setRoleViaApi: updateRole devolvió ${res.status()}`);
+}
+
+/** Cambia el rol de un usuario (identificado por email) desde /equipo. */
+async function changeRole(page: Page, email: string, newRole: string): Promise<void> {
+  await page.goto('/equipo');
+  await page.waitForSelector('[data-testid="team-user-row"]', { timeout: 10_000 });
+
+  const row = page.locator('[data-testid="team-user-row"]').filter({ hasText: email }).first();
+  await row.getByRole('button', { name: /cambiar rol/i }).click();
+
+  const roleDialog = page.getByRole('dialog');
+  await expect(roleDialog).toBeVisible();
+  await roleDialog.getByLabel(/nuevo rol/i).selectOption(newRole);
+  await roleDialog
+    .getByRole('button', { name: /cambiar rol/i })
+    .last()
+    .click();
+
+  // Confirmar en el dialog del ConfirmProvider
+  const confirmDialog = page.getByRole('dialog');
+  await expect(confirmDialog).toContainText(/confirmar cambio de rol/i);
+  await confirmDialog.getByRole('button', { name: /cambiar rol/i }).click();
+
+  // Esperar a que el dialog se cierre (mutación completada)
+  await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 8_000 });
+}
 
 test.describe('Auditoría — trazabilidad de cambio de rol', () => {
   test('cambio de rol aparece en /auditoria como entidad User', async ({ page }) => {
+    test.setTimeout(90_000);
     await loginAs(page, 'director');
 
-    // ── Paso 1: ir a /equipo y cambiar el rol de un auxiliar ──────────────
-    await page.goto('/equipo');
-    await page.waitForSelector('[data-testid="team-user-row"]', { timeout: 10_000 });
+    try {
+      // ── Paso 1: cambiar el rol del auxiliar (se revierte en finally) ────
+      await changeRole(page, AUXILIAR_EMAIL, 'SANITARIO');
 
-    const auxiliarRow = page
-      .locator('[data-testid="team-user-row"][data-user-role="AUXILIAR"]')
-      .first();
+      // ── Paso 2: verificar la traza en /auditoria ────────────────────────
+      await page.goto('/auditoria');
+      await page.waitForSelector('table tbody tr', { timeout: 10_000 });
 
-    const hasAuxiliar = await auxiliarRow.count().then((n) => n > 0).catch(() => false);
-    if (!hasAuxiliar) {
-      // Si no hay auxiliares en el seed, el test no puede ejecutarse
-      test.skip();
-      return;
+      // La traza del cambio aparece como summary "Rol cambiado de ... a ..."
+      // (no usar \bUser\b: textContent() concatena celdas sin espacios).
+      await expect(
+        page
+          .locator('table tbody tr')
+          .filter({ hasText: /rol cambiado/i })
+          .first(),
+      ).toBeVisible({ timeout: 8_000 });
+    } finally {
+      // Revertir SIEMPRE (vía API, determinista): otros specs dependen del
+      // rol AUXILIAR del seed.
+      await setRoleViaApi(page, AUXILIAR_EMAIL, 'AUXILIAR');
     }
-
-    // Abrir el dialog de cambio de rol
-    const changeRoleBtn = auxiliarRow.getByRole('button', { name: /cambiar rol/i });
-    await changeRoleBtn.click();
-
-    const roleDialog = page.getByRole('dialog');
-    await expect(roleDialog).toBeVisible();
-
-    // Seleccionar SANITARIO como nuevo rol
-    await roleDialog.getByLabel(/nuevo rol/i).selectOption('SANITARIO');
-    await roleDialog.getByRole('button', { name: /cambiar rol/i }).last().click();
-
-    // Confirmar en el dialog del ConfirmProvider
-    const confirmDialog = page.getByRole('dialog');
-    await expect(confirmDialog).toContainText(/confirmar cambio de rol/i);
-    await confirmDialog.getByRole('button', { name: /cambiar rol/i }).click();
-
-    // Esperar a que el dialog se cierre (mutación completada)
-    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 8_000 });
-
-    // ── Paso 2: ir a /auditoria y verificar la traza ──────────────────────
-    await page.goto('/auditoria');
-
-    // Esperar a que cargue la tabla de auditoría
-    await page.waitForSelector('table tbody tr', { timeout: 10_000 });
-
-    // Buscar una fila que tenga entidad "User" y acción que indique update
-    // La página muestra columnas: Fecha | Usuario | Acción | Entidad | Detalle
-    // Los textos de acción vienen de AUDIT_ACTION_LABELS: UPDATE → "Actualización" (o similar)
-    // Buscamos cualquier fila con celda "User" o "Usuario" en la columna Entidad
-    const auditRows = page.locator('table tbody tr');
-    const rowCount = await auditRows.count();
-    expect(rowCount).toBeGreaterThan(0);
-
-    // Al menos una fila debe tener "User" en la columna Entidad
-    // La tabla muestra el valor de l.entity directamente (string "User")
-    let foundUserEntry = false;
-    for (let i = 0; i < Math.min(rowCount, 20); i++) {
-      const rowText = await auditRows.nth(i).textContent() ?? '';
-      if (/\bUser\b/i.test(rowText)) {
-        foundUserEntry = true;
-        break;
-      }
-    }
-    expect(foundUserEntry, 'Debe haber al menos un registro de auditoría con entidad "User"').toBe(true);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
