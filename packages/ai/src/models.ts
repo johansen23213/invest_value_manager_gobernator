@@ -40,9 +40,11 @@ const DEFAULT_MODELS: Record<ProviderId, Record<ModelTier, string>> = {
     reasoning: 'stub-reasoning',
   },
   vllm: {
-    // Candidatos open-weight EU; el id real depende de qué se sirva en vLLM/TGI.
-    extraction: 'mistral-7b-instruct',
-    reasoning: 'mixtral-8x7b-instruct',
+    // Candidatos open-weight EU del ADR-0011 (gestionado OVHcloud/Scaleway o self-host).
+    // SON CANDIDATOS, no decisiones cerradas: el id EXACTO depende del catálogo del
+    // proveedor y se sobrescribe por env (AI_MODEL_VLLM_<TIER>). Ver `resolveModel`.
+    extraction: 'mistral-small-3.2-24b', // pequeño/medio multilingüe es/ca; o Qwen3-32B.
+    reasoning: 'llama-3.3-70b', // razonamiento (PIA); alternativa: mistral-large.
   },
   bedrock: {
     // Fallback gestionado Claude-UE (Fráncfort). Id concreto ligado a A-003.

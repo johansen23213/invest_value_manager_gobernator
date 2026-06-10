@@ -39,8 +39,8 @@ describe('resolveModel', () => {
   });
 
   it('usa los defaults del proveedor activo', () => {
-    expect(resolveModel('reasoning', { AI_PROVIDER: 'vllm' })).toBe('mixtral-8x7b-instruct');
-    expect(resolveModel('extraction', { AI_PROVIDER: 'vllm' })).toBe('mistral-7b-instruct');
+    expect(resolveModel('reasoning', { AI_PROVIDER: 'vllm' })).toBe('llama-3.3-70b');
+    expect(resolveModel('extraction', { AI_PROVIDER: 'vllm' })).toBe('mistral-small-3.2-24b');
   });
 
   it('AI_MODEL_<TIER> genérico sobrescribe el default', () => {
@@ -61,7 +61,7 @@ describe('resolveModel', () => {
   it('ignora valores en blanco y cae al siguiente nivel', () => {
     expect(
       resolveModel('extraction', { AI_PROVIDER: 'vllm', AI_MODEL_VLLM_EXTRACTION: '  ' }),
-    ).toBe('mistral-7b-instruct');
+    ).toBe('mistral-small-3.2-24b');
   });
 });
 
