@@ -318,6 +318,10 @@ milestones:
         y texto alrededor del objeto. promptVersion en AuditLog pasa a .v2. 88 @vetlla/ai +
         125 web (2 nuevos de tolerancia de parseo) · typecheck/lint verde."
     pendiente_para_cerrar_H5:
+      - "PENDIENTE DE VALIDAR (2026-06-10): re-probar el copiloto con modelo real
+        (Ollama qwen2.5:14b) tras el arreglo de prompts v2. Recoger 3-4 casos es/ca de
+        Feature 1 + el PIA y juzgar si la calidad es 'suficiente para piloto' o si el PIA
+        debe reservarse al modelo grande (OVHcloud). Es el benchmark es/ca que cierra H5."
       - "Cablear proveedor real (vLLM open-source UE / Claude-UE fallback) — solo config
         (AI_PROVIDER + AI_MODEL_*); depende de A-003. Benchmark es/ca del PIA con modelo real."
       - "Transparencia art.50 en UI ya presente; revisar checklist DPIA/RoPA y pasar
