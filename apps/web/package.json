@@ -17,6 +17,7 @@
     "@trpc/client": "^11.0.0-rc.700",
     "@trpc/react-query": "^11.0.0-rc.700",
     "@trpc/server": "^11.0.0-rc.700",
+    "@vetlla/ai": "workspace:*",
     "@vetlla/db": "workspace:*",
     "@vetlla/ui": "workspace:*",
     "bcryptjs": "^2.4.3",

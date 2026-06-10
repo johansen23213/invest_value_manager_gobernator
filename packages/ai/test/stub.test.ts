@@ -44,7 +44,8 @@ describe('StubProvider — determinismo', () => {
     );
     const parsed = JSON.parse(r.text);
     expect(parsed.type).toBe('CONSTANTES');
-    expect(parsed.payload.temperature).toBe(37.5);
+    // Claves de payload alineadas con la UI de atención (tension/fc/temperatura/sato2).
+    expect(parsed.payload.temperatura).toBe(37.5);
     expect(r.toolCalls).toHaveLength(0);
   });
 
@@ -53,6 +54,62 @@ describe('StubProvider — determinismo', () => {
     const r = await p.complete(baseInput({ messages: [{ role: 'user', content: 'caída' }] }));
     expect(r.toolCalls).toHaveLength(0);
     expect(r.stopReason).toBe('end');
+  });
+});
+
+describe('StubProvider — extracción JSON de utterances típicos (feature 1)', () => {
+  const p = new StubProvider();
+  const extractJson = async (content: string) => {
+    const r = await p.complete(
+      baseInput({ messages: [{ role: 'user', content }], responseFormat: { type: 'json' } }),
+    );
+    return JSON.parse(r.text) as { type: string; payload: Record<string, unknown> };
+  };
+
+  it('"tensión 120/80, 36.5ºC" → CONSTANTES con tensión y temperatura', async () => {
+    const parsed = await extractJson('tensión 120/80, 36.5ºC');
+    expect(parsed.type).toBe('CONSTANTES');
+    expect(parsed.payload.tension).toBe('120/80');
+    expect(parsed.payload.temperatura).toBe(36.5);
+  });
+
+  it('"ha comido la mitad" → INGESTA con porcentaje 50', async () => {
+    const parsed = await extractJson('ha comido la mitad');
+    expect(parsed.type).toBe('INGESTA');
+    expect(parsed.payload.porcentaje).toBe(50);
+  });
+
+  it('"deposición normal" → DEPOSICION con deposicion Sí y notas', async () => {
+    const parsed = await extractJson('deposición normal');
+    expect(parsed.type).toBe('DEPOSICION');
+    expect(parsed.payload.deposicion).toBe('Sí');
+    expect(parsed.payload.notas).toBe('deposición normal');
+  });
+
+  it('"se ha caído en el baño" → INCIDENCIA con descripción', async () => {
+    const parsed = await extractJson('se ha caído en el baño');
+    expect(parsed.type).toBe('INCIDENCIA');
+    expect(parsed.payload.descripcion).toBe('se ha caído en el baño');
+  });
+
+  it('catalán: "ha sopat tot el menjar" → INGESTA con porcentaje 100', async () => {
+    const parsed = await extractJson('ha sopat tot el menjar');
+    expect(parsed.type).toBe('INGESTA');
+    expect(parsed.payload.comida).toBe('Cena');
+    expect(parsed.payload.porcentaje).toBe(100);
+  });
+
+  it('texto seudonimizado ([[PERSONA_1]]) no rompe la derivación', async () => {
+    const parsed = await extractJson('[[PERSONA_1]] ha desayunado todo');
+    expect(parsed.type).toBe('INGESTA');
+    expect(parsed.payload.comida).toBe('Desayuno');
+    expect(parsed.payload.porcentaje).toBe(100);
+  });
+
+  it('texto sin señal clara cae a ABVD con nota', async () => {
+    const parsed = await extractJson('le he ayudado con el aseo');
+    expect(parsed.type).toBe('ABVD');
+    expect(parsed.payload.nota).toBe('le he ayudado con el aseo');
   });
 });
 

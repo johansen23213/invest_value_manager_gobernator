@@ -90,6 +90,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   ADMINISTER: 'Administración',
   RECORD: 'Registro',
   LOGIN: 'Acceso',
+  COPILOT_DRAFT: 'Borrador del copiloto',
+  COPILOT_CONFIRM: 'Confirmación del copiloto',
 };
 
 export const ROLE_LABELS: Record<string, string> = {

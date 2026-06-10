@@ -32,6 +32,9 @@ importers:
       '@trpc/server':
         specifier: ^11.0.0-rc.700
         version: 11.17.0(typescript@5.9.3)
+      '@vetlla/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@vetlla/db':
         specifier: workspace:*
         version: link:../../packages/db

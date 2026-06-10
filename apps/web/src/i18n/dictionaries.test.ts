@@ -68,6 +68,64 @@ describe('paridad es/ca — Sprint M (medicación)', () => {
   });
 });
 
+describe('paridad es/ca — H5 Slice 2 (copiloto: NL → CareRecord)', () => {
+  const copilotKeys = [
+    'copilot.title',
+    'copilot.intro',
+    'copilot.inputLabel',
+    'copilot.placeholder',
+    'copilot.generate',
+    'copilot.generating',
+    'copilot.badge',
+    'copilot.transparency',
+    'copilot.typeLabel',
+    'copilot.noteLabel',
+    'copilot.confirm',
+    'copilot.saving',
+    'copilot.discard',
+    'copilot.saved',
+    'copilot.discarded',
+    'copilot.error.draft',
+    'copilot.error.confirm',
+    'copilot.error.invalid',
+    'copilot.offline',
+    'copilot.field.tension',
+    'copilot.field.fc',
+    'copilot.field.temperatura',
+    'copilot.field.sato2',
+    'copilot.field.nota',
+    'copilot.field.notas',
+    'copilot.field.comida',
+    'copilot.field.porcentaje',
+    'copilot.field.deposicion',
+    'copilot.field.descripcion',
+    'copilot.field.actividad',
+  ];
+
+  it('todas las claves del copiloto existen en es', () => {
+    for (const key of copilotKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves del copiloto existen en ca', () => {
+    for (const key of copilotKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('las claves narrativas del copiloto difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = ['copilot.badge', 'copilot.transparency', 'copilot.saved', 'copilot.offline'];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
 describe('paridad es/ca — Wave B Sprint M (equipo + RBAC R-01/R-03)', () => {
   const waveBKeys = [
     'nav.team',

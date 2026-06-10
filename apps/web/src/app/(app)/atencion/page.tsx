@@ -9,6 +9,7 @@ import { CARE_TYPE_LABELS } from '@/lib/labels';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
 import { useToast } from '@/components/toast';
+import { CopilotCard } from './copilot-card';
 
 function cleanPayload(raw: Record<string, string>): CarePayload {
   const out: CarePayload = {};
@@ -180,6 +181,9 @@ export default function CarePage() {
         </div>
         <Badge tone={online ? 'green' : 'amber'}>{online ? 'En línea' : 'Sin conexión'}</Badge>
       </div>
+
+      {/* Copiloto: texto libre → borrador de registro, con confirmación humana (H5). */}
+      <CopilotCard residentId={resident.id} online={online} onSaved={() => void records.refetch()} />
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Constantes */}

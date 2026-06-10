@@ -49,30 +49,70 @@ function hasToolResult(messages: Message[]): boolean {
   return messages.some((m) => m.content.includes('[tool_result'));
 }
 
+/** ¿El texto (en minúsculas) contiene alguna de las palabras clave? */
+function matchesAny(lower: string, keywords: string[]): boolean {
+  return keywords.some((k) => lower.includes(k));
+}
+
+// Palabras clave es/ca por tipo de registro. El texto puede llegar seudonimizado
+// (tokens [[PERSONA_1]]…), por eso solo se buscan términos clínicos, nunca nombres.
+const VITALS_KEYWORDS = ['tensión', 'tensió', 'tension', 'temperatura', 'constantes', 'constants', 'saturaci', 'pulso', 'pols', 'lpm'];
+const INCIDENT_KEYWORDS = ['caíd', 'caid', 'caigut', 'caigud', 'incidencia', 'incidència', 'incident', 'golpe', 'cop al', 'herida', 'ferida', 'agitad', 'agitat'];
+const STOOL_KEYWORDS = ['deposici', 'femta'];
+const INTAKE_KEYWORDS = ['comid', 'comió', 'comio', 'menjat', 'menjar', 'ingesta', 'ingerit', 'desayun', 'esmorza', 'merienda', 'berenar', 'cena', 'sopar', 'bebid', 'begut'];
+
+/** Deriva constantes medibles del texto (tensión, temperatura, FC, SatO₂). */
+function deriveVitals(text: string): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  const tension = text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);
+  if (tension) payload.tension = `${tension[1]}/${tension[2]}`;
+  const temp = text.match(/(\d{2}(?:[.,]\d)?)\s*(?:º|°)?\s?c\b/i);
+  if (temp?.[1]) payload.temperatura = Number(temp[1].replace(',', '.'));
+  const fc = text.match(/(\d{2,3})\s*(?:lpm|ppm)/i);
+  if (fc?.[1]) payload.fc = Number(fc[1]);
+  const sat = text.match(/sat\w*[^\d]{0,4}(\d{2,3})/i);
+  if (sat?.[1]) payload.sato2 = Number(sat[1]);
+  return Object.keys(payload).length > 0 ? payload : { nota: text };
+}
+
+/** Deriva la ingesta: comida del día + porcentaje aproximado por expresión. */
+function deriveIntake(text: string, lower: string): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  if (matchesAny(lower, ['desayun', 'esmorza'])) payload.comida = 'Desayuno';
+  else if (matchesAny(lower, ['merienda', 'berenar'])) payload.comida = 'Merienda';
+  else if (matchesAny(lower, ['cena', 'sopar', 'sopat'])) payload.comida = 'Cena';
+  else if (matchesAny(lower, ['comida', 'dinar'])) payload.comida = 'Comida';
+  if (matchesAny(lower, ['todo', 'tot', 'completa', 'completo'])) payload.porcentaje = 100;
+  else if (matchesAny(lower, ['tres cuartos', 'tres quarts'])) payload.porcentaje = 75;
+  else if (matchesAny(lower, ['mitad', 'meitat'])) payload.porcentaje = 50;
+  else if (matchesAny(lower, ['poco', 'poc ', 'un cuarto', 'un quart'])) payload.porcentaje = 25;
+  else if (matchesAny(lower, ['nada', 'res ', 'rechaz', 'rebutj'])) payload.porcentaje = 0;
+  payload.nota = text;
+  return payload;
+}
+
 /**
- * Extracción determinista frente→`CareRecord` (feature 1, demo/test).
- * Reglas mínimas por palabras clave; suficiente para validar el flujo sin modelo.
+ * Extracción determinista frase→`CareRecord` (feature 1, demo/test).
+ * Reglas por palabras clave es/ca y campos derivados coherentes con los payloads
+ * que registra la UI de atención (tension/fc/temperatura/sato2, comida/porcentaje,
+ * deposicion/notas, descripcion). Suficiente para validar el flujo sin modelo.
  */
 function deriveCareRecord(text: string): { type: string; payload: Record<string, unknown> } {
   const lower = text.toLowerCase();
-  if (lower.includes('tensión') || lower.includes('tension') || lower.includes('temperatura')) {
-    const tempMatch = text.match(/(\d{2}(?:[.,]\d)?)\s*º?\s?c/i);
-    const tempValue = tempMatch?.[1];
-    return {
-      type: 'CONSTANTES',
-      payload: tempValue ? { temperature: Number(tempValue.replace(',', '.')) } : { note: text },
-    };
+  if (matchesAny(lower, VITALS_KEYWORDS)) {
+    return { type: 'CONSTANTES', payload: deriveVitals(text) };
   }
-  if (lower.includes('deposici')) {
-    return { type: 'DEPOSICION', payload: { note: text } };
+  if (matchesAny(lower, INCIDENT_KEYWORDS)) {
+    return { type: 'INCIDENCIA', payload: { descripcion: text } };
   }
-  if (lower.includes('comió') || lower.includes('comio') || lower.includes('ingesta')) {
-    return { type: 'INGESTA', payload: { note: text } };
+  if (matchesAny(lower, STOOL_KEYWORDS)) {
+    const negated = matchesAny(lower, ['no ha', 'sin deposici', 'sense deposici', 'no hay']);
+    return { type: 'DEPOSICION', payload: { deposicion: negated ? 'No' : 'Sí', notas: text } };
   }
-  if (lower.includes('caíd') || lower.includes('caid') || lower.includes('incidencia')) {
-    return { type: 'INCIDENCIA', payload: { note: text } };
+  if (matchesAny(lower, INTAKE_KEYWORDS)) {
+    return { type: 'INGESTA', payload: deriveIntake(text, lower) };
   }
-  return { type: 'ABVD', payload: { note: text } };
+  return { type: 'ABVD', payload: { nota: text } };
 }
 
 /** Genera la toolCall que el stub emite según el input. `id` estable por iteración. */
