@@ -469,12 +469,12 @@ medication_rbac_redesign:
     - { id: R-04, titulo: "Auditoría de cambio de rol y de función (RGPD)" }
     - { id: M-10, titulo: "Vínculo de prescripción a diagnóstico (diagnosisId): schema+router+UI prescribir+badge en MAR" }
     - { id: M-11, titulo: "Dosis por franja del día (momentDoses): schema + motor MAR (doseAt) + tests. Editor de UI en prescribir: pendiente" }
+    - { id: R-06, titulo: "Custom roles por tenant: DECISIÓN documentada de diferir hasta demanda real -> docs/adr/0013" }
     - { id: R-05, titulo: "Acceso familiar: vinculación desde UI + control de privacidad por sección (UX-20)" }
   backlog:
     - { id: M-09, titulo: "Cabecera de tratamiento (Treatment) que agrupa líneas" }
-    - { id: R-06, titulo: "Custom roles por tenant (solo con demanda real; ADR propio)" }
-  pendientes_menores:
-    - "lastLoginAt sin tracking en el login (Auth.js) -> 'último acceso' en /equipo."
-    - "Alta/invitación de usuario desde /equipo (requiere endpoint invite + email)."
+  pendientes_menores_hechos:
+    - "lastLoginAt -> 'último acceso' visible en /equipo (el tracking ya existía en auth.ts)."
+    - "Alta de usuario del equipo desde /equipo (users.invite, contraseña provisional; email transaccional diferido)."
   adr_hecho:
     - "ADR-C -> docs/adr/0012-mar-offline-administraciones.md (Propuesta; pendiente de implementar con BD para verificar RLS)."

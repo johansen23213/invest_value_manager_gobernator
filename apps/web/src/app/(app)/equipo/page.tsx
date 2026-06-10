@@ -23,19 +23,31 @@ import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
 import { RoleCapabilitiesCard } from '@/components/role-capabilities-card';
+import { z } from 'zod';
 import {
   Badge,
   Button,
+  Card,
+  CardContent,
+  CardTitle,
   Dialog,
   DialogContent,
   DialogTitle,
   DialogFooter,
+  FieldError,
   Input,
   Label,
   Select,
 } from '@vetlla/ui';
 import { ROLE_LABELS } from '@/lib/labels';
+import { formatDateTime } from '@/lib/format';
+import { useZodForm } from '@/lib/form';
 import { JOB_TITLE_OPTIONS, suggestRoleForJobTitle } from '@/lib/job-presets';
+
+const inviteSchema = z.object({
+  email: z.string().trim().email('Email no válido.'),
+  password: z.string().min(8, 'Mínimo 8 caracteres.').max(72),
+});
 
 // ── Iconos inline ─────────────────────────────────────────────────────────────
 
@@ -232,7 +244,7 @@ function ChangeRoleDialog({ user, onSave, onClose }: ChangeRoleDialogProps) {
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function EquipoPage() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
@@ -271,6 +283,35 @@ export default function EquipoPage() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  // Alta de usuario del equipo (Sprint 5).
+  const [showInvite, setShowInvite] = useState(false);
+  const [invite, setInvite] = useState({ email: '', name: '', role: 'AUXILIAR' as UserRole, jobTitle: '', password: '' });
+  const inviteForm = useZodForm(inviteSchema);
+  const inviteUser = api.users.invite.useMutation({
+    onSuccess: async () => {
+      await utils.users.list.invalidate();
+      await utils.users.listJobTitles.invalidate();
+      toast.success('Usuario creado. Comunica la contraseña provisional.');
+      setInvite({ email: '', name: '', role: 'AUXILIAR', jobTitle: '', password: '' });
+      inviteForm.clearErrors();
+      setShowInvite(false);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  function submitInvite(e: React.FormEvent) {
+    e.preventDefault();
+    const data = inviteForm.validate({ email: invite.email, password: invite.password });
+    if (!data) return;
+    inviteUser.mutate({
+      email: data.email,
+      password: data.password,
+      role: invite.role as 'DIRECTOR' | 'SANITARIO' | 'AUXILIAR',
+      name: invite.name || undefined,
+      jobTitle: invite.jobTitle || undefined,
+    });
+  }
 
   const handleChangeRole = useCallback(
     async (userId: string, newRole: UserRole) => {
@@ -320,6 +361,11 @@ export default function EquipoPage() {
           <p className="mt-1 text-sm text-slate-500">{t('team.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {canWrite && (
+            <Button onClick={() => setShowInvite((v) => !v)} data-testid="btn-invite-user">
+              Alta de usuario
+            </Button>
+          )}
           <Link
             href="/equipo/familias"
             className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
@@ -334,6 +380,66 @@ export default function EquipoPage() {
           </Link>
         </div>
       </div>
+
+      {/* Alta de usuario (Sprint 5) */}
+      {canWrite && showInvite && (
+        <Card>
+          <CardContent>
+            <CardTitle className="mb-3 text-base">Alta de un miembro del equipo</CardTitle>
+            <form className="flex flex-col gap-3" noValidate onSubmit={submitInvite}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="inv-email">Email</Label>
+                  <Input
+                    id="inv-email"
+                    type="email"
+                    inputMode="email"
+                    aria-invalid={Boolean(inviteForm.errors.email)}
+                    value={invite.email}
+                    onChange={(e) => setInvite((s) => ({ ...s, email: e.target.value }))}
+                  />
+                  <FieldError>{inviteForm.errors.email}</FieldError>
+                </div>
+                <div>
+                  <Label htmlFor="inv-name">Nombre (opcional)</Label>
+                  <Input id="inv-name" value={invite.name} onChange={(e) => setInvite((s) => ({ ...s, name: e.target.value }))} />
+                </div>
+                <div>
+                  <Label htmlFor="inv-role">Rol</Label>
+                  <Select
+                    id="inv-role"
+                    value={invite.role}
+                    onChange={(e) => setInvite((s) => ({ ...s, role: e.target.value as UserRole }))}
+                  >
+                    <option value="AUXILIAR">{ROLE_LABELS.AUXILIAR}</option>
+                    <option value="SANITARIO">{ROLE_LABELS.SANITARIO}</option>
+                    <option value="DIRECTOR">{ROLE_LABELS.DIRECTOR}</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="inv-job">Función (opcional)</Label>
+                  <Input id="inv-job" value={invite.jobTitle} onChange={(e) => setInvite((s) => ({ ...s, jobTitle: e.target.value }))} placeholder="p. ej. DUE, Fisioterapeuta" />
+                </div>
+                <div>
+                  <Label htmlFor="inv-pass">Contraseña provisional</Label>
+                  <Input
+                    id="inv-pass"
+                    type="text"
+                    aria-invalid={Boolean(inviteForm.errors.password)}
+                    placeholder="mín. 8 caracteres"
+                    value={invite.password}
+                    onChange={(e) => setInvite((s) => ({ ...s, password: e.target.value }))}
+                  />
+                  <FieldError>{inviteForm.errors.password}</FieldError>
+                </div>
+              </div>
+              <Button type="submit" disabled={inviteUser.isPending} className="self-start">
+                {inviteUser.isPending ? 'Creando…' : 'Crear usuario'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3">
@@ -389,6 +495,9 @@ export default function EquipoPage() {
                   {user.name ?? user.email}
                 </p>
                 <p className="truncate text-sm text-slate-500">{user.email}</p>
+                <p className="truncate text-xs text-slate-400">
+                  Último acceso: {user.lastLoginAt ? formatDateTime(locale, user.lastLoginAt) : 'nunca'}
+                </p>
               </div>
             </div>
 

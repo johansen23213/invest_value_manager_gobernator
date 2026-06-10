@@ -10,8 +10,13 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import bcrypt from 'bcryptjs';
 import { UserRole } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
+
+// Roles que se pueden dar de alta desde /equipo (los del equipo del centro).
+// FAMILIAR se gestiona en /equipo/familias (R-05); SUPERADMIN es de plataforma.
+const TEAM_ROLES = [UserRole.DIRECTOR, UserRole.SANITARIO, UserRole.AUXILIAR] as const;
 
 export const usersRouter = createTRPCRouter({
   /**
@@ -23,10 +28,54 @@ export const usersRouter = createTRPCRouter({
   list: permissionProcedure('users:read').query(({ ctx }) =>
     ctx.db.user.findMany({
       where: { role: { not: UserRole.FAMILIAR } },
-      select: { id: true, email: true, name: true, role: true, jobTitle: true },
+      select: { id: true, email: true, name: true, role: true, jobTitle: true, lastLoginAt: true },
       orderBy: { email: 'asc' },
     }),
   ),
+
+  /**
+   * Alta de un miembro del equipo (DIRECTOR/SANITARIO/AUXILIAR) con una contraseña
+   * provisional que la dirección comunica. Sin email transaccional en el MVP: se
+   * muestra la credencial al crearla. Auditado (CREATE User).
+   */
+  invite: permissionProcedure('users:write')
+    .input(
+      z.object({
+        email: z.string().trim().email(),
+        name: z.string().trim().max(120).optional(),
+        role: z.enum(TEAM_ROLES),
+        jobTitle: z.string().trim().max(100).optional(),
+        password: z.string().min(8).max(72),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const email = input.email.toLowerCase();
+      const passwordHash = await bcrypt.hash(input.password, 10);
+      let created;
+      try {
+        created = await ctx.db.user.create({
+          data: {
+            email,
+            name: input.name ?? null,
+            role: input.role,
+            jobTitle: input.jobTitle ?? null,
+            passwordHash,
+            tenantId: ctx.tenantId,
+          },
+          select: { id: true, email: true, name: true, role: true, jobTitle: true },
+        });
+      } catch {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Ese email ya está en uso.' });
+      }
+      await ctx.audit({
+        action: 'CREATE',
+        entity: 'User',
+        entityId: created.id,
+        summary: `Alta de usuario ${email} con rol ${input.role} por ${ctx.session.user.email}`,
+        metadata: { email, role: input.role, jobTitle: input.jobTitle ?? null },
+      });
+      return created;
+    }),
 
   /**
    * Devuelve los jobTitle únicos ya en uso en el tenant.
