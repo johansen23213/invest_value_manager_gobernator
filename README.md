@@ -69,15 +69,17 @@ producción (OVHcloud) cambiando solo la URL — ver `docs/adr/0011`.
 brew install ollama && ollama serve &
 ollama pull qwen2.5:14b        # ~9 GB · va bien en un Mac de 32 GB para ambos tiers
 
-# 2. En tu .env (no en .env.example), descomenta/añade:
-#   AI_PROVIDER=vllm
-#   AI_VLLM_BASE_URL=http://localhost:11434/v1
-#   AI_VLLM_API_KEY=ollama
-#   AI_MODEL_VLLM_EXTRACTION=qwen2.5:14b   # ajusta al tag de tu `ollama list`
-#   AI_MODEL_VLLM_REASONING=qwen2.5:14b
+# 2. Configurar el .env para Ollama (un comando, idempotente):
+pnpm ai:local                  # usa qwen2.5:14b; o: pnpm ai:local llama3.1:8b
+#   (vuelve al stub determinista con:  pnpm ai:stub)
 
 # 3. Reinicia la app y prueba el copiloto en /atencion (frase→registro) y en el PIA.
+bash scripts/dev-setup.sh
 ```
+
+`pnpm ai:local [modelo]` comprueba que Ollama responde, ofrece descargar el modelo si
+falta, y escribe `AI_PROVIDER=vllm` + el endpoint + el modelo en tu `.env` local (que está
+en `.gitignore`). El default del repo sigue siendo `stub`.
 
 > El 70B necesita ≥40 GB de RAM; en 32 GB usa un 14B. El catalán puede flojear en modelos
 > pequeños — el benchmark definitivo se hace con los modelos grandes en OVHcloud.
