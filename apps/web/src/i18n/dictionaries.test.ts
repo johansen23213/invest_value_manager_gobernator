@@ -337,3 +337,73 @@ describe('paridad es/ca — Wave B Sprint M (equipo + RBAC R-01/R-03)', () => {
     }
   });
 });
+
+describe('paridad es/ca — Ola B (expediente sociosanitario Fase 1)', () => {
+  const olaBKeys = [
+    // Chrome safety chips
+    'chrome.safety.devices',
+    'chrome.safety.wandering',
+    'chrome.safety.diet',
+    // Visión 360 nuevas tarjetas
+    'r360.devices.title',
+    'r360.devices.empty',
+    'r360.upp.title',
+    'r360.upp.empty',
+    'r360.weight.title',
+    'r360.weight.empty',
+    // Expediente — Cuidados
+    'exp.care.title',
+    'exp.care.dietType',
+    'exp.care.liquidTexture',
+    'exp.care.wanderingRisk',
+    'exp.care.fallRisk',
+    'exp.care.saved',
+    // Expediente — Clínico+
+    'exp.clinical.title',
+    'exp.clinical.devices',
+    'exp.clinical.devices.empty',
+    'exp.clinical.vaccines',
+    'exp.clinical.upp',
+    'exp.clinical.falls',
+    'exp.clinical.restraints',
+    'exp.clinical.restraints.legalNote',
+    'exp.clinical.consents',
+    'exp.clinical.lifeStory',
+    'exp.clinical.lifeStory.saved',
+    // Expediente — Administrativo
+    'exp.admin.title',
+    'exp.admin.cip',
+    'exp.admin.placeRegime',
+    'exp.admin.legalRep',
+    'exp.admin.advanceDirectives',
+    'exp.admin.saved',
+  ];
+
+  it('todas las claves Ola B existen en es', () => {
+    for (const key of olaBKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves Ola B existen en ca', () => {
+    for (const key of olaBKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de la Ola B difieren entre es y ca', () => {
+    const narrativeKeys = [
+      'exp.care.title',
+      'exp.clinical.restraints.legalNote',
+      'exp.admin.title',
+      'chrome.safety.devices',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});

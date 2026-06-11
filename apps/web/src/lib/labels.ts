@@ -41,8 +41,83 @@ export const ALLERGY_SEVERITY_LABELS: Record<string, string> = {
 };
 
 export const ASSESSMENT_TYPE_LABELS: Record<string, string> = {
-  BARTHEL: 'Barthel (ABVD)',
-  TINETTI: 'Tinetti (marcha/equilibrio)',
+  BARTHEL:      'Barthel (ABVD)',
+  TINETTI:      'Tinetti (marcha/equilibrio)',
+  PFEIFFER:     'Pfeiffer (cognitivo)',
+  MEC_LOBO:     'MEC-Lobo (cognitivo)',
+  GDS_REISBERG: 'GDS-Reisberg (demencia)',
+  NORTON:       'Norton (riesgo UPP)',
+  BRADEN:       'Braden (riesgo UPP)',
+  MNA:          'MNA (nutrición)',
+  PAINAD:       'PAINAD (dolor en demencia)',
+  DOWNTON:      'Downton (riesgo caídas)',
+  LAWTON_BRODY: 'Lawton-Brody (AIVD)',
+};
+
+export const DEVICE_TYPE_LABELS: Record<string, string> = {
+  SONDA_VESICAL:           'Sonda vesical',
+  SONDA_NASOGASTRICA:      'Sonda nasogástrica',
+  OXIGENO_DOMICILIARIO:    'Oxígeno domiciliario',
+  CPAP:                    'CPAP',
+  MARCAPASOS:              'Marcapasos',
+  DESFIBRILADOR_IMPLANTABLE: 'Desfibrilador implantable',
+  PROTESIS_CADERA:         'Prótesis de cadera',
+  PROTESIS_RODILLA:        'Prótesis de rodilla',
+  PROTESIS_AUDITIVA:       'Prótesis auditiva',
+  PROTESIS_DENTAL:         'Prótesis dental',
+  OTRO:                    'Otro dispositivo',
+};
+
+export const DIET_TYPE_LABELS: Record<string, string> = {
+  NORMAL:    'Dieta normal',
+  TRITURADA: 'Dieta triturada',
+  PASTOSA:   'Dieta pastosa',
+  BLANDA:    'Dieta blanda',
+  DIABETICA: 'Dieta diabética',
+  HIPOSODICA: 'Dieta hiposódica',
+  OTRA:      'Dieta especial',
+};
+
+export const LIQUID_TEXTURE_LABELS: Record<string, string> = {
+  LIBRE:  'Líquidos libres',
+  NECTAR: 'Líquidos néctar (IDDSI 2)',
+  MIEL:   'Líquidos miel (IDDSI 3)',
+  PUDING: 'Líquidos pudding (IDDSI 4)',
+};
+
+export const RESTRAINT_TYPE_LABELS: Record<string, string> = {
+  BARANDILLAS:    'Barandillas de cama',
+  CINTURON_SILLA: 'Cinturón en silla',
+  MUNEQUERAS:     'Muñequeras',
+  CHALECO:        'Chaleco',
+  OTRO:           'Otra sujeción',
+};
+
+export const CONSENT_TYPE_LABELS: Record<string, string> = {
+  INGRESO:                  'Consentimiento de ingreso',
+  IMAGEN:                   'Fotografía / vídeo',
+  PORTAL_FAMILIAS:          'Portal de familias',
+  DATOS_SANITARIOS_EXTERNOS: 'Datos sanitarios externos',
+  IA_ANONIMA:               'Uso de datos anónimos en IA',
+};
+
+export const UPP_ORIGIN_LABELS: Record<string, string> = {
+  INGRESO: 'Al ingreso (no imputable al centro)',
+  CENTRO:  'Durante la estancia',
+};
+
+export const PLACE_REGIME_LABELS: Record<string, string> = {
+  PRIVADA:             'Plaza privada',
+  CONCERTADA:          'Plaza concertada',
+  PRESTACION_VINCULADA: 'Prestación vinculada (PVS)',
+};
+
+export const ALLERGY_TYPE_LABELS: Record<string, string> = {
+  MEDICAMENTOSA: 'Medicamentosa',
+  ALIMENTARIA:   'Alimentaria',
+  AMBIENTAL:     'Ambiental',
+  LATEX:         'Látex',
+  OTRA:          'Otra',
 };
 
 export const BED_STATUS_LABELS: Record<string, string> = {
