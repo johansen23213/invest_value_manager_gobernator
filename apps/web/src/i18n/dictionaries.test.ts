@@ -181,6 +181,60 @@ describe('paridad es/ca — H5 Slice 3 (copiloto: borrador de PIA)', () => {
   });
 });
 
+describe('paridad es/ca — Rediseño Dashboard + Residente (2026-06-11)', () => {
+  const dashboardKeys = [
+    'dashboard.greeting.morning',
+    'dashboard.greeting.afternoon',
+    'dashboard.greeting.evening',
+    'dashboard.subtitle',
+    'dashboard.kpi.centers',
+    'dashboard.kpi.residents',
+    'dashboard.kpi.occupancy',
+    'dashboard.kpi.alerts',
+    'dashboard.kpi.careToday',
+    'dashboard.quickLinks',
+    'dashboard.attention',
+    'dashboard.attention.empty',
+    'dashboard.medAlert',
+    'dashboard.viewAll',
+    'resident.age',
+    'resident.ageBirthDate',
+    'resident.noBirthDate',
+    'resident.allergyBannerGrave',
+    'resident.allergyBannerOther',
+    'empty.alerts.title',
+    'empty.alerts.desc',
+  ];
+
+  it('todas las claves del dashboard rediseñado existen en es', () => {
+    for (const key of dashboardKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves del dashboard rediseñado existen en ca', () => {
+    for (const key of dashboardKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas del dashboard difieren entre es y ca', () => {
+    const narrativeKeys = [
+      'dashboard.greeting.morning',
+      'dashboard.subtitle',
+      'dashboard.attention.empty',
+      'resident.allergyBannerGrave',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
 describe('paridad es/ca — Wave B Sprint M (equipo + RBAC R-01/R-03)', () => {
   const waveBKeys = [
     'nav.team',
