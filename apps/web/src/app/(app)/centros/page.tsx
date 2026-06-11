@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { z } from 'zod';
 import {
   Badge,
   Button,
   Card,
   CardContent,
   EmptyState,
+  FieldError,
   Input,
   Label,
   Select,
@@ -17,14 +19,20 @@ import {
   Th,
 } from '@vetlla/ui';
 import { api } from '@/trpc/react';
-import { CENTER_TYPE_LABELS } from '@/lib/labels';
+import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
+import { useZodForm } from '@/lib/form';
 
 const CENTER_TYPES = ['RESIDENCIA', 'CENTRO_DIA', 'VIVIENDA_TUTELADA'] as const;
+
+const centerSchema = z.object({
+  name: z.string().trim().min(2, 'Indica el nombre del centro (mínimo 2 caracteres).').max(120),
+});
 
 export default function CentersPage() {
   const utils = api.useUtils();
   const toast = useToast();
+  const { t } = useT();
   const me = api.me.useQuery();
   const centers = api.centers.list.useQuery();
   const canWrite = me.data?.permissions.includes('centers:write') ?? false;
@@ -32,12 +40,14 @@ export default function CentersPage() {
   const [query, setQuery] = useState('');
   const [name, setName] = useState('');
   const [type, setType] = useState<(typeof CENTER_TYPES)[number]>('RESIDENCIA');
+  const form = useZodForm(centerSchema);
 
   const create = api.centers.create.useMutation({
     onSuccess: async () => {
       setName('');
+      form.clearErrors();
       await utils.centers.list.invalidate();
-      toast.success('Centro creado.');
+      toast.success(t('centers.created'));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -49,34 +59,44 @@ export default function CentersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Centros</h1>
+      <h1 className="text-2xl font-bold">{t('centers.title')}</h1>
 
       {canWrite && (
         <Card>
           <CardContent>
             <form
               className="flex flex-wrap items-end gap-3"
+              noValidate
               onSubmit={(e) => {
                 e.preventDefault();
-                create.mutate({ name, type });
+                // UX-09: validación inline en cliente antes de llamar al servidor.
+                if (!form.validate({ name })) return;
+                create.mutate({ name: name.trim(), type });
               }}
             >
               <div className="flex-1">
-                <Label htmlFor="name">Nombre</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} placeholder="Residencia Los Olivos" />
+                <Label htmlFor="name">{t('centers.form.name')}</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  aria-invalid={Boolean(form.errors.name)}
+                  placeholder={t('centers.form.namePh')}
+                />
+                <FieldError>{form.errors.name}</FieldError>
               </div>
               <div>
-                <Label htmlFor="type">Tipo</Label>
+                <Label htmlFor="type">{t('centers.form.type')}</Label>
                 <Select id="type" value={type} onChange={(e) => setType(e.target.value as (typeof CENTER_TYPES)[number])}>
-                  {CENTER_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {CENTER_TYPE_LABELS[t]}
+                  {CENTER_TYPES.map((ct) => (
+                    <option key={ct} value={ct}>
+                      {t(`center.type.${ct}`)}
                     </option>
                   ))}
                 </Select>
               </div>
               <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? 'Creando…' : 'Crear centro'}
+                {create.isPending ? t('centers.form.creating') : t('centers.form.create')}
               </Button>
             </form>
           </CardContent>
@@ -84,8 +104,14 @@ export default function CentersPage() {
       )}
 
       <div className="max-w-sm">
-        <Label htmlFor="q">Buscar</Label>
-        <Input id="q" type="search" placeholder="Nombre del centro…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <Label htmlFor="q">{t('centers.search')}</Label>
+        <Input
+          id="q"
+          type="search"
+          placeholder={t('centers.searchPh')}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
       </div>
 
       <Card>
@@ -100,10 +126,10 @@ export default function CentersPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Nombre</Th>
-                  <Th>Tipo</Th>
-                  <Th>Unidades</Th>
-                  <Th>Residentes</Th>
+                  <Th>{t('centers.table.name')}</Th>
+                  <Th>{t('centers.table.type')}</Th>
+                  <Th>{t('centers.table.units')}</Th>
+                  <Th>{t('centers.table.residents')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -115,7 +141,7 @@ export default function CentersPage() {
                       </Link>
                     </Td>
                     <Td>
-                      <Badge tone="blue">{CENTER_TYPE_LABELS[c.type]}</Badge>
+                      <Badge tone="blue">{t(`center.type.${c.type}`)}</Badge>
                     </Td>
                     <Td>{c._count.units}</Td>
                     <Td>{c._count.residents}</Td>
@@ -124,9 +150,12 @@ export default function CentersPage() {
               </tbody>
             </Table>
           ) : centers.data && centers.data.length > 0 ? (
-            <EmptyState title="Sin resultados" description="Ningún centro coincide con la búsqueda." />
+            <EmptyState title={t('centers.empty.noResults')} description={t('centers.empty.noResultsDesc')} />
           ) : (
-            <EmptyState title="No hay centros todavía" description={canWrite ? 'Crea el primero con el formulario de arriba.' : undefined} />
+            <EmptyState
+              title={t('centers.empty.none')}
+              description={canWrite ? t('centers.empty.noneDesc') : undefined}
+            />
           )}
         </CardContent>
       </Card>

@@ -20,6 +20,7 @@ import {
 import { api } from '@/trpc/react';
 import { DEPENDENCY_GRADE_LABELS, RESIDENT_STATUS_LABELS } from '@/lib/labels';
 import { useToast } from '@/components/toast';
+import { useT } from '@/i18n/provider';
 
 const GRADES = ['SIN_VALORAR', 'GRADO_I', 'GRADO_II', 'GRADO_III'] as const;
 const STATUSES = ['ACTIVO', 'PREINGRESO', 'BAJA'] as const;
@@ -28,6 +29,7 @@ const PAGE_SIZE = 20;
 export default function ResidentsPage() {
   const utils = api.useUtils();
   const toast = useToast();
+  const { t } = useT();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('residents:write') ?? false;
   const residents = api.residents.list.useQuery();
@@ -82,7 +84,7 @@ export default function ResidentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Residentes</h1>
+      <h1 className="text-2xl font-bold">{t('residents.title')}</h1>
 
       {canWrite && (
         <Card>

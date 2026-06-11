@@ -2,6 +2,7 @@
 
 import { Badge, Card, CardContent, EmptyState, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
+import { useT } from '@/i18n/provider';
 import { CENTER_TYPE_LABELS } from '@/lib/labels';
 import type { BedCounts, UnitOccupancy } from '@/lib/occupancy';
 
@@ -72,13 +73,14 @@ function UnitRow({ unit }: { unit: UnitOccupancy }) {
 }
 
 export default function OccupancyPage() {
+  const { t } = useT();
   const occupancy = api.overview.occupancy.useQuery();
   const data = occupancy.data;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">Ocupación</h1>
+        <h1 className="text-2xl font-bold">{t('occupancy.title')}</h1>
         <p className="text-sm text-slate-500">Plazas, ocupación y plano por centro y unidad.</p>
       </div>
 
