@@ -91,13 +91,13 @@ export default function CarePlanPage() {
               </div>
 
               {/* Objetivos */}
-              <p className="mb-1 text-sm font-medium text-slate-600">Objetivos</p>
+              <p className="mb-1 text-sm font-medium text-[#1A3A3F]/70">Objetivos</p>
               {plan.goals.length === 0 ? (
-                <p className="text-sm text-slate-500">Sin objetivos.</p>
+                <p className="text-sm text-[#1A3A3F]/60">Sin objetivos.</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {plan.goals.map((g) => (
-                    <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm">
+                    <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm">
                       <span>{g.description}</span>
                       {canWrite ? (
                         <Select
@@ -140,14 +140,14 @@ export default function CarePlanPage() {
               )}
 
               {/* Revisiones */}
-              <p className="mb-1 mt-4 text-sm font-medium text-slate-600">Revisiones / seguimiento</p>
+              <p className="mb-1 mt-4 text-sm font-medium text-[#1A3A3F]/70">Revisiones / seguimiento</p>
               {plan.reviews.length === 0 ? (
-                <p className="text-sm text-slate-500">Sin revisiones.</p>
+                <p className="text-sm text-[#1A3A3F]/60">Sin revisiones.</p>
               ) : (
                 <ul className="flex flex-col gap-1 text-sm">
                   {plan.reviews.map((rv) => (
-                    <li key={rv.id} className="rounded-md bg-slate-50 px-3 py-2">
-                      <span className="text-slate-400">
+                    <li key={rv.id} className="rounded-md bg-brand-50 px-3 py-2">
+                      <span className="text-[#1A3A3F]/40">
                         {formatDate(locale, rv.reviewDate)}:
                       </span>{' '}
                       {rv.summary}
@@ -179,7 +179,7 @@ export default function CarePlanPage() {
           </Card>
         ))
       ) : (
-        <p className="text-slate-500">Sin PIA todavía.</p>
+        <p className="text-[#1A3A3F]/60">Sin PIA todavía.</p>
       )}
     </div>
   );

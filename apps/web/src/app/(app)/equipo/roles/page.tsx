@@ -37,7 +37,7 @@ export default function RolesPage() {
   }, [canViewUsers, router]);
 
   if (me.isLoading || canViewUsers === null) {
-    return <p className="text-slate-500">Cargando…</p>;
+    return <p className="text-[#1A3A3F]/60">Cargando…</p>;
   }
   if (!canViewUsers) {
     return null; // el useEffect redirige
@@ -46,8 +46,8 @@ export default function RolesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">{t('rbac.roles.title')}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t('rbac.roles.subtitle')}</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('rbac.roles.title')}</h1>
+        <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('rbac.roles.subtitle')}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
