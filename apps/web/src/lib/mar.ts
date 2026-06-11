@@ -44,6 +44,8 @@ export interface DueDose {
   notes?: string; // motivo registrado (no administrado / rechazado)
   residentId?: string;
   residentName?: string;
+  /** ADR-0012: registrada en el dispositivo y aún sin sincronizar con el servidor. */
+  pendingSync?: boolean;
 }
 
 // Pase de medicación por turno (UX-17): el MAR se agrupa como lo trabaja

@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle } from '@vetlla/ui';
+import type { MedAdminStatus } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { SHIFT_LABELS } from '@/lib/labels';
 import { groupByShift, type DoseStatus, type MedForSchedule } from '@/lib/mar';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
+import { useCareSync } from '@/offline/use-care-sync';
 import { useT } from '@/i18n/provider';
 import { formatTime } from '@/lib/format';
 import { doseStatusLabel, doseTone } from '@/lib/mar-ui';
@@ -163,13 +165,35 @@ export default function MedicationPage() {
     ]);
   };
 
-  const record = api.medications.record.useMutation({
-    onSuccess: async () => {
-      await refresh();
-      toast.success('Administración registrada.');
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  // ADR-0012 — MAR offline-first: las administraciones entran en la cola local
+  // (IndexedDB) y se sincronizan al instante si hay red; sin red quedan
+  // PENDIENTE_SYNC con las mismas garantías de no-duplicado (clave natural).
+  const { enqueueMed, medPendingItems, medPending, online } = useCareSync();
+
+  // Al vaciarse la cola (sync en background), refrescar el estado del servidor.
+  useEffect(() => {
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medPending]);
+
+  async function recordDose(
+    medicationId: string,
+    scheduledAt: string | Date,
+    status: MedAdminStatus,
+    notes?: string,
+  ) {
+    const med = meds.data?.find((m) => m.id === medicationId);
+    await enqueueMed({
+      medicationId,
+      medicationName: med?.name,
+      residentId,
+      scheduledAt: new Date(scheduledAt).toISOString(),
+      status,
+      notes: notes ?? null,
+    });
+    await refresh();
+    toast.success(online ? 'Administración registrada.' : t('med.status.PENDIENTE_SYNC'));
+  }
 
   // M-07: registrar dosis PRN — pide la dosis real con motivo
   async function recordPrn(medicationId: string) {
@@ -181,12 +205,7 @@ export default function MedicationPage() {
       reason: { label: t('med.prn.doseLabel'), required: true, placeholder: 'p. ej. 500 mg' },
     });
     if (result) {
-      record.mutate({
-        medicationId,
-        scheduledAt: new Date(),
-        status: 'ADMINISTRADO',
-        notes: result.reason,
-      });
+      await recordDose(medicationId, new Date(), 'ADMINISTRADO', result.reason);
     }
   }
 
@@ -199,7 +218,7 @@ export default function MedicationPage() {
       reason: { label: 'Motivo', required: true, placeholder: 'p. ej. el residente la rechaza' },
     });
     if (result) {
-      record.mutate({ medicationId, scheduledAt: new Date(scheduledAt), status: 'RECHAZADO', notes: result.reason });
+      await recordDose(medicationId, scheduledAt, 'RECHAZADO', result.reason);
     }
   }
 
@@ -212,11 +231,24 @@ export default function MedicationPage() {
       reason: { label: 'Motivo', required: true, placeholder: 'p. ej. en ayunas para analítica' },
     });
     if (result) {
-      record.mutate({ medicationId, scheduledAt: new Date(scheduledAt), status: 'NO_ADMINISTRADO', notes: result.reason });
+      await recordDose(medicationId, scheduledAt, 'NO_ADMINISTRADO', result.reason);
     }
   }
 
-  const shiftGroups = useMemo(() => groupByShift(schedule.data ?? []), [schedule.data]);
+  // Mezcla servidor + cola local: una dosis con entrada local pendiente se pinta
+  // con su estado local y el badge PENDIENTE_SYNC (el auxiliar ve que no ha subido).
+  const shiftGroups = useMemo(() => {
+    const base = schedule.data ?? [];
+    const localByKey = new Map(
+      medPendingItems.map((p) => [`${p.medicationId}|${new Date(p.scheduledAt).getTime()}`, p]),
+    );
+    const merged = base.map((d) => {
+      const local = localByKey.get(`${d.medicationId}|${new Date(d.scheduledAt).getTime()}`);
+      if (!local) return d;
+      return { ...d, status: local.status as DoseStatus, notes: local.notes ?? d.notes, pendingSync: true };
+    });
+    return groupByShift(merged);
+  }, [schedule.data, medPendingItems]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -280,6 +312,12 @@ export default function MedicationPage() {
                               >
                                 {statusLabel}
                               </Badge>
+                              {/* ADR-0012: registrada en el dispositivo, sin subir aún */}
+                              {d.pendingSync && (
+                                <Badge tone="amber" icon={<IconClock />}>
+                                  {t('med.status.PENDIENTE_SYNC')}
+                                </Badge>
+                              )}
                               {d.notes && (
                                 <span className="text-slate-500">— {d.notes}</span>
                               )}
@@ -291,13 +329,7 @@ export default function MedicationPage() {
                                 <Button
                                   size="sm"
                                   className="min-h-[48px] px-4"
-                                  onClick={() =>
-                                    record.mutate({
-                                      medicationId: d.medicationId,
-                                      scheduledAt: new Date(d.scheduledAt),
-                                      status: 'ADMINISTRADO',
-                                    })
-                                  }
+                                  onClick={() => void recordDose(d.medicationId, d.scheduledAt, 'ADMINISTRADO')}
                                   aria-label={`Administrar ${d.medicationName} ${d.dose}`}
                                 >
                                   {t('med.actions.administer')}

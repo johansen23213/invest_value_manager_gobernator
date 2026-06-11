@@ -271,6 +271,7 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'emergency_contacts',
       'family_links',
       'medication_administrations',
+      'medication_sync_conflicts',
       'medications',
       'residents',
       'sync_conflicts',

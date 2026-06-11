@@ -2,6 +2,13 @@ export { prisma } from './client';
 export { forTenant, asPlatformAdmin } from './rls';
 export type { TenantContext, TenantPrisma } from './rls';
 export { mergeCareRecord, applyCareRecordPush } from './care-sync';
+export { mergeAdministration, applyMedicationAdminPush } from './med-sync';
+export type {
+  AdminEvent,
+  AdminMergeResult,
+  IncomingMedAdminEvent,
+  MedPushResult,
+} from './med-sync';
 export { logAudit } from './audit';
 export type { AuditEntry } from './audit';
 export type {

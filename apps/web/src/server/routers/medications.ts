@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { MedAdminStatus, MedicationRoute, MedicationType } from '@vetlla/db';
+import { applyMedicationAdminPush, MedAdminStatus, MedicationRoute, MedicationType } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import { computeAlerts, computePrn, computeSchedule, type AdminForSchedule, type MedForSchedule } from '@/lib/mar';
 
@@ -211,6 +211,65 @@ export const medicationsRouter = createTRPCRouter({
         metadata: { medicationId: input.medicationId, scheduledAt: input.scheduledAt.toISOString() },
       });
       return administration;
+    }),
+
+  /**
+   * Sincroniza un lote de administraciones registradas offline (ADR-0012).
+   * Idempotente por (tenant, medicación, hora pautada): reenviar no duplica.
+   * LWW por evento; las divergencias quedan en MedicationSyncConflict.
+   */
+  push: permissionProcedure('medication:administer')
+    .input(
+      z.object({
+        events: z
+          .array(
+            z.object({
+              medicationId: z.string(),
+              scheduledAt: z.coerce.date(),
+              status: z.nativeEnum(MedAdminStatus),
+              notes: z.string().max(500).nullish(),
+              administeredAt: z.coerce.date().nullish(),
+              recordedAt: z.coerce.date(),
+            }),
+          )
+          .max(200),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const results = await applyMedicationAdminPush(
+        ctx.db,
+        ctx.tenantId,
+        ctx.session.user.id,
+        input.events,
+      );
+      // Auditar solo lo que cambió el estado clínico (no los retries sin efecto).
+      for (const r of results) {
+        if (r.status === 'CREATED' || r.winner === 'CLIENT') {
+          const ev = input.events.find(
+            (e) => e.medicationId === r.medicationId && e.scheduledAt.getTime() === r.scheduledAt.getTime(),
+          );
+          await ctx.audit({
+            action: 'ADMINISTER',
+            entity: 'MedicationAdministration',
+            entityId: r.id,
+            summary: `MAR offline-sync: ${ev?.status ?? 'evento'}${r.conflict ? ' (conflicto registrado)' : ''}`,
+            metadata: {
+              medicationId: r.medicationId,
+              scheduledAt: r.scheduledAt.toISOString(),
+              via: 'offline-sync',
+              conflict: r.conflict,
+            },
+          });
+        }
+      }
+      return results.map((r) => ({
+        medicationId: r.medicationId,
+        scheduledAt: r.scheduledAt.toISOString(),
+        id: r.id,
+        status: r.status,
+        winner: r.winner,
+        conflict: r.conflict,
+      }));
     }),
 
   /** Alertas de no-administrado de hoy en todo el tenant (para el panel). */

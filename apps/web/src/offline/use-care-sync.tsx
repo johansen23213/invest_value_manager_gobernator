@@ -8,16 +8,34 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { allOutbox, deleteOutbox, isUnsynced, putOutbox } from './db';
-import { syncOutbox } from './sync';
-import type { CarePayload, OutboxRecord } from './types';
-import type { CareRecordType } from '@vetlla/db';
+import {
+  allMedOutbox,
+  allOutbox,
+  deleteOutbox,
+  isMedUnsynced,
+  isUnsynced,
+  putMedOutbox,
+  putOutbox,
+} from './db';
+import { syncMedOutbox, syncOutbox } from './sync';
+import { medOutboxKey, type CarePayload, type MedOutboxRecord, type OutboxRecord } from './types';
+import type { CareRecordType, MedAdminStatus } from '@vetlla/db';
 
 interface EnqueueInput {
   residentId: string;
   residentName?: string;
   type: CareRecordType;
   payload: CarePayload;
+}
+
+/** Administración del MAR para encolar (ADR-0012). */
+interface EnqueueMedInput {
+  medicationId: string;
+  medicationName?: string;
+  residentId: string;
+  scheduledAt: string; // ISO de la dosis pautada
+  status: MedAdminStatus;
+  notes?: string | null;
 }
 
 interface CareSyncContextValue {
@@ -27,6 +45,10 @@ interface CareSyncContextValue {
   enqueue: (input: EnqueueInput) => Promise<string>;
   undo: (clientId: string) => Promise<void>;
   syncNow: () => Promise<void>;
+  // --- MAR offline (ADR-0012) ---
+  medPending: number;
+  medPendingItems: MedOutboxRecord[];
+  enqueueMed: (input: EnqueueMedInput) => Promise<string>;
 }
 
 const CareSyncContext = createContext<CareSyncContextValue | null>(null);
@@ -34,10 +56,15 @@ const CareSyncContext = createContext<CareSyncContextValue | null>(null);
 export function CareSyncProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(true);
   const [pendingItems, setPendingItems] = useState<OutboxRecord[]>([]);
+  const [medPendingItems, setMedPendingItems] = useState<MedOutboxRecord[]>([]);
 
   const refresh = useCallback(async () => {
     const all = await allOutbox();
     setPendingItems(all.filter(isUnsynced).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    const allMed = await allMedOutbox();
+    setMedPendingItems(
+      allMed.filter(isMedUnsynced).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    );
   }, []);
 
   const syncNow = useCallback(async () => {
@@ -45,9 +72,13 @@ export function CareSyncProvider({ children }: { children: ReactNode }) {
       await syncOutbox();
     } catch {
       // sin red: queda en cola, se reintenta
-    } finally {
-      await refresh();
     }
+    try {
+      await syncMedOutbox();
+    } catch {
+      // sin red: queda en cola, se reintenta
+    }
+    await refresh();
   }, [refresh]);
 
   const enqueue = useCallback(
@@ -72,6 +103,33 @@ export function CareSyncProvider({ children }: { children: ReactNode }) {
       await refresh();
       if (typeof navigator !== 'undefined' && navigator.onLine) await syncNow();
       return clientId;
+    },
+    [refresh, syncNow],
+  );
+
+  // MAR offline: encola por la clave NATURAL de la dosis. Registrar dos veces la
+  // misma dosis en el dispositivo sobrescribe la entrada local (última decisión).
+  const enqueueMed = useCallback(
+    async (input: EnqueueMedInput) => {
+      const now = new Date().toISOString();
+      const key = medOutboxKey(input.medicationId, input.scheduledAt);
+      const record: MedOutboxRecord = {
+        key,
+        medicationId: input.medicationId,
+        medicationName: input.medicationName,
+        residentId: input.residentId,
+        scheduledAt: input.scheduledAt,
+        status: input.status,
+        notes: input.notes ?? null,
+        administeredAt: input.status === 'ADMINISTRADO' ? now : null,
+        recordedAt: now,
+        syncStatus: 'PENDING',
+        createdAt: now,
+      };
+      await putMedOutbox(record);
+      await refresh();
+      if (typeof navigator !== 'undefined' && navigator.onLine) await syncNow();
+      return key;
     },
     [refresh, syncNow],
   );
@@ -112,7 +170,17 @@ export function CareSyncProvider({ children }: { children: ReactNode }) {
 
   return (
     <CareSyncContext.Provider
-      value={{ online, pending: pendingItems.length, pendingItems, enqueue, undo, syncNow }}
+      value={{
+        online,
+        pending: pendingItems.length + medPendingItems.length,
+        pendingItems,
+        enqueue,
+        undo,
+        syncNow,
+        medPending: medPendingItems.length,
+        medPendingItems,
+        enqueueMed,
+      }}
     >
       {children}
     </CareSyncContext.Provider>

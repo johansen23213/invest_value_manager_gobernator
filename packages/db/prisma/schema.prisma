@@ -445,6 +445,8 @@ model Medication {
 }
 
 /// Registro de administración (MAR). Idempotente por (tenant, medicación, hora pautada).
+/// Offline-first (ADR-0012): la identidad del evento ES la clave natural; `recordedAt`
+/// (momento de registro en el dispositivo) decide el last-write-wins POR EVENTO.
 model MedicationAdministration {
   id               String         @id @default(cuid())
   tenantId         String         @map("tenant_id")
@@ -457,13 +459,34 @@ model MedicationAdministration {
   administeredAt   DateTime?      @map("administered_at")
   administeredById String?        @map("administered_by_id")
   notes            String?
+  recordedAt       DateTime       @default(now()) @map("recorded_at") // timestamp LWW del evento
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  conflicts MedicationSyncConflict[]
 
   @@unique([tenantId, medicationId, scheduledAt])
   @@index([tenantId])
   @@index([residentId])
   @@map("medication_administrations")
+}
+
+/// Conflicto de sincronización del MAR (ADR-0012). A diferencia de SyncConflict
+/// (LWW por campo), una administración es un hecho atómico: se conserva el evento
+/// completo de cada lado (server/client) y quién ganó, para revisión clínica.
+model MedicationSyncConflict {
+  id               String                   @id @default(cuid())
+  tenantId         String                   @map("tenant_id")
+  administrationId String                   @map("administration_id")
+  administration   MedicationAdministration @relation(fields: [administrationId], references: [id], onDelete: Cascade)
+  serverEvent      Json                     @map("server_event")
+  clientEvent      Json                     @map("client_event")
+  winner           ConflictWinner
+  resolvedAt       DateTime                 @default(now()) @map("resolved_at")
+
+  @@index([tenantId])
+  @@index([administrationId])
+  @@map("medication_sync_conflicts")
 }
 
 /// Plan Individualizado de Atención (PIA/PAI).
