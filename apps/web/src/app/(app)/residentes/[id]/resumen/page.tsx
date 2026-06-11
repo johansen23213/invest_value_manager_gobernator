@@ -57,11 +57,12 @@ export default function Resident360Page() {
   const residentId = params.id;
   const utils = api.useUtils();
   const toast = useToast();
-  const { locale } = useT();
 
   const me = api.me.useQuery();
   const canCareWrite = me.data?.permissions.includes('care:write') ?? false;
   const canAdminister = me.data?.permissions.includes('medication:administer') ?? false;
+
+  const { locale, t } = useT();
 
   const resident = api.residents.get.useQuery({ id: residentId });
   const schedule = api.medications.schedule.useQuery({ residentId });
@@ -109,7 +110,7 @@ export default function Resident360Page() {
     if (!r || Object.keys(payload).length === 0) return;
     await enqueue({ residentId: r.id, residentName, type, payload });
     toast.success(
-      `${CARE_TYPE_LABELS[type]} registrado${online ? '' : ' · se enviará al recuperar la red'}.`,
+      t('r360.care.saved', { type: CARE_TYPE_LABELS[type] ?? type }) + (online ? '' : t('r360.offlineSuffix')),
     );
     void records.refetch();
   }
@@ -123,28 +124,28 @@ export default function Resident360Page() {
       status: 'ADMINISTRADO',
     });
     await utils.medications.schedule.invalidate({ residentId });
-    toast.success(online ? 'Administración registrada.' : 'Registrada · se enviará al recuperar la red.');
+    toast.success(online ? t('r360.med.adminSaved') : t('r360.med.adminSavedOffline'));
   }
 
   if (resident.isLoading) {
-    return <p className="mt-6 text-slate-500">Cargando…</p>;
+    return <p className="mt-6 text-slate-500">{t('r360.loading')}</p>;
   }
   if (!r) {
-    return <p className="mt-6 text-slate-500">Residente no encontrado.</p>;
+    return <p className="mt-6 text-slate-500">{t('r360.notFound')}</p>;
   }
 
   return (
     <div className="mt-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Visión 360</h2>
-        <Badge tone={online ? 'green' : 'amber'}>{online ? 'En línea' : 'Sin conexión'}</Badge>
+        <h2 className="text-lg font-semibold">{t('r360.title')}</h2>
+        <Badge tone={online ? 'green' : 'amber'}>{online ? t('r360.online') : t('r360.offline')}</Badge>
       </div>
 
       <Tabs defaultValue="hoy">
-        <TabsList aria-label="Secciones de la visión 360">
-          <TabsTrigger value="hoy">Hoy</TabsTrigger>
-          <TabsTrigger value="salud">Salud</TabsTrigger>
-          <TabsTrigger value="atencion">Atención</TabsTrigger>
+        <TabsList aria-label={t('r360.tabsLabel')}>
+          <TabsTrigger value="hoy">{t('r360.tab.today')}</TabsTrigger>
+          <TabsTrigger value="salud">{t('r360.tab.health')}</TabsTrigger>
+          <TabsTrigger value="atencion">{t('r360.tab.care')}</TabsTrigger>
         </TabsList>
 
         {/* ── HOY — operativa del día con acciones rápidas ───────────────────── */}
@@ -154,21 +155,21 @@ export default function Resident360Page() {
             <Card>
               <CardContent>
                 <div className="mb-3 flex items-center justify-between">
-                  <CardTitle className="text-base">Medicación de hoy</CardTitle>
+                  <CardTitle className="text-base">{t('r360.med.title')}</CardTitle>
                   <Link
                     href={`/residentes/${residentId}/medicacion`}
                     className="text-sm text-brand-700 hover:underline"
                   >
-                    Ver MAR completo →
+                    {t('r360.med.viewMar')}
                   </Link>
                 </div>
                 <p className="mb-3 text-sm text-slate-600" aria-live="polite">
-                  {medSummary.administered}/{medSummary.total} administradas
+                  {t('r360.med.summary', { administered: medSummary.administered, total: medSummary.total })}
                   {medSummary.notAdministered > 0 && (
                     <>
                       {' · '}
                       <span className="font-medium text-red-700">
-                        {medSummary.notAdministered} no administradas
+                        {t('r360.med.notAdministered', { count: medSummary.notAdministered })}
                       </span>
                     </>
                   )}
@@ -187,23 +188,27 @@ export default function Resident360Page() {
                           <span className="truncate">
                             {d.medicationName} ({d.dose})
                           </span>
-                          {d.overdue && <Badge tone="amber">Retrasada</Badge>}
+                          {d.overdue && <Badge tone="amber">{t('r360.med.overdue')}</Badge>}
                         </span>
                         {canAdminister && (
                           <Button
                             size="sm"
                             className="min-h-[48px] px-4"
                             onClick={() => void administer(d.medicationId, d.medicationName, d.scheduledAt)}
-                            aria-label={`Administrar ${d.medicationName} ${d.dose} de las ${formatTime(locale, d.scheduledAt)}`}
+                            aria-label={t('r360.med.administerAria', {
+                              name: d.medicationName,
+                              dose: d.dose,
+                              time: formatTime(locale, d.scheduledAt),
+                            })}
                           >
-                            Administrar
+                            {t('med.actions.administer')}
                           </Button>
                         )}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin dosis pendientes ahora mismo.</p>
+                  <p className="text-sm text-slate-500">{t('r360.med.noPending')}</p>
                 )}
               </CardContent>
             </Card>
@@ -212,22 +217,22 @@ export default function Resident360Page() {
             {canCareWrite && (
               <Card>
                 <CardContent>
-                  <CardTitle className="mb-3 text-base">Registrar constantes</CardTitle>
+                  <CardTitle className="mb-3 text-base">{t('r360.vitals.title')}</CardTitle>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor="tension">T. arterial</Label>
+                      <Label htmlFor="tension">{t('r360.vitals.tension')}</Label>
                       <Input id="tension" inputMode="numeric" placeholder="120/80" value={vitals.tension} onChange={(e) => setVitals((s) => ({ ...s, tension: e.target.value }))} />
                     </div>
                     <div>
-                      <Label htmlFor="fc">FC (lpm)</Label>
+                      <Label htmlFor="fc">{t('r360.vitals.fc')}</Label>
                       <Input id="fc" type="number" inputMode="numeric" value={vitals.fc} onChange={(e) => setVitals((s) => ({ ...s, fc: e.target.value }))} />
                     </div>
                     <div>
-                      <Label htmlFor="temp">Tª (ºC)</Label>
+                      <Label htmlFor="temp">{t('r360.vitals.temp')}</Label>
                       <Input id="temp" type="number" inputMode="decimal" step="0.1" value={vitals.temperatura} onChange={(e) => setVitals((s) => ({ ...s, temperatura: e.target.value }))} />
                     </div>
                     <div>
-                      <Label htmlFor="sato2">SatO₂ (%)</Label>
+                      <Label htmlFor="sato2">{t('r360.vitals.sato2')}</Label>
                       <Input id="sato2" type="number" inputMode="numeric" value={vitals.sato2} onChange={(e) => setVitals((s) => ({ ...s, sato2: e.target.value }))} />
                     </div>
                   </div>
@@ -239,7 +244,7 @@ export default function Resident360Page() {
                       setVitals({ tension: '', fc: '', temperatura: '', sato2: '' });
                     }}
                   >
-                    Registrar constantes
+                    {t('r360.vitals.title')}
                   </Button>
                 </CardContent>
               </Card>
@@ -249,13 +254,13 @@ export default function Resident360Page() {
             {canCareWrite && (
               <Card>
                 <CardContent>
-                  <CardTitle className="mb-3 text-base">Registrar incidencia</CardTitle>
-                  <Label htmlFor="inc">Descripción</Label>
+                  <CardTitle className="mb-3 text-base">{t('r360.incident.title')}</CardTitle>
+                  <Label htmlFor="inc">{t('r360.incident.label')}</Label>
                   <Input
                     id="inc"
                     value={incident}
                     onChange={(e) => setIncident(e.target.value)}
-                    placeholder="Ha dormido inquieto…"
+                    placeholder={t('r360.incident.placeholder')}
                   />
                   <Button
                     size="lg"
@@ -265,7 +270,7 @@ export default function Resident360Page() {
                       setIncident('');
                     }}
                   >
-                    Registrar incidencia
+                    {t('r360.incident.title')}
                   </Button>
                 </CardContent>
               </Card>
@@ -274,9 +279,9 @@ export default function Resident360Page() {
             {/* Registros de hoy / recientes */}
             <Card>
               <CardContent>
-                <CardTitle className="mb-3 text-base">Registros recientes</CardTitle>
+                <CardTitle className="mb-3 text-base">{t('r360.records.recent')}</CardTitle>
                 {!online ? (
-                  <p className="text-sm text-slate-500">Sin conexión: el histórico se mostrará al volver online.</p>
+                  <p className="text-sm text-slate-500">{t('r360.records.offline')}</p>
                 ) : records.data && records.data.length > 0 ? (
                   <ul className="flex flex-col gap-1 text-sm">
                     {records.data.slice(0, 6).map((rec) => (
@@ -290,7 +295,7 @@ export default function Resident360Page() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin registros todavía.</p>
+                  <p className="text-sm text-slate-500">{t('r360.records.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -303,7 +308,7 @@ export default function Resident360Page() {
             {/* Alergias */}
             <Card>
               <CardContent>
-                <CardTitle className="mb-3 text-base">Alergias</CardTitle>
+                <CardTitle className="mb-3 text-base">{t('r360.allergies.title')}</CardTitle>
                 {r.allergies.length > 0 ? (
                   <ul className="flex flex-col gap-1 text-sm">
                     {r.allergies.map((al) => (
@@ -314,7 +319,7 @@ export default function Resident360Page() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin alergias registradas.</p>
+                  <p className="text-sm text-slate-500">{t('med.allergies.none')}</p>
                 )}
               </CardContent>
             </Card>
@@ -322,7 +327,7 @@ export default function Resident360Page() {
             {/* Escalas */}
             <Card>
               <CardContent>
-                <CardTitle className="mb-3 text-base">Escalas</CardTitle>
+                <CardTitle className="mb-3 text-base">{t('r360.scales.title')}</CardTitle>
                 {latestAssessments.length > 0 ? (
                   <ul className="flex flex-col gap-1 text-sm">
                     {latestAssessments.map((a) => (
@@ -336,7 +341,7 @@ export default function Resident360Page() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin escalas valoradas.</p>
+                  <p className="text-sm text-slate-500">{t('r360.scales.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -344,7 +349,7 @@ export default function Resident360Page() {
             {/* Diagnósticos */}
             <Card>
               <CardContent>
-                <CardTitle className="mb-3 text-base">Diagnósticos</CardTitle>
+                <CardTitle className="mb-3 text-base">{t('r360.dx.title')}</CardTitle>
                 {r.diagnoses.length > 0 ? (
                   <ul className="flex flex-col gap-1 text-sm">
                     {r.diagnoses.map((dx) => (
@@ -355,7 +360,7 @@ export default function Resident360Page() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin diagnósticos registrados.</p>
+                  <p className="text-sm text-slate-500">{t('r360.dx.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -364,12 +369,12 @@ export default function Resident360Page() {
             <Card>
               <CardContent>
                 <div className="mb-3 flex items-center justify-between">
-                  <CardTitle className="text-base">Medicación activa</CardTitle>
+                  <CardTitle className="text-base">{t('r360.activeMed.title')}</CardTitle>
                   <Link
                     href={`/residentes/${residentId}/medicacion`}
                     className="text-sm text-brand-700 hover:underline"
                   >
-                    Gestionar →
+                    {t('r360.manage')}
                   </Link>
                 </div>
                 {activeMeds.length > 0 ? (
@@ -378,20 +383,20 @@ export default function Resident360Page() {
                       <li key={m.id} className="flex flex-wrap items-center gap-2">
                         <strong>{m.name}</strong>
                         <span className="text-slate-500">· {m.dose}</span>
-                        {m.type === 'PRN' && <Badge tone="blue">A demanda</Badge>}
+                        {m.type === 'PRN' && <Badge tone="blue">{t('r360.prn')}</Badge>}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin medicación activa.</p>
+                  <p className="text-sm text-slate-500">{t('r360.activeMed.empty')}</p>
                 )}
               </CardContent>
             </Card>
           </div>
           <p className="mt-3 text-sm text-slate-500">
-            ¿Falta algo o hay que corregir un dato?{' '}
+            {t('r360.health.editHint')}{' '}
             <Link href={`/residentes/${residentId}`} className="text-brand-700 hover:underline">
-              Abrir el expediente completo
+              {t('r360.health.openRecord')}
             </Link>
             .
           </p>
@@ -404,12 +409,12 @@ export default function Resident360Page() {
             <Card>
               <CardContent>
                 <div className="mb-3 flex items-center justify-between">
-                  <CardTitle className="text-base">Plan de atención (PIA)</CardTitle>
+                  <CardTitle className="text-base">{t('r360.pia.title')}</CardTitle>
                   <Link
                     href={`/residentes/${residentId}/pia`}
                     className="text-sm text-brand-700 hover:underline"
                   >
-                    Gestionar PIA →
+                    {t('r360.pia.manage')}
                   </Link>
                 </div>
                 {activePlans.length > 0 ? (
@@ -432,13 +437,13 @@ export default function Resident360Page() {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-slate-500">Sin objetivos definidos.</p>
+                          <p className="text-xs text-slate-500">{t('r360.pia.noGoals')}</p>
                         )}
                       </section>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin plan de atención activo.</p>
+                  <p className="text-sm text-slate-500">{t('r360.pia.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -446,9 +451,9 @@ export default function Resident360Page() {
             {/* Timeline de registros de cuidado */}
             <Card>
               <CardContent>
-                <CardTitle className="mb-3 text-base">Histórico de cuidado</CardTitle>
+                <CardTitle className="mb-3 text-base">{t('r360.history.title')}</CardTitle>
                 {!online ? (
-                  <p className="text-sm text-slate-500">Sin conexión: el histórico se mostrará al volver online.</p>
+                  <p className="text-sm text-slate-500">{t('r360.records.offline')}</p>
                 ) : records.data && records.data.length > 0 ? (
                   <ol className="flex flex-col gap-2">
                     {records.data.map((rec) => (
@@ -462,7 +467,7 @@ export default function Resident360Page() {
                     ))}
                   </ol>
                 ) : (
-                  <p className="text-sm text-slate-500">Sin registros de cuidado todavía.</p>
+                  <p className="text-sm text-slate-500">{t('r360.history.empty')}</p>
                 )}
               </CardContent>
             </Card>

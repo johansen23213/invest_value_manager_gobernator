@@ -22,6 +22,7 @@ export const PERMISSIONS = [
   'portal:read', // portal de familias (solo el residente vinculado)
   'audit:read', // registro de actividad (RGPD)
   'dsar:manage', // derechos del interesado: export (art. 15) y supresión (art. 17)
+  'conflicts:review', // validar divergencias de sincronización offline (juicio clínico)
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -46,6 +47,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'careplan:write',
     'audit:read',
     'dsar:manage',
+    'conflicts:review',
   ],
   SANITARIO: [
     'tenant:read',
@@ -61,6 +63,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'medication:administer',
     'careplan:read',
     'careplan:write',
+    'conflicts:review',
   ],
   // El auxiliar registra atención directa y administra medicación (MAR).
   AUXILIAR: [

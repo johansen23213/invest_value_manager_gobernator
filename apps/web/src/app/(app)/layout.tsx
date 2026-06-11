@@ -68,6 +68,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                         {t('nav.alerts')}
                       </Link>
                     )}
+                    {hasPermission(user.role, 'care:read') && (
+                      <Link href="/conflictos" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.conflicts')}
+                      </Link>
+                    )}
                     {hasPermission(user.role, 'users:read') && (
                       <Link href="/equipo" className="rounded-md px-3 py-2 hover:bg-slate-100">
                         {t('nav.team')}

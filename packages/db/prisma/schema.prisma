@@ -424,9 +424,14 @@ model SyncConflict {
   clientValue  Json?          @map("client_value")
   winner       ConflictWinner
   resolvedAt   DateTime       @default(now()) @map("resolved_at")
+  // Revisión humana de la divergencia (R-CONF): null = pendiente de revisar.
+  // El LWW ya resolvió el dato; esto registra que un humano lo ha validado.
+  reviewedAt   DateTime?      @map("reviewed_at")
+  reviewedById String?        @map("reviewed_by_id")
 
   @@index([tenantId])
   @@index([careRecordId])
+  @@index([tenantId, reviewedAt])
   @@map("sync_conflicts")
 }
 
@@ -551,9 +556,13 @@ model MedicationSyncConflict {
   clientEvent      Json                     @map("client_event")
   winner           ConflictWinner
   resolvedAt       DateTime                 @default(now()) @map("resolved_at")
+  // Revisión humana de la divergencia (R-CONF): null = pendiente de revisar.
+  reviewedAt       DateTime?                @map("reviewed_at")
+  reviewedById     String?                  @map("reviewed_by_id")
 
   @@index([tenantId])
   @@index([administrationId])
+  @@index([tenantId, reviewedAt])
   @@map("medication_sync_conflicts")
 }
 
