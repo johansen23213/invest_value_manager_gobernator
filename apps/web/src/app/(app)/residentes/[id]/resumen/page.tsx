@@ -31,12 +31,14 @@ import { useCareSync } from '@/offline/use-care-sync';
 import type { CarePayload } from '@/offline/types';
 import { useToast } from '@/components/toast';
 import { useT } from '@/i18n/provider';
-import { formatDateTime, formatTime } from '@/lib/format';
+import { formatDate, formatDateTime, formatTime } from '@/lib/format';
 import {
   ASSESSMENT_TYPE_LABELS,
   CARE_PLAN_STATUS_LABELS,
   CARE_TYPE_LABELS,
+  DEVICE_TYPE_LABELS,
   GOAL_STATUS_LABELS,
+  UPP_ORIGIN_LABELS,
 } from '@/lib/labels';
 
 function cleanPayload(raw: Record<string, string>): CarePayload {
@@ -324,7 +326,7 @@ export default function Resident360Page() {
               </CardContent>
             </Card>
 
-            {/* Escalas */}
+            {/* Escalas — todos los tipos valorados (ahora 11 posibles) */}
             <Card>
               <CardContent>
                 <CardTitle className="mb-3 text-base">{t('r360.scales.title')}</CardTitle>
@@ -332,16 +334,107 @@ export default function Resident360Page() {
                   <ul className="flex flex-col gap-1 text-sm">
                     {latestAssessments.map((a) => (
                       <li key={a.id} className="flex items-center justify-between">
-                        <span>{ASSESSMENT_TYPE_LABELS[a.type] ?? a.type}</span>
+                        <span className="text-[#1A3A3F]">{ASSESSMENT_TYPE_LABELS[a.type] ?? a.type}</span>
                         <span className="text-[#1A3A3F]/70">
                           <strong>{a.score ?? '—'}</strong>{' '}
-                          <span className="text-[#1A3A3F]/40">· {formatDateTime(locale, a.assessedAt)}</span>
+                          <span className="text-[#1A3A3F]/40">· {formatDate(locale, a.assessedAt)}</span>
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <p className="text-sm text-[#1A3A3F]/60">{t('r360.scales.empty')}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Dispositivos activos */}
+            <Card>
+              <CardContent>
+                <CardTitle className="mb-3 text-base">{t('r360.devices.title')}</CardTitle>
+                {(r.devices ?? []).length > 0 ? (
+                  <ul className="flex flex-col gap-1 text-sm">
+                    {(r.devices ?? []).map((d) => (
+                      <li key={d.id} className="flex flex-wrap items-center gap-2">
+                        <Badge tone="neutral">{DEVICE_TYPE_LABELS[d.type] ?? d.type}</Badge>
+                        {d.description && (
+                          <span className="text-[#1A3A3F]/60">{d.description}</span>
+                        )}
+                        {d.since && (
+                          <span className="text-[#1A3A3F]/40">desde {formatDate(locale, d.since)}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.devices.empty')}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* UPP activas */}
+            <Card>
+              <CardContent>
+                <CardTitle className="mb-3 text-base">{t('r360.upp.title')}</CardTitle>
+                {(r.pressureUlcers ?? []).length > 0 ? (
+                  <ul className="flex flex-col gap-2 text-sm">
+                    {(r.pressureUlcers ?? []).map((u) => (
+                      <li key={u.id} className="rounded-md bg-warm-50 px-3 py-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge tone="amber">
+                            {t('r360.upp.stage', { stage: String(u.stage) })}
+                          </Badge>
+                          <span className="font-medium text-[#1A3A3F]">{u.location}</span>
+                          <span className="text-[#1A3A3F]/40">
+                            {UPP_ORIGIN_LABELS[u.acquired] ?? u.acquired}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-[#1A3A3F]/60">
+                          {u.curings && u.curings.length > 0
+                            ? t('r360.upp.lastCuring', { date: formatDate(locale, u.curings[0]!.date) })
+                            : t('r360.upp.noCuring')}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.upp.empty')}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Peso reciente con tendencia */}
+            <Card>
+              <CardContent>
+                <CardTitle className="mb-3 text-base">{t('r360.weight.title')}</CardTitle>
+                {(r.weights ?? []).length > 0 ? (() => {
+                  const latest = r.weights![0]!;
+                  const prev = r.weights![1];
+                  let trendBadge: React.ReactNode = null;
+                  if (prev) {
+                    const diff = latest.weightKg - prev.weightKg;
+                    if (diff > 0.5) {
+                      trendBadge = <Badge tone="amber">↑ {t('r360.weight.trend.up')}</Badge>;
+                    } else if (diff < -0.5) {
+                      trendBadge = <Badge tone="red">↓ {t('r360.weight.trend.down')}</Badge>;
+                    } else {
+                      trendBadge = <Badge tone="neutral">→ {t('r360.weight.trend.stable')}</Badge>;
+                    }
+                  }
+                  return (
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <span className="text-2xl font-bold text-[#1A3A3F]">
+                        {latest.weightKg} kg
+                      </span>
+                      {trendBadge}
+                      <span className="text-[#1A3A3F]/40">{formatDate(locale, latest.recordedAt)}</span>
+                      {latest.bmi && (
+                        <span className="text-[#1A3A3F]/60">IMC: {latest.bmi}</span>
+                      )}
+                    </div>
+                  );
+                })() : (
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.weight.empty')}</p>
                 )}
               </CardContent>
             </Card>

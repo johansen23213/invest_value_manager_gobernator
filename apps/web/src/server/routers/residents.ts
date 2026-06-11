@@ -88,6 +88,20 @@ export const residentsRouter = createTRPCRouter({
           allergies: { orderBy: { substance: 'asc' } },
           diagnoses: { orderBy: { diagnosedAt: 'desc' } },
           assessments: { orderBy: { assessedAt: 'desc' } },
+          // Fase 1: campos de seguridad a pie de cama y datos clínicos
+          devices: {
+            where: { active: true },
+            orderBy: { createdAt: 'asc' },
+          },
+          weights: {
+            orderBy: { recordedAt: 'desc' },
+            take: 2, // último y anterior (para tendencia)
+          },
+          pressureUlcers: {
+            where: { active: true },
+            orderBy: { onsetDate: 'desc' },
+            include: { curings: { orderBy: { date: 'desc' }, take: 1 } },
+          },
         },
       }),
     ),
