@@ -8,12 +8,12 @@ import { LoginForm } from './login-form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ registered?: string; reset?: string }>;
 }) {
   const session = await auth();
   if (session?.user) redirect('/');
   const { t } = await getT();
-  const { registered } = await searchParams;
+  const { registered, reset } = await searchParams;
 
   return (
     <main id="contenido" className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-slate-50 px-4">
@@ -28,13 +28,26 @@ export default async function LoginPage({
             {t('login.registered')}
           </div>
         )}
+        {reset && (
+          <div
+            role="status"
+            className="mb-4 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800"
+          >
+            {t('login.resetDone')}
+          </div>
+        )}
         <LoginForm />
-        <p className="mt-4 text-center text-sm text-slate-600">
-          {t('login.noAccount')}{' '}
-          <Link href="/registro" className="font-medium text-brand-700 hover:underline">
-            {t('login.tryFree')}
+        <div className="mt-4 flex flex-col gap-1 text-center text-sm">
+          <Link href="/recuperar" className="text-brand-700 hover:underline">
+            {t('login.forgot')}
           </Link>
-        </p>
+          <p className="text-slate-600">
+            {t('login.noAccount')}{' '}
+            <Link href="/registro" className="font-medium text-brand-700 hover:underline">
+              {t('login.tryFree')}
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   );

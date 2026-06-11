@@ -13,6 +13,10 @@ import { TRPCError } from '@trpc/server';
 import bcrypt from 'bcryptjs';
 import { UserRole } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
+import { createAuthToken } from '@/server/account/tokens';
+import { invitationEmail } from '@/server/account/emails';
+import { sendEmail } from '@/server/email';
+import { logger } from '@/server/logger';
 
 // Roles que se pueden dar de alta desde /equipo (los del equipo del centro).
 // FAMILIAR se gestiona en /equipo/familias (R-05); SUPERADMIN es de plataforma.
@@ -75,6 +79,42 @@ export const usersRouter = createTRPCRouter({
         metadata: { email, role: input.role, jobTitle: input.jobTitle ?? null },
       });
       return created;
+    }),
+
+  /**
+   * Envía (o reenvía) a un usuario del equipo un enlace de "establece tu
+   * contraseña" por email. Sustituye a comunicar contraseñas provisionales a
+   * mano: el usuario fija su propia contraseña con un token de un solo uso.
+   */
+  sendAccessLink: permissionProcedure('users:write')
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: { id: true, email: true, role: true },
+      });
+      if (!user || user.role === UserRole.FAMILIAR) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Usuario no encontrado.' });
+      }
+      const tenant = await ctx.db.tenant.findFirst({ select: { name: true } });
+      const token = await createAuthToken(user.id, 'INVITATION');
+      const mail = invitationEmail(token, tenant?.name ?? 'tu centro');
+      try {
+        await sendEmail({ to: user.email, subject: mail.subject, text: mail.text });
+      } catch {
+        logger.error('users.access_link_failed', { userId: user.id });
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'No se pudo enviar el correo. Revisa la configuración de email.',
+        });
+      }
+      await ctx.audit({
+        action: 'INVITE',
+        entity: 'User',
+        entityId: user.id,
+        summary: `Enlace de acceso enviado a ${user.email} por ${ctx.session.user.email}`,
+      });
+      return { ok: true as const };
     }),
 
   /**
