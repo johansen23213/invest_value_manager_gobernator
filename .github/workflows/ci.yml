@@ -29,7 +29,12 @@ jobs:
           --health-retries 10
 
     env:
+      # Rol OWNER (vetlla): aplica migraciones y seed (DDL + ownership).
       DATABASE_URL: postgresql://vetlla:vetlla_dev_password@localhost:5432/vetlla?schema=public
+      # Rol de APP no propietario (vetlla_app): runtime + tests de RLS. Que RLS se
+      # enforce de verdad (ADR-0014): Postgres ignora RLS para superusuarios y en la
+      # imagen oficial 'vetlla' es superusuario, así que la app NO debe usarlo.
+      APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
       AUTH_SECRET: ci-secret-not-for-production
 
     steps:
@@ -53,6 +58,24 @@ jobs:
       - name: Apply migrations
         run: pnpm --filter @vetlla/db migrate:deploy
 
+      # ADR-0014: crear el rol de app NO propietario DESPUÉS de las migraciones
+      # (necesita las tablas creadas por el owner para concederle CRUD). Se ejecuta
+      # como OWNER (vetlla). Idempotente. La app/tests conectan luego como vetlla_app
+      # vía APP_DATABASE_URL, de modo que RLS sí aplica (no es superusuario ni owner).
+      - name: "[INC-1] Create non-owner app role for RLS (ADR-0014)"
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: vetlla
+          PGPASSWORD: vetlla_dev_password
+          PGDATABASE: vetlla
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
+            -f packages/db/prisma/sql/app-role.sql
+
       - name: Lint
         run: pnpm lint
 
@@ -62,5 +85,60 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit tests
+      # -----------------------------------------------------------------------
+      # INC-1: Gate de aislamiento RLS (owner: quim-qa, apoyo: leo-devops)
+      #
+      # Se ejecuta como paso DEDICADO y visible antes del resto de tests para
+      # que una fuga cross-tenant o una tabla sin RLS rompa el CI de forma
+      # prominente, sin quedar enterrada en la salida de "Unit tests".
+      #
+      # Este paso requiere que las migraciones ya estén aplicadas (paso anterior
+      # "Apply migrations"). Ejecuta los tres grupos de tests de packages/db:
+      #
+      #   1. rls-coverage.test.ts  — estático, sin BD: parsea schema.prisma y
+      #      verifica que cada tabla con tenant_id tiene ENABLE+FORCE+política
+      #      en alguna migración. Falla si se añade una tabla sin su RLS.
+      #
+      #   2. rls.test.ts           — integración contra Postgres: aislamiento
+      #      real (lectura cruzada, WITH CHECK, fallo en cerrado, bypass).
+      #
+      #   3. audit.integration.test.ts / care-sync.integration.test.ts —
+      #      integración con BD: trazabilidad e idempotencia con RLS activo.
+      #
+      # Si alguno de estos tests falla, el job completo falla aquí (fail-fast).
+      # -----------------------------------------------------------------------
+      - name: "[INC-1] RLS isolation gate — @vetlla/db"
+        run: pnpm --filter @vetlla/db test
+
+      # Tests unitarios del resto de packages (apps/web, packages/ai, etc.).
+      # @vetlla/db ya se ejecutó arriba; Turborepo puede saltarlo por caché,
+      # o lo ejecutará de nuevo (idempotente). El step anterior es el gate.
+      - name: Unit tests (all packages)
         run: pnpm test
+
+      # -----------------------------------------------------------------------
+      # INC-1 (PENDIENTE): E2E Playwright
+      #
+      # Los tests de Playwright (apps/web/e2e/) cubren flujos críticos de
+      # punta a punta (login, MAR, prescripción, equipo/RBAC, auditoría,
+      # copiloto) con navegador real (Chromium).
+      #
+      # Por qué no está activo aquí todavía:
+      #   - Requiere `playwright install chromium` (~300 MB) y la app
+      #     construida corriendo en :3000 (next start) + seed de demo.
+      #   - El tiempo de startup encarece el job y no se ha decidido aún
+      #     si merece su propio job paralelo o va en este.
+      #   - El Playwright config ya soporta PW_CHROMIUM para inyectar un
+      #     binario propio si se usa una action de caché.
+      #
+      # Para habilitarlo (leo-devops), añadir un job 'e2e' con:
+      #   1. Mismo servicio postgres y env.
+      #   2. pnpm --filter @vetlla/web exec playwright install --with-deps chromium
+      #   3. pnpm --filter @vetlla/db seed   (seed de demo)
+      #   4. pnpm --filter @vetlla/web build
+      #   5. pnpm --filter @vetlla/web test:e2e
+      #
+      # Riesgo mientras no está en CI: los flujos de login, MAR offline,
+      # copiloto y familia solo se verifican manualmente. Ver mapa de cobertura
+      # en project_state.yaml (INC-1).
+      # -----------------------------------------------------------------------

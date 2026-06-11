@@ -1,6 +1,22 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [".env", "tsconfig.base.json"],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "APP_DATABASE_URL",
+    "AUTH_SECRET",
+    "AUTH_URL",
+    "ANTHROPIC_API_KEY",
+    "NODE_ENV",
+    "AI_PROVIDER",
+    "AI_VLLM_BASE_URL",
+    "AI_VLLM_API_KEY",
+    "AI_VLLM_TIMEOUT_MS",
+    "AI_BEDROCK_REGION",
+    "AI_VERTEX_PROJECT",
+    "AI_VERTEX_LOCATION",
+    "AI_MODEL_*"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "@vetlla/db#generate"],

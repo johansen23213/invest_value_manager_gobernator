@@ -4,15 +4,25 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
-import { Button, Input, Label } from '@vetlla/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+  Input,
+  Label,
+} from '@vetlla/ui';
 
 // Confirmación accesible para acciones destructivas (UX-03) y, opcionalmente,
 // con motivo obligatorio (UX-17, p. ej. medicación no administrada).
+// Sobre Radix Dialog (UX-08): focus-trap, scroll-lock, retorno de foco y
+// cierre con Escape/click fuera gestionados por la primitiva.
 interface ReasonField {
   label: string;
   required?: boolean;
@@ -43,7 +53,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [reasonValue, setReasonValue] = useState('');
   const [error, setError] = useState('');
   const resolverRef = useRef<Resolver | null>(null);
-  const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
   const close = useCallback((result: ConfirmResult | null) => {
     resolverRef.current?.(result);
@@ -55,20 +64,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   const confirm = useCallback((opts: ConfirmOptions) => {
     setOptions(opts);
+    setReasonValue('');
+    setError('');
     return new Promise<ConfirmResult | null>((resolve) => {
       resolverRef.current = resolve;
     });
   }, []);
-
-  useEffect(() => {
-    if (!options) return;
-    confirmBtnRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [options, close]);
 
   function onConfirm() {
     if (options?.reason?.required && reasonValue.trim() === '') {
@@ -81,29 +82,26 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
-      {options && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4"
-          onClick={() => close(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="confirm-title"
-            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+      <Dialog open={options !== null} onOpenChange={(open) => !open && close(null)}>
+        {options && (
+          <DialogContent
+            aria-describedby={undefined}
+            onOpenAutoFocus={(e) => {
+              // Con campo de motivo, enfoca el input; si no, deja el foco por defecto.
+              if (options.reason) {
+                e.preventDefault();
+                inputAutoFocus();
+              }
+            }}
           >
-            <h2 id="confirm-title" className="text-lg font-semibold">
-              {options.title}
-            </h2>
-            {options.description && (
-              <p className="mt-2 text-sm text-slate-600">{options.description}</p>
-            )}
+            <DialogTitle>{options.title}</DialogTitle>
+            {options.description && <DialogDescription>{options.description}</DialogDescription>}
             {options.reason && (
               <div className="mt-4">
                 <Label htmlFor="confirm-reason">{options.reason.label}</Label>
                 <Input
                   id="confirm-reason"
+                  data-confirm-reason
                   value={reasonValue}
                   placeholder={options.reason.placeholder}
                   onChange={(e) => setReasonValue(e.target.value)}
@@ -117,23 +115,30 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 )}
               </div>
             )}
-            <div className="mt-6 flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="secondary" onClick={() => close(null)}>
                 {options.cancelLabel ?? 'Cancelar'}
               </Button>
               <Button
-                ref={confirmBtnRef}
                 variant={options.tone === 'danger' ? 'danger' : 'primary'}
                 onClick={onConfirm}
               >
                 {options.confirmLabel ?? 'Confirmar'}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
     </ConfirmContext.Provider>
   );
+}
+
+function inputAutoFocus() {
+  // Tras montar el contenido, enfoca el campo de motivo.
+  requestAnimationFrame(() => {
+    const el = document.querySelector<HTMLInputElement>('[data-confirm-reason]');
+    el?.focus();
+  });
 }
 
 export function useConfirm(): ConfirmContextValue['confirm'] {

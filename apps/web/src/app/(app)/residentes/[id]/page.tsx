@@ -1,22 +1,53 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { Badge, Button, Card, CardContent, CardTitle, Input, Label, Select } from '@vetlla/ui';
+import { z } from 'zod';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardTitle,
+  FieldError,
+  Input,
+  Label,
+  Select,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@vetlla/ui';
 import type { AllergySeverity, ContactRelation } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
 import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm';
+import { useZodForm } from '@/lib/form';
 import { interpretScale, SCALE_RANGES, type ScaleType } from '@/lib/scales';
 import {
   ALLERGY_SEVERITY_LABELS,
   ASSESSMENT_TYPE_LABELS,
   CONTACT_RELATION_LABELS,
-  DEPENDENCY_GRADE_LABELS,
-  RESIDENT_STATUS_LABELS,
 } from '@/lib/labels';
+
+const phoneSchema = z
+  .union([z.literal(''), z.string().regex(/^[+()\d\s-]{6,20}$/, 'Teléfono no válido (6–20 caracteres).')])
+  .optional();
+
+const contactSchema = z.object({
+  name: z.string().trim().min(1, 'Indica el nombre.').max(120),
+  phone: phoneSchema,
+});
+
+const allergySchema = z.object({
+  substance: z.string().trim().min(1, 'Indica la sustancia.').max(120),
+});
+
+const diagnosisSchema = z.object({
+  description: z.string().trim().min(1, 'Indica la descripción.').max(300),
+});
 
 export default function ResidentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -25,22 +56,86 @@ export default function ResidentDetailPage() {
   const { locale } = useT();
   const fmtDate = (d: Date | string | null | undefined) => formatDate(locale, d);
   const toast = useToast();
+  const confirm = useConfirm();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('residents:write') ?? false;
   const canClinical = me.data?.permissions.includes('clinical:write') ?? false;
+  const canDsar = me.data?.permissions.includes('dsar:manage') ?? false;
   const resident = api.residents.get.useQuery({ id: residentId });
+
+  // INC-2 — DSAR (RGPD): export art. 15 y supresión art. 17.
+  const [dsarConfirmLastName, setDsarConfirmLastName] = useState('');
+  const [dsarReason, setDsarReason] = useState('');
+  const exportDsar = api.dsar.exportResident.useMutation({
+    onSuccess: ({ data, sha256 }) => {
+      const blob = new Blob([JSON.stringify({ sha256, ...data }, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dsar-export-${residentId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Exportación generada y descargada.');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const anonymize = api.dsar.anonymizeResident.useMutation({
+    onSuccess: async (res) => {
+      setDsarConfirmLastName('');
+      setDsarReason('');
+      await refresh();
+      toast.success(`Residente anonimizado (${res.pseudonym}).`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  async function handleAnonymize() {
+    const ok = await confirm({
+      title: 'Suprimir datos del residente (art. 17)',
+      description:
+        'Operación IRREVERSIBLE: se elimina la identificación directa (nombre, DNI, fecha de nacimiento), se borran contactos y vínculos familiares. Los registros clínicos se conservan anonimizados según la política de retención sanitaria.',
+      confirmLabel: 'Anonimizar definitivamente',
+      tone: 'danger',
+    });
+    if (ok) {
+      anonymize.mutate({
+        residentId,
+        confirmLastName: dsarConfirmLastName,
+        reason: dsarReason,
+      });
+    }
+  }
 
   const refresh = () => utils.residents.get.invalidate({ id: residentId });
 
-  // Formularios (estado mínimo).
+  // Formularios (estado mínimo) + validación inline con Zod (UX-09).
   const [contact, setContact] = useState({ name: '', relation: 'HIJO_A', phone: '' });
   const [allergy, setAllergy] = useState({ substance: '', severity: '' });
   const [diagnosis, setDiagnosis] = useState({ description: '', code: '' });
   const [assessment, setAssessment] = useState({ type: 'BARTHEL' as ScaleType, score: '' });
 
+  const contactForm = useZodForm(contactSchema);
+  const allergyForm = useZodForm(allergySchema);
+  const diagnosisForm = useZodForm(diagnosisSchema);
+  const assessmentMax = SCALE_RANGES[assessment.type].max;
+  const assessmentSchema = z.object({
+    score: z.preprocess(
+      (v) => (v === '' || v == null ? undefined : Number(v)),
+      z
+        .number({ invalid_type_error: 'Introduce una puntuación.' })
+        .int('Debe ser un número entero.')
+        .min(0, 'Mínimo 0.')
+        .max(assessmentMax, `Máximo ${assessmentMax}.`),
+    ),
+  });
+  const assessmentForm = useZodForm(assessmentSchema);
+
   const addContact = api.residents.addContact.useMutation({
     onSuccess: async () => {
       setContact({ name: '', relation: 'HIJO_A', phone: '' });
+      contactForm.clearErrors();
       await refresh();
       toast.success('Contacto añadido.');
     },
@@ -49,6 +144,7 @@ export default function ResidentDetailPage() {
   const addAllergy = api.residents.addAllergy.useMutation({
     onSuccess: async () => {
       setAllergy({ substance: '', severity: '' });
+      allergyForm.clearErrors();
       await refresh();
       toast.success('Alergia añadida.');
     },
@@ -57,6 +153,7 @@ export default function ResidentDetailPage() {
   const addDiagnosis = api.residents.addDiagnosis.useMutation({
     onSuccess: async () => {
       setDiagnosis({ description: '', code: '' });
+      diagnosisForm.clearErrors();
       await refresh();
       toast.success('Diagnóstico añadido.');
     },
@@ -65,6 +162,7 @@ export default function ResidentDetailPage() {
   const addAssessment = api.residents.addAssessment.useMutation({
     onSuccess: async () => {
       setAssessment({ type: 'BARTHEL', score: '' });
+      assessmentForm.clearErrors();
       await refresh();
       toast.success('Valoración registrada.');
     },
@@ -76,111 +174,117 @@ export default function ResidentDetailPage() {
   const r = resident.data;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/residentes" className="text-sm text-brand-700 hover:underline">
-          ← Residentes
-        </Link>
-        <h1 className="mt-1 text-2xl font-bold">
-          {r.firstName} {r.lastName}
-        </h1>
-        <p className="text-sm text-slate-500">
-          {r.center.name} · {r.bed ? `Plaza ${r.bed.code} (${r.bed.unit.name})` : 'Sin plaza'} ·{' '}
-          {DEPENDENCY_GRADE_LABELS[r.dependencyGrade]}{' '}
-          <Badge tone={r.status === 'ACTIVO' ? 'green' : 'neutral'}>
-            {RESIDENT_STATUS_LABELS[r.status]}
-          </Badge>
-        </p>
-        <p className="mt-1 text-sm text-slate-500">
-          Nacimiento: {fmtDate(r.birthDate)} · Ingreso: {fmtDate(r.admissionDate)} · DNI/NIE:{' '}
-          {r.nationalId ?? '—'}
-        </p>
-        <div className="mt-3 flex gap-2">
-          <Link
-            href={`/residentes/${residentId}/medicacion`}
-            className="min-h-touch rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100"
-          >
-            Medicación
-          </Link>
-          <Link
-            href={`/residentes/${residentId}/pia`}
-            className="min-h-touch rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100"
-          >
-            PIA
-          </Link>
-        </div>
-      </div>
+    <Tabs defaultValue="datos" className="flex flex-col gap-2">
+      <TabsList>
+        <TabsTrigger value="datos">Datos</TabsTrigger>
+        <TabsTrigger value="escalas">Escalas</TabsTrigger>
+        <TabsTrigger value="contactos">Contactos</TabsTrigger>
+        <TabsTrigger value="alergias">Alergias</TabsTrigger>
+        <TabsTrigger value="diagnosticos">Diagnósticos</TabsTrigger>
+        {canDsar && <TabsTrigger value="rgpd">RGPD</TabsTrigger>}
+      </TabsList>
+
+      {/* Datos personales */}
+      <TabsContent value="datos">
+        <Card>
+          <CardContent>
+            <CardTitle className="mb-3 text-base">Datos personales</CardTitle>
+            <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
+                <dt className="text-slate-500">Nacimiento</dt>
+                <dd>{fmtDate(r.birthDate)}</dd>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
+                <dt className="text-slate-500">Ingreso</dt>
+                <dd>{fmtDate(r.admissionDate)}</dd>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
+                <dt className="text-slate-500">DNI/NIE</dt>
+                <dd>{r.nationalId ?? '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
+                <dt className="text-slate-500">Centro</dt>
+                <dd>{r.center.name}</dd>
+              </div>
+              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
+                <dt className="text-slate-500">Plaza</dt>
+                <dd>{r.bed ? `${r.bed.code} (${r.bed.unit.name})` : 'Sin plaza'}</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       {/* Escalas */}
-      <Card>
-        <CardContent>
-          <CardTitle className="mb-3 text-base">Escalas de valoración</CardTitle>
-          {r.assessments.length === 0 ? (
-            <p className="text-sm text-slate-500">Sin valoraciones.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {r.assessments.map((a) => (
-                <li key={a.id} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
-                  <span>
-                    <span className="font-medium">{ASSESSMENT_TYPE_LABELS[a.type]}</span>: {a.score}/
-                    {SCALE_RANGES[a.type as ScaleType].max}{' '}
-                    <Badge tone="blue">{interpretScale(a.type as ScaleType, a.score)}</Badge>
-                  </span>
-                  <span className="text-slate-400">{fmtDate(a.assessedAt)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {canClinical && (
-            <form
-              className="mt-3 flex flex-wrap items-end gap-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                addAssessment.mutate({
-                  residentId,
-                  type: assessment.type,
-                  score: Number(assessment.score),
-                });
-              }}
-            >
-              <div>
-                <Label htmlFor="aType">Escala</Label>
-                <Select
-                  id="aType"
-                  value={assessment.type}
-                  onChange={(e) => setAssessment((s) => ({ ...s, type: e.target.value as ScaleType }))}
-                >
-                  <option value="BARTHEL">Barthel (0–100)</option>
-                  <option value="TINETTI">Tinetti (0–28)</option>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="aScore">Puntuación</Label>
-                <Input
-                  id="aScore"
-                  type="number"
-                  min={0}
-                  max={SCALE_RANGES[assessment.type].max}
-                  value={assessment.score}
-                  onChange={(e) => setAssessment((s) => ({ ...s, score: e.target.value }))}
-                  required
-                />
-              </div>
-              <Button type="submit" disabled={addAssessment.isPending}>
-                Registrar valoración
-              </Button>
-              {addAssessment.error && (
-                <p role="alert" className="w-full text-sm text-red-600">
-                  {addAssessment.error.message}
-                </p>
-              )}
-            </form>
-          )}
-        </CardContent>
-      </Card>
+      <TabsContent value="escalas">
+        <Card>
+          <CardContent>
+            <CardTitle className="mb-3 text-base">Escalas de valoración</CardTitle>
+            {r.assessments.length === 0 ? (
+              <p className="text-sm text-slate-500">Sin valoraciones.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {r.assessments.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
+                    <span>
+                      <span className="font-medium">{ASSESSMENT_TYPE_LABELS[a.type]}</span>: {a.score}/
+                      {SCALE_RANGES[a.type as ScaleType].max}{' '}
+                      <Badge tone="blue">{interpretScale(a.type as ScaleType, a.score)}</Badge>
+                    </span>
+                    <span className="text-slate-400">{fmtDate(a.assessedAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {canClinical && (
+              <form
+                className="mt-3 flex flex-wrap items-start gap-3"
+                noValidate
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = assessmentForm.validate({ score: assessment.score });
+                  if (!data) return;
+                  addAssessment.mutate({ residentId, type: assessment.type, score: data.score });
+                }}
+              >
+                <div>
+                  <Label htmlFor="aType">Escala</Label>
+                  <Select
+                    id="aType"
+                    value={assessment.type}
+                    onChange={(e) => setAssessment((s) => ({ ...s, type: e.target.value as ScaleType }))}
+                  >
+                    <option value="BARTHEL">Barthel (0–100)</option>
+                    <option value="TINETTI">Tinetti (0–28)</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="aScore">Puntuación</Label>
+                  <Input
+                    id="aScore"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={assessmentMax}
+                    aria-invalid={Boolean(assessmentForm.errors.score)}
+                    value={assessment.score}
+                    onChange={(e) => setAssessment((s) => ({ ...s, score: e.target.value }))}
+                  />
+                  <FieldError>{assessmentForm.errors.score}</FieldError>
+                </div>
+                <div className="self-end">
+                  <Button type="submit" disabled={addAssessment.isPending}>
+                    Registrar valoración
+                  </Button>
+                </div>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Contactos */}
+      {/* Contactos */}
+      <TabsContent value="contactos">
         <Card>
           <CardContent>
             <CardTitle className="mb-3 text-base">Contactos</CardTitle>
@@ -199,24 +303,32 @@ export default function ResidentDetailPage() {
             {canWrite && (
               <form
                 className="mt-3 flex flex-col gap-2"
+                noValidate
                 onSubmit={(e) => {
                   e.preventDefault();
+                  const data = contactForm.validate({ name: contact.name, phone: contact.phone });
+                  if (!data) return;
                   addContact.mutate({
                     residentId,
-                    name: contact.name,
+                    name: data.name,
                     relation: contact.relation as ContactRelation,
                     phone: contact.phone || undefined,
                   });
                 }}
               >
-                <Input
-                  placeholder="Nombre"
-                  value={contact.name}
-                  onChange={(e) => setContact((s) => ({ ...s, name: e.target.value }))}
-                  required
-                />
+                <div>
+                  <Input
+                    placeholder="Nombre"
+                    aria-label="Nombre"
+                    aria-invalid={Boolean(contactForm.errors.name)}
+                    value={contact.name}
+                    onChange={(e) => setContact((s) => ({ ...s, name: e.target.value }))}
+                  />
+                  <FieldError>{contactForm.errors.name}</FieldError>
+                </div>
                 <div className="flex gap-2">
                   <Select
+                    aria-label="Parentesco"
                     value={contact.relation}
                     onChange={(e) => setContact((s) => ({ ...s, relation: e.target.value }))}
                   >
@@ -226,21 +338,29 @@ export default function ResidentDetailPage() {
                       </option>
                     ))}
                   </Select>
-                  <Input
-                    placeholder="Teléfono"
-                    value={contact.phone}
-                    onChange={(e) => setContact((s) => ({ ...s, phone: e.target.value }))}
-                  />
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Teléfono"
+                      aria-label="Teléfono"
+                      inputMode="tel"
+                      aria-invalid={Boolean(contactForm.errors.phone)}
+                      value={contact.phone}
+                      onChange={(e) => setContact((s) => ({ ...s, phone: e.target.value }))}
+                    />
+                  </div>
                 </div>
-                <Button type="submit" size="sm" disabled={addContact.isPending}>
+                <FieldError>{contactForm.errors.phone}</FieldError>
+                <Button type="submit" size="sm" disabled={addContact.isPending} className="self-start">
                   Añadir contacto
                 </Button>
               </form>
             )}
           </CardContent>
         </Card>
+      </TabsContent>
 
-        {/* Alergias */}
+      {/* Alergias */}
+      <TabsContent value="alergias">
         <Card>
           <CardContent>
             <CardTitle className="mb-3 text-base">Alergias</CardTitle>
@@ -260,22 +380,30 @@ export default function ResidentDetailPage() {
             {canClinical && (
               <form
                 className="mt-3 flex flex-col gap-2"
+                noValidate
                 onSubmit={(e) => {
                   e.preventDefault();
+                  const data = allergyForm.validate({ substance: allergy.substance });
+                  if (!data) return;
                   addAllergy.mutate({
                     residentId,
-                    substance: allergy.substance,
+                    substance: data.substance,
                     severity: (allergy.severity || undefined) as AllergySeverity | undefined,
                   });
                 }}
               >
-                <Input
-                  placeholder="Sustancia"
-                  value={allergy.substance}
-                  onChange={(e) => setAllergy((s) => ({ ...s, substance: e.target.value }))}
-                  required
-                />
+                <div>
+                  <Input
+                    placeholder="Sustancia"
+                    aria-label="Sustancia"
+                    aria-invalid={Boolean(allergyForm.errors.substance)}
+                    value={allergy.substance}
+                    onChange={(e) => setAllergy((s) => ({ ...s, substance: e.target.value }))}
+                  />
+                  <FieldError>{allergyForm.errors.substance}</FieldError>
+                </div>
                 <Select
+                  aria-label="Gravedad"
                   value={allergy.severity}
                   onChange={(e) => setAllergy((s) => ({ ...s, severity: e.target.value }))}
                 >
@@ -286,16 +414,18 @@ export default function ResidentDetailPage() {
                     </option>
                   ))}
                 </Select>
-                <Button type="submit" size="sm" disabled={addAllergy.isPending}>
+                <Button type="submit" size="sm" disabled={addAllergy.isPending} className="self-start">
                   Añadir alergia
                 </Button>
               </form>
             )}
           </CardContent>
         </Card>
+      </TabsContent>
 
-        {/* Diagnósticos */}
-        <Card className="md:col-span-2">
+      {/* Diagnósticos */}
+      <TabsContent value="diagnosticos">
+        <Card>
           <CardContent>
             <CardTitle className="mb-3 text-base">Diagnósticos</CardTitle>
             {r.diagnoses.length === 0 ? (
@@ -312,26 +442,28 @@ export default function ResidentDetailPage() {
             )}
             {canClinical && (
               <form
-                className="mt-3 flex flex-wrap items-end gap-2"
+                className="mt-3 flex flex-wrap items-start gap-2"
+                noValidate
                 onSubmit={(e) => {
                   e.preventDefault();
-                  addDiagnosis.mutate({
-                    residentId,
-                    description: diagnosis.description,
-                    code: diagnosis.code || undefined,
-                  });
+                  const data = diagnosisForm.validate({ description: diagnosis.description });
+                  if (!data) return;
+                  addDiagnosis.mutate({ residentId, description: data.description, code: diagnosis.code || undefined });
                 }}
               >
                 <div className="flex-1">
                   <Input
                     placeholder="Descripción"
+                    aria-label="Descripción"
+                    aria-invalid={Boolean(diagnosisForm.errors.description)}
                     value={diagnosis.description}
                     onChange={(e) => setDiagnosis((s) => ({ ...s, description: e.target.value }))}
-                    required
                   />
+                  <FieldError>{diagnosisForm.errors.description}</FieldError>
                 </div>
                 <Input
                   placeholder="CIE-10"
+                  aria-label="Código CIE-10"
                   value={diagnosis.code}
                   onChange={(e) => setDiagnosis((s) => ({ ...s, code: e.target.value }))}
                   className="max-w-[120px]"
@@ -343,7 +475,85 @@ export default function ResidentDetailPage() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </TabsContent>
+
+      {/* INC-2 — DSAR: derechos del interesado (solo dsar:manage) */}
+      {canDsar && (
+        <TabsContent value="rgpd">
+          <div className="flex flex-col gap-4">
+            <Card>
+              <CardContent>
+                <CardTitle className="mb-2 text-base">
+                  Derecho de acceso y portabilidad (art. 15 y 20)
+                </CardTitle>
+                <p className="mb-3 text-sm text-slate-600">
+                  Genera un fichero JSON con todos los datos que Vetlla guarda de este residente
+                  (expediente, atención directa, medicación, PIA y trazas de auditoría), con hash
+                  SHA-256 de integridad. La exportación queda registrada en el AuditLog.
+                </p>
+                <Button
+                  onClick={() => exportDsar.mutate({ residentId })}
+                  disabled={exportDsar.isPending}
+                  data-testid="dsar-export"
+                >
+                  {exportDsar.isPending ? 'Generando…' : 'Exportar datos del residente'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent>
+                <CardTitle className="mb-2 text-base text-red-700">
+                  Derecho de supresión (art. 17)
+                </CardTitle>
+                <p className="mb-3 text-sm text-slate-600">
+                  Anonimización irreversible: elimina nombre, DNI y fecha de nacimiento, borra
+                  contactos y vínculos familiares, y libera la plaza. Los registros clínicos se
+                  conservan <strong>anonimizados</strong> (obligación de conservación sanitaria;
+                  política de retención pendiente de definición — Q-003). El AuditLog no se
+                  modifica: es la evidencia de trazabilidad.
+                </p>
+                <div className="flex flex-col gap-3" style={{ maxWidth: '420px' }}>
+                  <div>
+                    <Label htmlFor="dsar-confirm">
+                      Escribe el apellido del residente para confirmar
+                    </Label>
+                    <Input
+                      id="dsar-confirm"
+                      value={dsarConfirmLastName}
+                      onChange={(e) => setDsarConfirmLastName(e.target.value)}
+                      placeholder={r.lastName}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dsar-reason">Motivo de la solicitud</Label>
+                    <Input
+                      id="dsar-reason"
+                      value={dsarReason}
+                      onChange={(e) => setDsarReason(e.target.value)}
+                      placeholder="p. ej. solicitud del interesado tras el alta"
+                      maxLength={500}
+                    />
+                  </div>
+                  <Button
+                    variant="danger"
+                    onClick={() => void handleAnonymize()}
+                    disabled={
+                      anonymize.isPending ||
+                      dsarConfirmLastName.trim() === '' ||
+                      dsarReason.trim().length < 5
+                    }
+                    data-testid="dsar-anonymize"
+                  >
+                    {anonymize.isPending ? 'Anonimizando…' : 'Anonimizar residente (irreversible)'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      )}
+    </Tabs>
   );
 }

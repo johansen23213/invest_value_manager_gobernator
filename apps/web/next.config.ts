@@ -2,8 +2,8 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // El cliente de Prisma vive en el workspace @vetlla/db; lo transpilamos.
-  transpilePackages: ['@vetlla/db', '@vetlla/ui'],
+  // Los workspaces @vetlla/* exportan TypeScript fuente; los transpilamos.
+  transpilePackages: ['@vetlla/ai', '@vetlla/db', '@vetlla/ui'],
   serverExternalPackages: ['@prisma/client', 'bcryptjs'],
 };
 

@@ -24,7 +24,8 @@ function Kpi({ label, value, loading, href, cta }: { label: string; value: numbe
 const QUICK_LINKS: { perm: Permission; href: string; title: string; desc: string }[] = [
   { perm: 'care:write', href: '/atencion', title: 'Atención directa', desc: 'Registrar a pie de cama' },
   { perm: 'residents:read', href: '/residentes', title: 'Residentes', desc: 'Expedientes y altas' },
-  { perm: 'centers:read', href: '/centros', title: 'Centros', desc: 'Unidades, plazas y ocupación' },
+  { perm: 'centers:read', href: '/ocupacion', title: 'Ocupación', desc: 'Plano y KPIs por unidad' },
+  { perm: 'care:read', href: '/alertas', title: 'Alertas', desc: 'Medicación e incidencias de hoy' },
 ];
 
 export function DashboardClient() {
@@ -48,14 +49,19 @@ export function DashboardClient() {
       <h1 className="text-2xl font-bold">Panel</h1>
 
       {canMeds && alertCount > 0 && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <Link
+          href="/alertas"
+          className="block rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 transition hover:bg-red-100"
+          role="alert"
+        >
           <strong>{alertCount}</strong> dosis no administradas hoy.{' '}
           {alerts.data?.slice(0, 3).map((a) => (
             <span key={`${a.medicationId}-${a.scheduledAt}`} className="mr-2">
               {a.residentName} ({a.medicationName})
             </span>
           ))}
-        </div>
+          <span className="font-medium underline">Ver alertas →</span>
+        </Link>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">

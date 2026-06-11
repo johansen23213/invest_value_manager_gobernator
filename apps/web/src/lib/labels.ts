@@ -65,6 +65,12 @@ export const DOSE_STATUS_LABELS: Record<string, string> = {
   RECHAZADO: 'Rechazado',
 };
 
+export const SHIFT_LABELS: Record<string, string> = {
+  MANANA: 'Mañana',
+  TARDE: 'Tarde',
+  NOCHE: 'Noche',
+};
+
 export const GOAL_STATUS_LABELS: Record<string, string> = {
   PENDIENTE: 'Pendiente',
   EN_PROGRESO: 'En progreso',
@@ -84,6 +90,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   ADMINISTER: 'Administración',
   RECORD: 'Registro',
   LOGIN: 'Acceso',
+  COPILOT_DRAFT: 'Borrador del copiloto',
+  COPILOT_CONFIRM: 'Confirmación del copiloto',
 };
 
 export const ROLE_LABELS: Record<string, string> = {

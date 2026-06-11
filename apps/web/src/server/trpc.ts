@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import { forTenant, logAudit, type AuditEntry } from '@vetlla/db';
 import { auth } from '@/auth';
 import { hasPermission, type Permission } from '@/lib/rbac';
+import { logger } from '@/server/logger';
 
 export type AuditInput = Omit<AuditEntry, 'tenantId' | 'actorId' | 'actorEmail'>;
 
@@ -29,10 +30,24 @@ const t = initTRPC.context<Context>().create({
 });
 
 export const createTRPCRouter = t.router;
-export const publicProcedure = t.procedure;
+
+// INC-6 — Observabilidad: duración de cada procedure como log JSON sin PII
+// (ruta, ok, ms). Umbral para no ensuciar: solo las lentas (>500 ms); los
+// errores ya los traza el onError del route handler.
+const timingMiddleware = t.middleware(async ({ path, next }) => {
+  const start = Date.now();
+  const result = await next();
+  const durationMs = Date.now() - start;
+  if (durationMs > 500) {
+    logger.warn('trpc.slow', { path, ok: result.ok, durationMs });
+  }
+  return result;
+});
+
+export const publicProcedure = t.procedure.use(timingMiddleware);
 
 /** Exige sesión iniciada. */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(timingMiddleware).use(({ ctx, next }) => {
   if (!ctx.session?.user) {
     throw new TRPCError({ code: 'UNAUTHORIZED' });
   }

@@ -37,6 +37,12 @@ query expondría datos de otro centro. El aislamiento debe vivir en la base de d
 - **Rol de BD separado para la app (no propietario):** válido y más estricto, pero
   exige dos cadenas de conexión (migración vs runtime). Con `FORCE` + GUC logramos el
   mismo aislamiento verificable con un solo rol. Se reconsiderará en producción.
+  **ENMENDADO (2026-06-11, ADR-0014):** la premisa "con FORCE + un solo rol basta" es
+  **falsa si ese rol es SUPERUSER** — Postgres ignora RLS para superusuarios aunque haya
+  `FORCE`. El CI lo destapó (rol `vetlla` = superusuario de la imagen oficial). El modelo
+  de producción pasa a ser un **rol de app no-propietario `NOSUPERUSER NOBYPASSRLS`**
+  (owner aplica migraciones; app y tests de RLS conectan como rol de app). Bypass de
+  plataforma sigue por GUC. Ver **ADR-0014**.
 - **Base de datos por tenant:** mayor aislamiento pero peor coste/operación; contra el
   principio de "alta de un centro en minutos".
 

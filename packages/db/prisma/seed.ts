@@ -5,6 +5,9 @@ import {
   CenterType,
   ContactRelation,
   DependencyGrade,
+  MedicationRoute,
+  MedicationType,
+  Prisma,
   ResidentStatus,
   Sex,
   asPlatformAdmin,
@@ -41,17 +44,18 @@ function pick<T>(arr: T[], i: number): T {
 
 async function seedUsers(tenantId: string) {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  // R-01: jobTitle coherente por usuario demo para que la pantalla de equipo se vea poblada.
   const users = [
-    { email: 'superadmin@vetlla.dev', name: 'Plataforma', role: UserRole.SUPERADMIN, tenantId: null },
-    { email: 'direccion@demo.vetlla.dev', name: 'Dirección Demo', role: UserRole.DIRECTOR, tenantId },
-    { email: 'sanitario@demo.vetlla.dev', name: 'Enfermería Demo', role: UserRole.SANITARIO, tenantId },
-    { email: 'auxiliar@demo.vetlla.dev', name: 'Auxiliar Demo', role: UserRole.AUXILIAR, tenantId },
-    { email: 'familiar@demo.vetlla.dev', name: 'Familiar Demo', role: UserRole.FAMILIAR, tenantId },
+    { email: 'superadmin@vetlla.dev',   name: 'Plataforma',      role: UserRole.SUPERADMIN, tenantId: null,    jobTitle: null },
+    { email: 'direccion@demo.vetlla.dev', name: 'Dirección Demo', role: UserRole.DIRECTOR,   tenantId,          jobTitle: 'Director/a' },
+    { email: 'sanitario@demo.vetlla.dev', name: 'Enfermería Demo',role: UserRole.SANITARIO,  tenantId,          jobTitle: 'Enfermero/a (DUE)' },
+    { email: 'auxiliar@demo.vetlla.dev',  name: 'Auxiliar Demo',  role: UserRole.AUXILIAR,   tenantId,          jobTitle: 'Auxiliar de atención directa' },
+    { email: 'familiar@demo.vetlla.dev',  name: 'Familiar Demo',  role: UserRole.FAMILIAR,   tenantId,          jobTitle: null },
   ];
   for (const u of users) {
     await db.user.upsert({
       where: { email: u.email },
-      update: { name: u.name, role: u.role, tenantId: u.tenantId },
+      update: { name: u.name, role: u.role, tenantId: u.tenantId, jobTitle: u.jobTitle },
       create: { ...u, passwordHash },
     });
   }
@@ -152,15 +156,58 @@ async function seedResidents(
 
     // Medicación (parte de los residentes). Pauta con dosis de mañana para que
     // se generen alertas de no-administrado durante el día.
+    // Sprint M: se usan los nuevos enums route, type y daysOfWeek.
     if (idx % 2 === 0) {
+      const medNames = ['Paracetamol', 'Omeprazol', 'Enalapril', 'Metformina'];
+      const medDoses = ['1g', '20mg', '10mg', '850mg'];
+      const medRoutes: MedicationRoute[] = [
+        MedicationRoute.ORAL,
+        MedicationRoute.ORAL,
+        MedicationRoute.ORAL,
+        MedicationRoute.ORAL,
+      ];
+      const medUnits = ['comprimido', 'comprimido', 'comprimido', 'comprimido'];
+      // Mayoría crónicas; índice 2 (Enalapril) → aguda con fin; índice 3 → PRN
+      const medTypes: MedicationType[] = [
+        MedicationType.CRONICO,
+        MedicationType.CRONICO,
+        MedicationType.AGUDO,
+        MedicationType.PRN,
+      ];
+      const medDaysOfWeek: (number[] | null)[] = [
+        null,         // todos los días
+        null,         // todos los días
+        [1, 3, 5],    // lunes, miércoles, viernes
+        null,         // PRN — sin pauta fija de días
+      ];
+      const medEndDate: (Date | null)[] = [
+        null,
+        null,
+        new Date(2026, 11, 31), // fin de año
+        null,
+      ];
+      // idx siempre es par aquí (idx % 2 === 0), así que idx/2 da secuencia 0,1,2,3,4…
+      // para que los 4 tipos (CRONICO, CRONICO, AGUDO, PRN) roten correctamente.
+      const typeIdx = Math.floor(idx / 2) % 4;
+      // PRN no lleva horas fijas en el MAR; times vacío se admite para PRN
+      const times = medTypes[typeIdx] === MedicationType.PRN ? [] : ['08:00', '20:00'];
       await db.medication.create({
         data: {
           tenantId,
           residentId: resident.id,
-          name: pick(['Paracetamol', 'Omeprazol', 'Enalapril', 'Metformina'], idx),
-          dose: pick(['1g', '20mg', '10mg', '850mg'], idx),
-          times: ['08:00', '20:00'],
+          name: pick(medNames, idx),
+          dose: pick(medDoses, idx),
+          route: medRoutes[typeIdx],
+          unit: medUnits[typeIdx],
+          times,
+          type: medTypes[typeIdx],
+          // Prisma Json? nullable: null de JS no es InputJsonValue; usar DbNull o undefined.
+          // undefined omite el campo y deja el default de la columna (NULL en BD).
+          daysOfWeek: medDaysOfWeek[typeIdx] !== null
+            ? (medDaysOfWeek[typeIdx] as Prisma.InputJsonValue)
+            : Prisma.DbNull,
           startDate: new Date(2024, 0, 1),
+          endDate: medEndDate[typeIdx],
         },
       });
     }

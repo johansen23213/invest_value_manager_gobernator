@@ -10,6 +10,8 @@ import { ToastProvider } from '@/components/toast';
 import { ConfirmProvider } from '@/components/confirm';
 import { Logo } from '@/components/logo';
 import { hasPermission } from '@/lib/rbac';
+import { forTenant } from '@vetlla/db';
+import { trialDaysLeft } from '@/lib/plans';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -17,6 +19,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = session;
   const { t } = await getT();
   const isFamily = user.role === 'FAMILIAR';
+
+  // Banner de prueba: días restantes del TRIAL (visible para todo el equipo).
+  let trialDays: number | null = null;
+  if (user.tenantId) {
+    const db = forTenant({ tenantId: user.tenantId, bypassRls: user.role === 'SUPERADMIN' });
+    const tenant = await db.tenant.findFirst({ select: { plan: true, trialEndsAt: true } });
+    if (tenant?.plan === 'TRIAL') trialDays = trialDaysLeft(tenant.trialEndsAt);
+  }
 
   return (
     <CareSyncProvider>
@@ -42,15 +52,40 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                     <Link href="/centros" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.centers')}
                     </Link>
+                    {hasPermission(user.role, 'centers:read') && (
+                      <Link href="/ocupacion" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.occupancy')}
+                      </Link>
+                    )}
                     <Link href="/residentes" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.residents')}
                     </Link>
                     <Link href="/atencion" className="rounded-md px-3 py-2 hover:bg-slate-100">
                       {t('nav.care')}
                     </Link>
+                    {hasPermission(user.role, 'care:read') && (
+                      <Link href="/alertas" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.alerts')}
+                      </Link>
+                    )}
+                    {hasPermission(user.role, 'care:read') && (
+                      <Link href="/conflictos" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.conflicts')}
+                      </Link>
+                    )}
+                    {hasPermission(user.role, 'users:read') && (
+                      <Link href="/equipo" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.team')}
+                      </Link>
+                    )}
                     {hasPermission(user.role, 'audit:read') && (
                       <Link href="/auditoria" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                        Actividad
+                        {t('nav.audit')}
+                      </Link>
+                    )}
+                    {hasPermission(user.role, 'users:write') && (
+                      <Link href="/plan" className="rounded-md px-3 py-2 hover:bg-slate-100">
+                        {t('nav.plan')}
                       </Link>
                     )}
                   </>
@@ -79,6 +114,27 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
+          {/* Banner de TRIAL: cuántos días quedan y a dónde ir para activar el plan */}
+          {trialDays !== null && (
+            <div
+              role="status"
+              className={`border-b px-4 py-2 text-center text-sm font-medium ${
+                trialDays > 5
+                  ? 'border-amber-200 bg-amber-50 text-amber-800'
+                  : 'border-red-200 bg-red-50 text-red-800'
+              }`}
+            >
+              {trialDays > 0 ? t('plan.trialLeft', { days: trialDays }) : t('plan.trialEnded')}
+              {hasPermission(user.role, 'users:write') && (
+                <>
+                  {' · '}
+                  <Link href="/plan" className="underline">
+                    {t('nav.plan')}
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
           <main id="contenido" className="mx-auto max-w-5xl px-4 py-8">
             {children}
           </main>

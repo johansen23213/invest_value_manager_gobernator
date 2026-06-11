@@ -7,14 +7,24 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import {
+  ToastAction as ToastActionPrimitive,
+  ToastClose,
+  ToastProviderPrimitive,
+  ToastRoot,
+  ToastTitle,
+  ToastViewport,
+} from '@vetlla/ui';
 
-// Sistema de notificaciones (UX-04). Accesible: aria-live="polite" + role="status".
+// Sistema de notificaciones (UX-04) sobre Radix Toast (UX-08): región
+// aria-live gestionada, foco con teclado (F8), descarte por gesto/teclado y
+// pausa al pasar el ratón. La API imperativa (toast/success/error) se mantiene.
 type ToastType = 'success' | 'error' | 'info';
 interface ToastAction {
   label: string;
   onClick: () => void;
 }
-interface Toast {
+interface ToastItem {
   id: number;
   type: ToastType;
   message: string;
@@ -29,16 +39,10 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const TONE: Record<ToastType, string> = {
-  success: 'border-green-200 bg-green-50 text-green-900',
-  error: 'border-red-200 bg-red-50 text-red-900',
-  info: 'border-slate-200 bg-white text-slate-900',
-};
-
 let counter = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const remove = useCallback((id: number) => {
     setToasts((list) => list.filter((t) => t.id !== id));
@@ -48,9 +52,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, type: ToastType = 'info', action?: ToastAction) => {
       const id = ++counter;
       setToasts((list) => [...list, { id, type, message, action }]);
-      setTimeout(() => remove(id), action ? 7000 : 4500);
     },
-    [remove],
+    [],
   );
 
   const success = useCallback(
@@ -61,22 +64,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   return (
     <ToastContext.Provider value={{ toast, success, error }}>
-      {children}
-      <div
-        className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-full max-w-sm flex-col gap-2"
-        aria-live="polite"
-        role="status"
-      >
+      <ToastProviderPrimitive swipeDirection="right">
+        {children}
         {toasts.map((t) => (
-          <div
+          <ToastRoot
             key={t.id}
-            className={`pointer-events-auto flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm shadow-md ${TONE[t.type]}`}
+            tone={t.type}
+            // Las que llevan acción (p. ej. deshacer) duran más.
+            duration={t.action ? 7000 : 4500}
+            // Los errores se anuncian de forma asertiva.
+            type={t.type === 'error' ? 'foreground' : 'background'}
+            onOpenChange={(open) => {
+              if (!open) remove(t.id);
+            }}
           >
-            <span>{t.message}</span>
+            <ToastTitle>{t.message}</ToastTitle>
             <span className="flex items-center gap-2">
               {t.action && (
-                <button
-                  type="button"
+                <ToastActionPrimitive
+                  altText={t.action.label}
                   onClick={() => {
                     t.action?.onClick();
                     remove(t.id);
@@ -84,20 +90,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   className="font-semibold underline underline-offset-2"
                 >
                   {t.action.label}
-                </button>
+                </ToastActionPrimitive>
               )}
-              <button
-                type="button"
-                onClick={() => remove(t.id)}
-                aria-label="Cerrar"
-                className="text-slate-400 hover:text-slate-700"
-              >
+              <ToastClose aria-label="Cerrar" className="text-slate-400 hover:text-slate-700">
                 ×
-              </button>
+              </ToastClose>
             </span>
-          </div>
+          </ToastRoot>
         ))}
-      </div>
+        <ToastViewport />
+      </ToastProviderPrimitive>
     </ToastContext.Provider>
   );
 }

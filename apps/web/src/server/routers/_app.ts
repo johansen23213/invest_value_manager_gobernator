@@ -1,6 +1,5 @@
 import {
   createTRPCRouter,
-  permissionProcedure,
   protectedProcedure,
   publicProcedure,
   tenantProcedure,
@@ -11,10 +10,19 @@ import { unitsRouter } from '@/server/routers/units';
 import { bedsRouter } from '@/server/routers/beds';
 import { residentsRouter } from '@/server/routers/residents';
 import { careRouter } from '@/server/routers/care';
+import { copilotRouter } from '@/server/routers/copilot';
 import { medicationsRouter } from '@/server/routers/medications';
+import { treatmentsRouter } from '@/server/routers/treatments';
 import { carePlansRouter } from '@/server/routers/careplans';
 import { familyRouter } from '@/server/routers/family';
 import { auditRouter } from '@/server/routers/audit';
+import { dsarRouter } from '@/server/routers/dsar';
+import { usersRouter } from '@/server/routers/users';
+import { overviewRouter } from '@/server/routers/overview';
+import { signupRouter } from '@/server/routers/signup';
+import { planRouter } from '@/server/routers/plan';
+import { accountRouter } from '@/server/routers/account';
+import { conflictsRouter } from '@/server/routers/conflicts';
 
 // Router raíz de la API tipada. Cada hito añade sus routers
 // (centros, residentes, atención, medicación, copiloto...).
@@ -40,25 +48,25 @@ export const appRouter = createTRPCRouter({
     current: tenantProcedure.query(({ ctx }) => ctx.db.tenant.findFirst()),
   }),
 
-  users: createTRPCRouter({
-    /** Usuarios del tenant. Aislados por RLS; requiere permiso users:read. */
-    list: permissionProcedure('users:read').query(({ ctx }) =>
-      ctx.db.user.findMany({
-        select: { id: true, email: true, name: true, role: true },
-        orderBy: { email: 'asc' },
-      }),
-    ),
-  }),
+  users: usersRouter,
 
   centers: centersRouter,
   units: unitsRouter,
   beds: bedsRouter,
   residents: residentsRouter,
   care: careRouter,
+  copilot: copilotRouter,
   medications: medicationsRouter,
+  treatments: treatmentsRouter,
   carePlans: carePlansRouter,
   family: familyRouter,
   audit: auditRouter,
+  dsar: dsarRouter,
+  overview: overviewRouter,
+  signup: signupRouter,
+  plan: planRouter,
+  account: accountRouter,
+  conflicts: conflictsRouter,
 });
 
 export type AppRouter = typeof appRouter;
