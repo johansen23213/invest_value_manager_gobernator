@@ -235,6 +235,27 @@ describe('paridad es/ca — Rediseño Dashboard + Residente (2026-06-11)', () =>
   });
 });
 
+describe('paridad es/ca — Ola 1 Lifecare (auth panel claim)', () => {
+  const authPanelKeys = ['auth.panel.claim', 'auth.panel.sub', 'auth.panel.trust'];
+
+  it('todas las claves auth panel existen en es', () => {
+    for (const key of authPanelKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves auth panel existen en ca', () => {
+    for (const key of authPanelKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('el claim del panel difiere entre es y ca (paridad real)', () => {
+    expect(DICTIONARIES.ca['auth.panel.claim']).not.toBe(DICTIONARIES.es['auth.panel.claim']);
+    expect(DICTIONARIES.ca['auth.panel.sub']).not.toBe(DICTIONARIES.es['auth.panel.sub']);
+  });
+});
+
 describe('paridad es/ca — Wave B Sprint M (equipo + RBAC R-01/R-03)', () => {
   const waveBKeys = [
     'nav.team',

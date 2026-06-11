@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { auth, signOut } from '@/auth';
@@ -13,12 +14,35 @@ import { hasPermission } from '@/lib/rbac';
 import { forTenant } from '@vetlla/db';
 import { trialDaysLeft } from '@/lib/plans';
 
+// Componente de enlace de navegación con indicador de página activa.
+// aria-current="page" para accesibilidad (WCAG 2.4.4) + estilo visual petróleo.
+async function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+  return (
+    <Link
+      href={href}
+      aria-current={isActive ? 'page' : undefined}
+      className={
+        isActive
+          ? 'rounded-full px-3.5 py-1.5 text-sm font-semibold bg-brand-700 text-white transition-smooth'
+          : 'rounded-full px-3.5 py-1.5 text-sm font-medium text-[#1A3A3F]/70 transition-smooth hover:bg-brand-50 hover:text-brand-700'
+      }
+    >
+      {label}
+    </Link>
+  );
+}
+
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect('/login');
   const { user } = session;
   const { t } = await getT();
   const isFamily = user.role === 'FAMILIAR';
+
+  // Pathname actual para el indicador de página activa.
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') ?? '/';
 
   // Banner de prueba: días restantes del TRIAL (visible para todo el equipo).
   let trialDays: number | null = null;
@@ -32,73 +56,49 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <CareSyncProvider>
       <ToastProvider>
         <ConfirmProvider>
-          <div className="min-h-screen bg-surface">
+          <div className="min-h-screen bg-[#FAF7F2]">
             {/* Enlace de salto al contenido (WCAG 2.4.1) */}
             <a
               href="#contenido"
-              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
             >
               {t('skip.toContent')}
             </a>
 
-            <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+            {/* Header con fondo blanco/crema y borde inferior petróleo sutil */}
+            <header className="sticky top-0 z-30 border-b border-brand-100/60 bg-white/95 backdrop-blur-sm">
               <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2.5">
                 {/* Marca + nav principal */}
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-4">
                   <Link href={isFamily ? '/portal' : '/'} aria-label={t('app.name')}>
                     <Logo />
                   </Link>
                   <nav className="flex items-center gap-0.5 text-sm" aria-label="Principal">
                     {isFamily ? (
-                      <Link
-                        href="/portal"
-                        className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900"
-                      >
-                        {t('nav.portal')}
-                      </Link>
+                      <NavLink href="/portal" label={t('nav.portal')} pathname={pathname} />
                     ) : (
                       <>
-                        <Link href="/" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                          {t('nav.home')}
-                        </Link>
-                        <Link href="/centros" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                          {t('nav.centers')}
-                        </Link>
+                        <NavLink href="/" label={t('nav.home')} pathname={pathname} />
+                        <NavLink href="/centros" label={t('nav.centers')} pathname={pathname} />
                         {hasPermission(user.role, 'centers:read') && (
-                          <Link href="/ocupacion" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                            {t('nav.occupancy')}
-                          </Link>
+                          <NavLink href="/ocupacion" label={t('nav.occupancy')} pathname={pathname} />
                         )}
-                        <Link href="/residentes" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                          {t('nav.residents')}
-                        </Link>
-                        <Link href="/atencion" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                          {t('nav.care')}
-                        </Link>
+                        <NavLink href="/residentes" label={t('nav.residents')} pathname={pathname} />
+                        <NavLink href="/atencion" label={t('nav.care')} pathname={pathname} />
                         {hasPermission(user.role, 'care:read') && (
-                          <Link href="/alertas" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                            {t('nav.alerts')}
-                          </Link>
+                          <NavLink href="/alertas" label={t('nav.alerts')} pathname={pathname} />
                         )}
                         {hasPermission(user.role, 'care:read') && (
-                          <Link href="/conflictos" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                            {t('nav.conflicts')}
-                          </Link>
+                          <NavLink href="/conflictos" label={t('nav.conflicts')} pathname={pathname} />
                         )}
                         {hasPermission(user.role, 'users:read') && (
-                          <Link href="/equipo" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                            {t('nav.team')}
-                          </Link>
+                          <NavLink href="/equipo" label={t('nav.team')} pathname={pathname} />
                         )}
                         {hasPermission(user.role, 'audit:read') && (
-                          <Link href="/auditoria" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                            {t('nav.audit')}
-                          </Link>
+                          <NavLink href="/auditoria" label={t('nav.audit')} pathname={pathname} />
                         )}
                         {hasPermission(user.role, 'users:write') && (
-                          <Link href="/plan" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
-                            {t('nav.plan')}
-                          </Link>
+                          <NavLink href="/plan" label={t('nav.plan')} pathname={pathname} />
                         )}
                       </>
                     )}
@@ -109,9 +109,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 <div className="flex items-center gap-2 text-sm">
                   <LocaleSwitcher />
                   {!isFamily && <SyncStatusBadge />}
-                  <span className="hidden rounded-lg bg-slate-100 px-3 py-1.5 text-slate-600 sm:inline">
+                  <span className="hidden rounded-full bg-brand-50 px-3 py-1.5 text-[#1A3A3F]/70 sm:inline">
                     {user.name ?? user.email}
-                    <span className="ml-1 text-slate-400">· {t(`role.${user.role}`)}</span>
+                    <span className="ml-1 text-[#1A3A3F]/70">· {t(`role.${user.role}`)}</span>
                   </span>
                   <form
                     action={async () => {
@@ -121,7 +121,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                   >
                     <button
                       type="submit"
-                      className="min-h-touch rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-700 transition-smooth hover:border-slate-300 hover:bg-slate-100"
+                      className="min-h-touch rounded-full border border-brand-200 px-3 py-1.5 text-sm font-medium text-[#1A3A3F]/70 transition-smooth hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
                     >
                       {t('action.logout')}
                     </button>
