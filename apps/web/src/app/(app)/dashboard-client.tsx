@@ -25,10 +25,11 @@ function ringDash(pct: number, r: number): { dashArray: string; dashOffset: numb
   return { dashArray: `${circ}`, dashOffset: offset };
 }
 
+// Colores Lifecare para el anillo: teal petróleo normal, coral en alerta.
 function ringColor(rate: number): string {
-  if (rate >= 0.95) return '#dc2626'; // red-600
-  if (rate >= 0.8) return '#d97706';  // amber-600
-  return '#0d9488';                    // brand-600
+  if (rate >= 0.95) return '#d4552d'; // warm-600 (coral)
+  if (rate >= 0.8)  return '#d97706'; // amber-600 (aviso)
+  return '#14666B';                    // brand-600 (petróleo)
 }
 
 // ---------------------------------------------------------------------------
@@ -110,21 +111,21 @@ function KpiCard({ label, value, sub, loading, href, cta, accent, large }: KpiCa
       }`}
     >
       <CardContent className="flex flex-col gap-1">
-        <p className="text-sm font-medium text-slate-500">{label}</p>
+        <p className="text-sm font-medium text-[#1A3A3F]/70">{label}</p>
         {loading ? (
           <Skeleton className="mt-1 h-9 w-20" />
         ) : (
-          <p className={large ? 'text-4xl font-extrabold tracking-tight text-slate-900' : 'text-3xl font-bold text-slate-900'}>
+          <p className={large ? 'text-4xl font-extrabold tracking-tight text-[#1A3A3F]' : 'text-3xl font-bold text-[#1A3A3F]'}>
             {value}
             {sub && (
-              <span className="ml-1.5 text-sm font-normal text-slate-400">{sub}</span>
+              <span className="ml-1.5 text-sm font-normal text-[#1A3A3F]/70">{sub}</span>
             )}
           </p>
         )}
         {href && cta && !loading && (
           <Link
             href={href}
-            className="mt-1 text-sm font-medium text-brand-700 hover:underline focus-visible:underline"
+            className="mt-1 text-sm font-semibold text-brand-600 hover:text-brand-700 hover:underline focus-visible:underline"
           >
             {cta}
           </Link>
@@ -154,15 +155,15 @@ function OccupancyKpiCard({
       <CardContent className="flex items-center gap-4">
         <OccupancyRing occupied={occupied} total={total} loading={loading} />
         <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-medium text-slate-500">{t('dashboard.kpi.occupancy')}</p>
+          <p className="text-sm font-medium text-[#1A3A3F]/70">{t('dashboard.kpi.occupancy')}</p>
           {loading ? (
             <Skeleton className="h-9 w-16" />
           ) : (
             <>
-              <p className="text-3xl font-bold text-slate-900" aria-label={`Ocupación: ${pctLabel}`}>
+              <p className="text-3xl font-bold text-[#1A3A3F]" aria-label={`Ocupación: ${pctLabel}`}>
                 {pctLabel}
               </p>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[#1A3A3F]/70">
                 {occupied}/{total} {t('dashboard.kpi.occupancyOf', { total })}
               </p>
             </>
@@ -218,14 +219,14 @@ const QUICK_LINK_DESCS_CA: Record<string, string> = {
   '/atencion': 'Registrar al llit del resident',
   '/residentes': 'Expedients i altes',
   '/ocupacion': 'Plànol i KPIs per unitat',
-  '/alertas': 'Medicació i incidències d\'avui',
+  '/alertas': "Medicació i incidències d'avui",
 };
 
 function QuickLink({ href, icon, title, desc }: { href: string; icon: string; title: string; desc: string }) {
   return (
     <Link
       href={href}
-      className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-card transition-smooth hover:border-brand-300 hover:shadow-card-hover focus-visible:border-brand-500"
+      className="group flex items-start gap-3 rounded-2xl border border-brand-100/60 bg-white p-4 shadow-card transition-smooth hover:border-brand-300 hover:shadow-card-hover focus-visible:border-brand-500"
     >
       <span
         aria-hidden="true"
@@ -234,8 +235,8 @@ function QuickLink({ href, icon, title, desc }: { href: string; icon: string; ti
         {icon}
       </span>
       <div>
-        <p className="font-semibold text-slate-900">{title}</p>
-        <p className="text-sm text-slate-500">{desc}</p>
+        <p className="font-semibold text-[#1A3A3F]">{title}</p>
+        <p className="text-sm text-[#1A3A3F]/70">{desc}</p>
       </div>
     </Link>
   );
@@ -275,26 +276,26 @@ function AttentionPanel({
   return (
     <Link
       href="/alertas"
-      className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 transition-smooth hover:bg-red-100"
+      className="flex items-start gap-3 rounded-2xl border border-warm-200 bg-warm-50 px-5 py-4 transition-smooth hover:bg-warm-100"
       role="alert"
     >
       {/* Warning SVG inline */}
-      <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0 text-red-600">
+      <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0 text-warm-600">
         <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" strokeWidth="1.5" />
         <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         <circle cx="12" cy="17" r="0.5" fill="currentColor" stroke="currentColor" />
       </svg>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-red-800">
+        <p className="font-semibold text-warm-800">
           {t('dashboard.medAlert', { count: alertCount })}
         </p>
         {alertNames.length > 0 && (
-          <p className="mt-0.5 truncate text-sm text-red-700">
+          <p className="mt-0.5 truncate text-sm text-warm-700">
             {names}{hasMore ? ` +${alertNames.length - 4} más` : ''}
           </p>
         )}
       </div>
-      <span className="shrink-0 text-sm font-medium text-red-700 underline">{t('dashboard.viewAll')}</span>
+      <span className="shrink-0 text-sm font-semibold text-warm-700 underline">{t('dashboard.viewAll')}</span>
     </Link>
   );
 }
@@ -344,11 +345,11 @@ export function DashboardClient() {
         {me.isLoading ? (
           <Skeleton className="h-9 w-64" />
         ) : (
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#1A3A3F]">
             {t(greetingKey, { name: userName })}
           </h1>
         )}
-        <p className="mt-1 text-base text-slate-500">
+        <p className="mt-1 text-base text-[#1A3A3F]/70">
           <time dateTime={new Date().toISOString().slice(0, 10)}>{todayCapitalized}</time>
           {' · '}
           {t('dashboard.subtitle')}
@@ -360,7 +361,7 @@ export function DashboardClient() {
         <section aria-labelledby="attention-heading">
           <h2
             id="attention-heading"
-            className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400"
+            className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/60"
           >
             {t('dashboard.attention')}
           </h2>
@@ -421,7 +422,7 @@ export function DashboardClient() {
         <section aria-labelledby="quick-links-heading">
           <h2
             id="quick-links-heading"
-            className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400"
+            className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/60"
           >
             {t('dashboard.quickLinks')}
           </h2>

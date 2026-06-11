@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: light;
+  /* Token semántico: color de texto base (navy cálido, no slate-900 frío). */
+  --color-text-base: #1A3A3F;
 }
 
 /* Transiciones suaves en toda la app (respeta prefers-reduced-motion). */
@@ -15,14 +17,15 @@
   }
 }
 
-/* Fondo base ligeramente cálido — más humano que el blanco puro. */
+/* Fondo base crema/hueso Lifecare — más humano que el blanco puro o el slate-50 frío. */
 body {
-  background-color: #fafaf9;
+  background-color: #FAF7F2;
+  color: #1A3A3F;
 }
 
-/* Focus ring consistente y visible en todos los elementos interactivos. */
+/* Focus ring consistente y visible. Color petróleo para contraste sobre crema y blanco. */
 :focus-visible {
-  outline: 2px solid #0d9488;
+  outline: 2px solid #14666B;
   outline-offset: 2px;
 }
 
@@ -44,13 +47,32 @@ body {
   }
 }
 
-/* Anillo de ocupación SVG — asegura que el círculo se renderice bien. */
+/* Anillo de ocupación SVG — track en tono crema/gris cálido. */
 .occupancy-ring-track {
-  stroke: #e2e8f0;
+  stroke: #E8DDD0;
   fill: none;
 }
 .occupancy-ring-fill {
   fill: none;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Divisor ondulado SVG para las páginas de auth (decorativo). */
+.wave-divider {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+
+/* Blob decorativo de fondo — usa clip-path para no añadir dependencias. */
+.blob-bg::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(ellipse 60% 50% at 30% 40%, rgb(20 102 107 / 0.12) 0%, transparent 70%),
+              radial-gradient(ellipse 40% 40% at 75% 70%, rgb(231 111 81 / 0.08) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
 }
