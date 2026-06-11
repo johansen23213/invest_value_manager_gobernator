@@ -20,6 +20,11 @@ const es: Record<string, string> = {
   'nav.conflicts': 'Conflictos',
   'nav.portal': 'Portal',
 
+  // Panel decorativo auth — claim Lifecare (dirección de arte Ola 1)
+  'auth.panel.claim': 'Cuidar bien,\ncon menos papeleo.',
+  'auth.panel.sub': 'La plataforma que acompaña a tu equipo a pie de cama.',
+  'auth.panel.trust': 'Datos de salud alojados en la UE · RGPD desde el diseño',
+
   'login.subtitle': 'Gestión sociosanitaria. Inicia sesión.',
   'login.registered': 'Cuenta creada. Inicia sesión con tu email y contraseña.',
   'login.resetDone': 'Contraseña actualizada. Ya puedes iniciar sesión.',
@@ -473,6 +478,11 @@ const ca: Record<string, string> = {
   'nav.alerts': 'Alertes',
   'nav.conflicts': 'Conflictes',
   'nav.portal': 'Portal',
+
+  // Panel decoratiu auth — claim Lifecare (direcció d'art Ona 1)
+  'auth.panel.claim': 'Cuidar bé,\namb menys paperassa.',
+  'auth.panel.sub': "La plataforma que acompanya el teu equip al llit del resident.",
+  'auth.panel.trust': 'Dades de salut allotjades a la UE · RGPD des del disseny',
 
   'login.subtitle': 'Gestió sociosanitària. Inicia la sessió.',
   'login.registered': 'Compte creat. Inicia la sessió amb el teu email i contrasenya.',
