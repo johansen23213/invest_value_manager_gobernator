@@ -50,7 +50,7 @@ export default function ConflictsPage() {
   });
 
   if (me.data && !canRead) {
-    return <p className="text-slate-500">{t('conf.noPermission')}</p>;
+    return <p className="text-[#1A3A3F]/60">{t('conf.noPermission')}</p>;
   }
 
   const data = conflicts.data;
@@ -59,8 +59,8 @@ export default function ConflictsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">{t('conf.title')}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-slate-600">{t('conf.intro')}</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('conf.title')}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[#1A3A3F]/70">{t('conf.intro')}</p>
         {total > 0 && (
           <p className="mt-2">
             <Badge tone="amber">{t('conf.pending', { count: total })}</Badge>
@@ -69,7 +69,7 @@ export default function ConflictsPage() {
       </div>
 
       {conflicts.isLoading ? (
-        <p className="text-slate-500">…</p>
+        <p className="text-[#1A3A3F]/60">…</p>
       ) : total === 0 ? (
         <EmptyState title={t('conf.empty')} description={t('conf.emptyDesc')} />
       ) : (
@@ -77,7 +77,7 @@ export default function ConflictsPage() {
           {/* Medicación */}
           {data!.medication.length > 0 && (
             <section aria-label={t('conf.section.medication')}>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#1A3A3F]/60">
                 {t('conf.section.medication')}
               </h2>
               <div className="flex flex-col gap-3">
@@ -90,9 +90,9 @@ export default function ConflictsPage() {
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div>
                             <CardTitle className="text-base">
-                              {c.medicationName} <span className="font-normal text-slate-500">· {c.medicationDose}</span>
+                              {c.medicationName} <span className="font-normal text-[#1A3A3F]/60">· {c.medicationDose}</span>
                             </CardTitle>
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-[#1A3A3F]/60">
                               <Link
                                 href={`/residentes/${c.residentId}/resumen`}
                                 className="text-brand-700 hover:underline"
@@ -107,19 +107,19 @@ export default function ConflictsPage() {
                           </Badge>
                         </div>
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-md bg-slate-50 p-3 text-sm">
-                            <p className="font-medium text-slate-700">{t('conf.server')}</p>
-                            <p className="text-slate-600">{t('conf.status')}: {server.status}</p>
-                            <p className="text-slate-600">{t('conf.notes')}: {server.notes}</p>
+                          <div className="rounded-md bg-brand-50 p-3 text-sm">
+                            <p className="font-medium text-[#1A3A3F]">{t('conf.server')}</p>
+                            <p className="text-[#1A3A3F]/70">{t('conf.status')}: {server.status}</p>
+                            <p className="text-[#1A3A3F]/70">{t('conf.notes')}: {server.notes}</p>
                           </div>
-                          <div className="rounded-md bg-slate-50 p-3 text-sm">
-                            <p className="font-medium text-slate-700">{t('conf.client')}</p>
-                            <p className="text-slate-600">{t('conf.status')}: {client.status}</p>
-                            <p className="text-slate-600">{t('conf.notes')}: {client.notes}</p>
+                          <div className="rounded-md bg-brand-50 p-3 text-sm">
+                            <p className="font-medium text-[#1A3A3F]">{t('conf.client')}</p>
+                            <p className="text-[#1A3A3F]/70">{t('conf.status')}: {client.status}</p>
+                            <p className="text-[#1A3A3F]/70">{t('conf.notes')}: {client.notes}</p>
                           </div>
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-[#1A3A3F]/40">
                             {t('conf.detectedAt')}: {formatDateTime(locale, c.resolvedAt)}
                           </span>
                           {canReview && (
@@ -143,7 +143,7 @@ export default function ConflictsPage() {
           {/* Atención directa */}
           {data!.care.length > 0 && (
             <section aria-label={t('conf.section.care')}>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#1A3A3F]/60">
                 {t('conf.section.care')}
               </h2>
               <div className="flex flex-col gap-3">
@@ -154,9 +154,9 @@ export default function ConflictsPage() {
                         <div>
                           <CardTitle className="text-base">
                             {CARE_TYPE_LABELS[c.recordType] ?? c.recordType}
-                            <span className="ml-2 font-normal text-slate-500">· {t('conf.field')}: {c.field}</span>
+                            <span className="ml-2 font-normal text-[#1A3A3F]/60">· {t('conf.field')}: {c.field}</span>
                           </CardTitle>
-                          <p className="text-sm text-slate-500">
+                          <p className="text-sm text-[#1A3A3F]/60">
                             <Link
                               href={`/residentes/${c.residentId}/resumen`}
                               className="text-brand-700 hover:underline"
@@ -170,17 +170,17 @@ export default function ConflictsPage() {
                         </Badge>
                       </div>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-md bg-slate-50 p-3 text-sm">
-                          <p className="font-medium text-slate-700">{t('conf.server')}</p>
-                          <p className="text-slate-600">{renderValue(c.serverValue)}</p>
+                        <div className="rounded-md bg-brand-50 p-3 text-sm">
+                          <p className="font-medium text-[#1A3A3F]">{t('conf.server')}</p>
+                          <p className="text-[#1A3A3F]/70">{renderValue(c.serverValue)}</p>
                         </div>
-                        <div className="rounded-md bg-slate-50 p-3 text-sm">
-                          <p className="font-medium text-slate-700">{t('conf.client')}</p>
-                          <p className="text-slate-600">{renderValue(c.clientValue)}</p>
+                        <div className="rounded-md bg-brand-50 p-3 text-sm">
+                          <p className="font-medium text-[#1A3A3F]">{t('conf.client')}</p>
+                          <p className="text-[#1A3A3F]/70">{renderValue(c.clientValue)}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-[#1A3A3F]/40">
                           {t('conf.detectedAt')}: {formatDateTime(locale, c.resolvedAt)}
                         </span>
                         {canReview && (

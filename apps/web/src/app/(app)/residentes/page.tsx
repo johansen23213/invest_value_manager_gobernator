@@ -84,7 +84,7 @@ export default function ResidentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">{t('residents.title')}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('residents.title')}</h1>
 
       {canWrite && (
         <Card>
@@ -173,20 +173,20 @@ export default function ResidentsPage() {
             </div>
           ) : filtered.length > 0 ? (
             <>
-              <p className="mb-2 text-sm text-slate-500">{filtered.length} residentes</p>
+              <p className="mb-2 text-sm text-[#1A3A3F]/60">{filtered.length} residentes</p>
               <Table>
-                <thead>
+                <thead className="bg-brand-50">
                   <tr>
-                    <Th>Residente</Th>
-                    <Th>Centro</Th>
-                    <Th>Plaza</Th>
-                    <Th>Dependencia</Th>
-                    <Th>Estado</Th>
+                    <Th className="text-brand-700">Residente</Th>
+                    <Th className="text-brand-700">Centro</Th>
+                    <Th className="text-brand-700">Plaza</Th>
+                    <Th className="text-brand-700">Dependencia</Th>
+                    <Th className="text-brand-700">Estado</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginated.map((r) => (
-                    <tr key={r.id}>
+                    <tr key={r.id} className="hover:bg-brand-50 transition-colors">
                       <Td>
                         <Link href={`/residentes/${r.id}`} className="font-medium text-brand-700 hover:underline">
                           {r.lastName}, {r.firstName}

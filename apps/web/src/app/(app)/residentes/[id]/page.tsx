@@ -169,8 +169,8 @@ export default function ResidentDetailPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  if (resident.isLoading) return <p className="text-slate-500">Cargando…</p>;
-  if (!resident.data) return <p className="text-slate-500">Residente no encontrado.</p>;
+  if (resident.isLoading) return <p className="text-[#1A3A3F]/60">Cargando…</p>;
+  if (!resident.data) return <p className="text-[#1A3A3F]/60">Residente no encontrado.</p>;
   const r = resident.data;
 
   return (
@@ -190,24 +190,24 @@ export default function ResidentDetailPage() {
           <CardContent>
             <CardTitle className="mb-3 text-base">Datos personales</CardTitle>
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
-                <dt className="text-slate-500">Nacimiento</dt>
+              <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
+                <dt className="text-[#1A3A3F]/60">Nacimiento</dt>
                 <dd>{fmtDate(r.birthDate)}</dd>
               </div>
-              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
-                <dt className="text-slate-500">Ingreso</dt>
+              <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
+                <dt className="text-[#1A3A3F]/60">Ingreso</dt>
                 <dd>{fmtDate(r.admissionDate)}</dd>
               </div>
-              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
-                <dt className="text-slate-500">DNI/NIE</dt>
+              <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
+                <dt className="text-[#1A3A3F]/60">DNI/NIE</dt>
                 <dd>{r.nationalId ?? '—'}</dd>
               </div>
-              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
-                <dt className="text-slate-500">Centro</dt>
+              <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
+                <dt className="text-[#1A3A3F]/60">Centro</dt>
                 <dd>{r.center.name}</dd>
               </div>
-              <div className="flex justify-between gap-2 border-b border-slate-100 py-1">
-                <dt className="text-slate-500">Plaza</dt>
+              <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
+                <dt className="text-[#1A3A3F]/60">Plaza</dt>
                 <dd>{r.bed ? `${r.bed.code} (${r.bed.unit.name})` : 'Sin plaza'}</dd>
               </div>
             </dl>
@@ -221,17 +221,17 @@ export default function ResidentDetailPage() {
           <CardContent>
             <CardTitle className="mb-3 text-base">Escalas de valoración</CardTitle>
             {r.assessments.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin valoraciones.</p>
+              <p className="text-sm text-[#1A3A3F]/60">Sin valoraciones.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {r.assessments.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
+                  <li key={a.id} className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2 text-sm">
                     <span>
                       <span className="font-medium">{ASSESSMENT_TYPE_LABELS[a.type]}</span>: {a.score}/
                       {SCALE_RANGES[a.type as ScaleType].max}{' '}
                       <Badge tone="blue">{interpretScale(a.type as ScaleType, a.score)}</Badge>
                     </span>
-                    <span className="text-slate-400">{fmtDate(a.assessedAt)}</span>
+                    <span className="text-[#1A3A3F]/40">{fmtDate(a.assessedAt)}</span>
                   </li>
                 ))}
               </ul>
@@ -289,7 +289,7 @@ export default function ResidentDetailPage() {
           <CardContent>
             <CardTitle className="mb-3 text-base">Contactos</CardTitle>
             {r.contacts.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin contactos.</p>
+              <p className="text-sm text-[#1A3A3F]/60">Sin contactos.</p>
             ) : (
               <ul className="flex flex-col gap-1 text-sm">
                 {r.contacts.map((ct) => (
@@ -365,7 +365,7 @@ export default function ResidentDetailPage() {
           <CardContent>
             <CardTitle className="mb-3 text-base">Alergias</CardTitle>
             {r.allergies.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin alergias registradas.</p>
+              <p className="text-sm text-[#1A3A3F]/60">Sin alergias registradas.</p>
             ) : (
               <ul className="flex flex-col gap-1 text-sm">
                 {r.allergies.map((al) => (
@@ -429,13 +429,13 @@ export default function ResidentDetailPage() {
           <CardContent>
             <CardTitle className="mb-3 text-base">Diagnósticos</CardTitle>
             {r.diagnoses.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin diagnósticos.</p>
+              <p className="text-sm text-[#1A3A3F]/60">Sin diagnósticos.</p>
             ) : (
               <ul className="flex flex-col gap-1 text-sm">
                 {r.diagnoses.map((d) => (
                   <li key={d.id}>
-                    {d.code ? <span className="text-slate-400">[{d.code}] </span> : null}
-                    {d.description} <span className="text-slate-400">· {fmtDate(d.diagnosedAt)}</span>
+                    {d.code ? <span className="text-[#1A3A3F]/40">[{d.code}] </span> : null}
+                    {d.description} <span className="text-[#1A3A3F]/40">· {fmtDate(d.diagnosedAt)}</span>
                   </li>
                 ))}
               </ul>
@@ -486,7 +486,7 @@ export default function ResidentDetailPage() {
                 <CardTitle className="mb-2 text-base">
                   Derecho de acceso y portabilidad (art. 15 y 20)
                 </CardTitle>
-                <p className="mb-3 text-sm text-slate-600">
+                <p className="mb-3 text-sm text-[#1A3A3F]/70">
                   Genera un fichero JSON con todos los datos que Vetlla guarda de este residente
                   (expediente, atención directa, medicación, PIA y trazas de auditoría), con hash
                   SHA-256 de integridad. La exportación queda registrada en el AuditLog.
@@ -506,7 +506,7 @@ export default function ResidentDetailPage() {
                 <CardTitle className="mb-2 text-base text-red-700">
                   Derecho de supresión (art. 17)
                 </CardTitle>
-                <p className="mb-3 text-sm text-slate-600">
+                <p className="mb-3 text-sm text-[#1A3A3F]/70">
                   Anonimización irreversible: elimina nombre, DNI y fecha de nacimiento, borra
                   contactos y vínculos familiares, y libera la plaza. Los registros clínicos se
                   conservan <strong>anonimizados</strong> (obligación de conservación sanitaria;

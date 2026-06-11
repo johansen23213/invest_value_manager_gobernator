@@ -419,7 +419,7 @@ export default function PrescribirPage() {
           <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
             {/* Paso 1 — Fármaco */}
             <fieldset>
-              <legend className="mb-2 font-semibold text-slate-700">
+              <legend className="mb-2 font-semibold text-[#1A3A3F]">
                 Fármaco y forma de administración
               </legend>
               <div className="flex flex-wrap gap-4">
@@ -514,7 +514,7 @@ export default function PrescribirPage() {
 
             {/* Paso 2 — Pauta temporal */}
             <fieldset>
-              <legend className="mb-2 font-semibold text-slate-700">Pauta temporal</legend>
+              <legend className="mb-2 font-semibold text-[#1A3A3F]">Pauta temporal</legend>
               <div className="flex flex-wrap gap-4">
                 <div style={{ minWidth: '140px' }}>
                   <Label htmlFor="start-date">{t('med.prescribe.field.start')}</Label>
@@ -538,7 +538,7 @@ export default function PrescribirPage() {
 
               {/* M-06 — días de la semana */}
               <div className="mt-3">
-                <p className="mb-1 font-medium text-slate-700">
+                <p className="mb-1 font-medium text-[#1A3A3F]">
                   {t('med.prescribe.field.daysOfWeek')}
                 </p>
                 <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('med.prescribe.field.daysOfWeek')} data-testid="days-of-week-group">
@@ -550,7 +550,7 @@ export default function PrescribirPage() {
                     className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                       form.daysOfWeek === null
                         ? 'border-brand-600 bg-brand-600 text-white'
-                        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                        : 'border-brand-200 bg-white text-[#1A3A3F] hover:bg-brand-50'
                     }`}
                   >
                     {t('med.prescribe.field.daysAll')}
@@ -571,7 +571,7 @@ export default function PrescribirPage() {
                         className={`flex h-12 w-12 items-center justify-center rounded-md border text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                           selected
                             ? 'border-brand-600 bg-brand-600 text-white'
-                            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                            : 'border-brand-200 bg-white text-[#1A3A3F] hover:bg-brand-50'
                         }`}
                       >
                         {label}
@@ -580,7 +580,7 @@ export default function PrescribirPage() {
                   })}
                 </div>
                 {/* Resumen legible por SR / debug visual */}
-                <p className="mt-1 text-xs text-slate-500" aria-live="polite">
+                <p className="mt-1 text-xs text-[#1A3A3F]/40" aria-live="polite">
                   {dowSummary}
                 </p>
               </div>
@@ -588,7 +588,7 @@ export default function PrescribirPage() {
               {/* Horas de pauta — solo si no es PRN */}
               {!isPrn && (
                 <div className="mt-3">
-                  <p className="mb-1 font-medium text-slate-700">
+                  <p className="mb-1 font-medium text-[#1A3A3F]">
                     {t('med.prescribe.field.times')}
                   </p>
                   <TimeListField
@@ -602,16 +602,16 @@ export default function PrescribirPage() {
                   Vacío = dosis base; relleno = prevalece para esa hora. */}
               {!isPrn && form.times.length > 0 && (
                 <div className="mt-3" data-testid="moment-doses-editor">
-                  <p className="mb-1 font-medium text-slate-700">
+                  <p className="mb-1 font-medium text-[#1A3A3F]">
                     {t('med.prescribe.field.momentDoses')}
                   </p>
-                  <p className="mb-2 text-xs text-slate-500">
+                  <p className="mb-2 text-xs text-[#1A3A3F]/40">
                     {t('med.prescribe.field.momentDosesHint')}
                   </p>
                   <div className="flex flex-wrap gap-3">
                     {form.times.map((time) => (
                       <div key={time} className="flex items-center gap-2">
-                        <span className="w-14 shrink-0 text-sm font-semibold tabular-nums text-slate-700">
+                        <span className="w-14 shrink-0 text-sm font-semibold tabular-nums text-[#1A3A3F]">
                           {time}
                         </span>
                         <Input
@@ -633,7 +633,7 @@ export default function PrescribirPage() {
                 </div>
               )}
               {isPrn && (
-                <p className="mt-2 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                <p className="mt-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
                   <strong>{t('med.type.PRN')}:</strong> no requiere horas fijas. Se registra cuando ocurre.
                 </p>
               )}
@@ -641,7 +641,7 @@ export default function PrescribirPage() {
 
             {/* Diagnóstico relacionado (M-10) */}
             <fieldset>
-              <legend className="mb-2 font-semibold text-slate-700">Diagnóstico relacionado (opcional)</legend>
+              <legend className="mb-2 font-semibold text-[#1A3A3F]">Diagnóstico relacionado (opcional)</legend>
               <Select
                 id="diagnosis"
                 aria-label="Diagnóstico relacionado"
@@ -660,7 +660,7 @@ export default function PrescribirPage() {
 
             {/* M-09 — Tratamiento: la línea puede agruparse en una cabecera */}
             <fieldset data-testid="treatment-fieldset">
-              <legend className="mb-2 font-semibold text-slate-700">
+              <legend className="mb-2 font-semibold text-[#1A3A3F]">
                 {t('med.treatment.legend')}
               </legend>
               <div className="flex flex-wrap items-end gap-3">
@@ -700,7 +700,7 @@ export default function PrescribirPage() {
 
             {/* Paso 3 — Instrucciones */}
             <fieldset>
-              <legend className="mb-2 font-semibold text-slate-700">
+              <legend className="mb-2 font-semibold text-[#1A3A3F]">
                 {t('med.prescribe.field.instructions')}
               </legend>
               <textarea
@@ -709,7 +709,7 @@ export default function PrescribirPage() {
                 onChange={(e) => setForm((s) => ({ ...s, instructions: e.target.value }))}
                 maxLength={500}
                 rows={3}
-                className="min-h-touch w-full rounded-md border border-slate-300 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="min-h-touch w-full rounded-2xl border border-brand-200 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 aria-label={t('med.prescribe.field.instructions')}
               />
             </fieldset>

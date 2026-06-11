@@ -116,7 +116,7 @@ export function CopilotCard({
           placeholder={t('copilot.placeholder')}
           maxLength={1000}
           rows={3}
-          className="min-h-[88px] w-full rounded-md border border-slate-300 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-50"
+          className="min-h-[88px] w-full rounded-2xl border border-brand-200 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:bg-brand-50"
         />
         <Button
           size="lg"
