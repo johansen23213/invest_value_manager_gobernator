@@ -550,6 +550,7 @@ medication_rbac_redesign:
     - { id: R-05, titulo: "Acceso familiar: vinculación desde UI + control de privacidad por sección (UX-20)" }
   backlog: []
   done_2026-06-11:
+    - { id: PROD-EXP-01, titulo: "Análisis exhaustivo del expediente sociosanitario completo: gap analysis (7 bloques, 50+ campos), propuesta de 3 fases y esbozo de modelo de datos Prisma para Fase 1 (12 nuevos campos en Resident, 8 tablas nuevas, ampliación de AssessmentType/AllergyType/enums). Ver docs/producto/2026-06-11-expediente-completo-residente.md. Huecos críticos: dieta/textura, dispositivos, sujeciones, UPP, Norton/Braden, régimen de plaza/representante legal." }
     - { id: M-09, titulo: "Cabecera de tratamiento (Treatment): tabla con RLS + router + UI agrupada en el MAR + selector/creación inline en prescribir" }
     - { id: M-11b, titulo: "Editor UI de momentDoses en prescribir (dosis por hora, en blanco usa la base)" }
     - { id: M-10b, titulo: "Chip de diagnóstico clickable hacia el expediente (en prescripciones y tratamientos)" }
