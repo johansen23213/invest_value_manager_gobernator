@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Card, CardContent, CardTitle } from '@vetlla/ui';
 import type { MedAdminStatus } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { SHIFT_LABELS } from '@/lib/labels';
-import { groupByShift, type DoseStatus, type MedForSchedule } from '@/lib/mar';
+import { currentShift, groupByShift, type DoseStatus, type MedForSchedule, type Shift } from '@/lib/mar';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
 import { useCareSync } from '@/offline/use-care-sync';
@@ -94,6 +94,63 @@ function DoseStatusIcon({ status, overdue }: { status: DoseStatus; overdue: bool
 }
 
 
+// ── Filtro de turno (UX-17) ─────────────────────────────────────────────────
+//
+// DECISIÓN DE DEFAULT (ver tarea MAR filtrado por turno):
+//   Default = turno activo según la hora del dispositivo (opción b).
+//   Análisis e2e estático: los specs medicacion-mar.spec.ts no cuentan dose-items
+//   por turno ni asumen que se ven dosis de todos los turnos nada más cargar.
+//   El guard `if (count > 0)` en M-02 protege contra residentes sin dosis en el
+//   turno activo. La funcionalidad "Ver todos" está a un toque de distancia.
+
+type ShiftFilter = Shift | 'ALL';
+
+const SHIFT_FILTER_OPTIONS: { value: ShiftFilter; labelKey: string }[] = [
+  { value: 'ALL', labelKey: 'mar.shift.all' },
+  { value: 'MANANA', labelKey: 'mar.shift.MANANA' },
+  { value: 'TARDE', labelKey: 'mar.shift.TARDE' },
+  { value: 'NOCHE', labelKey: 'mar.shift.NOCHE' },
+];
+
+interface ShiftFilterBarProps {
+  value: ShiftFilter;
+  onChange: (v: ShiftFilter) => void;
+  t: (k: string) => string;
+}
+
+function ShiftFilterBar({ value, onChange, t }: ShiftFilterBarProps) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={t('mar.shift.filter.label')}
+      className="flex flex-wrap gap-2"
+    >
+      {SHIFT_FILTER_OPTIONS.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <button
+            key={opt.value}
+            role="radio"
+            aria-checked={active}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={[
+              // Píldora, objetivo táctil ≥48px, dirección de arte Lifecare
+              'inline-flex min-h-[48px] items-center rounded-full px-5 text-sm font-medium',
+              'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1',
+              active
+                ? 'bg-brand-700 text-white shadow-sm'
+                : 'bg-brand-50 text-[#1A3A3F] hover:bg-brand-100 border border-brand-100',
+            ].join(' ')}
+          >
+            {t(opt.labelKey)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Sección PRN — medicaciones a demanda (M-07) ──────────────────────────────
 
 interface PrnSectionProps {
@@ -148,6 +205,9 @@ export default function MedicationPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const { locale, t } = useT();
+
+  // UX-17: turno activo al abrir la pantalla → pre-selección automática del chip.
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilter>(() => currentShift(new Date()));
 
   const me = api.me.useQuery();
   const canPrescribe = me.data?.permissions.includes('medication:prescribe') ?? false;
@@ -272,6 +332,13 @@ export default function MedicationPage() {
     return groupByShift(merged);
   }, [schedule.data, medPendingItems]);
 
+  // UX-17: grupos visibles según el chip de turno seleccionado.
+  // PRN y Tratamientos NO se filtran (están fuera de shiftGroups).
+  const visibleShiftGroups = useMemo(
+    () => (shiftFilter === 'ALL' ? shiftGroups : shiftGroups.filter((g) => g.shift === shiftFilter)),
+    [shiftGroups, shiftFilter],
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -292,11 +359,33 @@ export default function MedicationPage() {
         <Card>
           <CardContent>
             <CardTitle className="mb-3 text-base">{t('med.today')}</CardTitle>
+
+            {/* UX-17 — Chips de turno: permiten a David ver solo su pase.
+                Por defecto se activa el turno actual (función pura currentShift).
+                PRN y Tratamientos quedan fuera de este filtro. */}
+            <div className="mb-4 flex flex-col gap-2">
+              <ShiftFilterBar value={shiftFilter} onChange={setShiftFilter} t={t} />
+              {/* Aviso sutil cuando se muestra un turno concreto (no "Todos") */}
+              {shiftFilter !== 'ALL' && (
+                <p className="text-xs text-[#1A3A3F]/60" aria-live="polite">
+                  {t('mar.shift.notice').replace('{shift}', t(`mar.shift.${shiftFilter}`))}
+                  {t('mar.shift.noticeSuffix')}
+                  <button
+                    type="button"
+                    onClick={() => setShiftFilter('ALL')}
+                    className="underline underline-offset-2 hover:text-[#1A3A3F] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                  >
+                    {t('mar.shift.showAll')}
+                  </button>
+                </p>
+              )}
+            </div>
+
             {schedule.isLoading ? (
               <p className="text-[#1A3A3F]/60">Cargando…</p>
-            ) : shiftGroups.length > 0 ? (
+            ) : visibleShiftGroups.length > 0 ? (
               <div className="flex flex-col gap-5">
-                {shiftGroups.map((group) => (
+                {visibleShiftGroups.map((group) => (
                   <section key={group.shift} aria-label={`Turno de ${SHIFT_LABELS[group.shift]}`}>
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#1A3A3F]/40">
                       {SHIFT_LABELS[group.shift]}
@@ -384,7 +473,22 @@ export default function MedicationPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[#1A3A3F]/60">{t('med.noDoses')}</p>
+              // Cuando hay filtro de turno activo y no hay dosis en ese turno,
+              // indicamos que el turno está limpio y ofrecemos "Ver todos".
+              shiftFilter !== 'ALL' ? (
+                <p className="text-sm text-[#1A3A3F]/60">
+                  Sin dosis para el turno de {t(`mar.shift.${shiftFilter}`)}.{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShiftFilter('ALL')}
+                    className="underline underline-offset-2 hover:text-[#1A3A3F] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                  >
+                    {t('mar.shift.showAll')}
+                  </button>
+                </p>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('med.noDoses')}</p>
+              )
             )}
           </CardContent>
         </Card>

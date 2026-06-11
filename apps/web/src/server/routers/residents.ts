@@ -2,9 +2,13 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import {
   AllergySeverity,
+  AllergyType,
   AssessmentType,
   ContactRelation,
   DependencyGrade,
+  DietType,
+  LiquidTexture,
+  PlaceRegime,
   ResidentStatus,
   Sex,
   type TenantPrisma,
@@ -23,6 +27,36 @@ const residentInput = z.object({
   status: z.nativeEnum(ResidentStatus).optional(),
   admissionDate: z.coerce.date().optional(),
   notes: z.string().max(2000).optional(),
+  // --- Fase 1: Bloque A — Identificación y administrativo ---
+  internalRecordNo:   z.string().max(60).optional(),
+  cip:                z.string().max(30).optional(),
+  socialSecurityNo:   z.string().max(30).optional(),
+  insurerName:        z.string().max(120).optional(),
+  placeRegime:        z.nativeEnum(PlaceRegime).optional(),
+  dischargeDate:      z.coerce.date().optional(),
+  dischargeReason:    z.string().max(300).optional(),
+  originCenter:       z.string().max(200).optional(),
+  nationalIdExpiry:   z.coerce.date().optional(),
+  judicialCapacity:   z.boolean().optional(),
+  legalRepName:       z.string().max(120).optional(),
+  legalRepPhone:      z.string().max(30).optional(),
+  legalRepEmail:      z.string().email().optional().or(z.literal('')),
+  advanceDirectives:  z.boolean().optional(),
+  advanceDirLocation: z.string().max(300).optional(),
+  preferredLanguage:  z.string().max(10).optional(),
+  bloodGroup:         z.string().max(10).optional(),
+  // --- Fase 1: Consentimientos RGPD (resumen de estado) ---
+  consentImage:        z.boolean().optional(),
+  consentFamilyPortal: z.boolean().optional(),
+  consentAdmission:    z.coerce.date().optional(),
+  // --- Fase 1: Ficha de cuidados operativos ---
+  dietType:             z.nativeEnum(DietType).optional(),
+  liquidTexture:        z.nativeEnum(LiquidTexture).optional(),
+  nutritionSupplements: z.string().max(300).optional(),
+  continenceType:       z.string().max(100).optional(),
+  absorbentSize:        z.string().max(10).optional(),
+  wanderingRisk:        z.boolean().optional(),
+  fallRisk:             z.boolean().optional(),
 });
 
 /** Verifica que el residente pertenece al tenant (vía RLS) o lanza NOT_FOUND. */
@@ -92,12 +126,16 @@ export const residentsRouter = createTRPCRouter({
   addContact: permissionProcedure('residents:write')
     .input(
       z.object({
-        residentId: z.string(),
-        name: z.string().min(1).max(120),
-        relation: z.nativeEnum(ContactRelation),
-        phone: z.string().max(30).optional(),
-        email: z.string().email().optional(),
-        isPrimary: z.boolean().optional(),
+        residentId:    z.string(),
+        name:          z.string().min(1).max(120),
+        relation:      z.nativeEnum(ContactRelation),
+        phone:         z.string().max(30).optional(),
+        email:         z.string().email().optional(),
+        isPrimary:     z.boolean().optional(),
+        // Fase 1: datos adicionales del contacto
+        callOrder:     z.number().int().min(1).max(99).optional(),
+        availability:  z.string().max(200).optional(),
+        postalAddress: z.string().max(300).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -113,17 +151,18 @@ export const residentsRouter = createTRPCRouter({
   addAllergy: permissionProcedure('clinical:write')
     .input(
       z.object({
-        residentId: z.string(),
-        substance: z.string().min(1).max(120),
-        severity: z.nativeEnum(AllergySeverity).optional(),
-        reaction: z.string().max(300).optional(),
+        residentId:  z.string(),
+        substance:   z.string().min(1).max(120),
+        severity:    z.nativeEnum(AllergySeverity).optional(),
+        reaction:    z.string().max(300).optional(),
+        allergyType: z.nativeEnum(AllergyType).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       await assertResident(ctx.db, input.residentId);
       const { residentId, ...rest } = input;
       const allergy = await ctx.db.allergy.create({ data: { ...rest, residentId, tenantId: ctx.tenantId } });
-      await ctx.audit({ action: 'CREATE', entity: 'Allergy', entityId: residentId, summary: `Alergia registrada: ${rest.substance}` });
+      await ctx.audit({ action: 'CREATE', entity: 'Allergy', entityId: residentId, summary: `Alergia registrada: ${rest.substance}${rest.allergyType ? ` (${rest.allergyType})` : ''}` });
       return allergy;
     }),
 

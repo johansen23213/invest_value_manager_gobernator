@@ -1,15 +1,23 @@
 import bcrypt from 'bcryptjs';
 import {
   AllergySeverity,
+  AllergyType,
   AssessmentType,
   CenterType,
+  ConsentType,
   ContactRelation,
   DependencyGrade,
+  DeviceType,
+  DietType,
+  LiquidTexture,
   MedicationRoute,
   MedicationType,
+  PlaceRegime,
   Prisma,
+  RestraintType,
   ResidentStatus,
   Sex,
+  UPPOrigin,
   asPlatformAdmin,
   prisma,
   UserRole,
@@ -225,6 +233,277 @@ async function seedResidents(
       });
       await db.carePlanReview.create({
         data: { tenantId, carePlanId: plan.id, summary: 'Evolución estable. Continuar pauta.' },
+      });
+    }
+
+    // --- Fase 1: expediente ampliado en los 4 primeros residentes del lote ---
+
+    // Residente 0: disfagia con textura néctar + sonda nasogástrica + Norton en riesgo
+    if (idx === startIdx) {
+      await db.resident.update({
+        where: { id: resident.id },
+        data: {
+          cip: `CAT${String(10000000 + idx).slice(0, 9)}`,
+          internalRecordNo: `EXP-2026-${String(idx + 1).padStart(3, '0')}`,
+          placeRegime: PlaceRegime.CONCERTADA,
+          judicialCapacity: false,
+          legalRepName: 'Ana García (hija)',
+          legalRepPhone: '600100200',
+          advanceDirectives: true,
+          advanceDirLocation: 'Notaría Martínez, c/ Mayor 1, Valencia',
+          preferredLanguage: 'ca',
+          bloodGroup: 'A+',
+          consentImage: true,
+          consentAdmission: new Date('2023-01-15'),
+          dietType: DietType.TRITURADA,
+          liquidTexture: LiquidTexture.NECTAR,
+          nutritionSupplements: 'Fortimel Energy 200ml × 2/día',
+          continenceType: 'pañal',
+          absorbentSize: 'M',
+          wanderingRisk: false,
+          fallRisk: true,
+        },
+      });
+      // Dispositivo: sonda nasogástrica
+      await db.residentDevice.create({
+        data: {
+          tenantId,
+          residentId: resident.id,
+          type: DeviceType.SONDA_NASOGASTRICA,
+          description: 'Sonda Levin 16F — nutrición enteral nocturna',
+          since: new Date('2025-11-01'),
+          active: true,
+        },
+      });
+      // Vacuna gripe
+      await db.vaccine.create({
+        data: { tenantId, residentId: resident.id, type: 'gripe', date: new Date('2025-10-15'), lot: 'FLU-2025-A' },
+      });
+      // Vacuna COVID
+      await db.vaccine.create({
+        data: { tenantId, residentId: resident.id, type: 'COVID', date: new Date('2025-09-01'), lot: 'COV-2025-B' },
+      });
+      // Peso
+      await db.weightRecord.create({
+        data: { tenantId, residentId: resident.id, weightKg: 54.2, heightCm: 158, bmi: 21.7, recordedAt: new Date('2026-01-10') },
+      });
+      await db.weightRecord.create({
+        data: { tenantId, residentId: resident.id, weightKg: 52.8, recordedAt: new Date('2026-02-10') },
+      });
+      // Norton en riesgo alto (score 12)
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.NORTON, score: 12, assessedAt: new Date('2026-01-10'), notes: 'Riesgo alto: inmovilidad parcial + disfagia' },
+      });
+      // UPP activa con cura
+      const ulcer = await db.pressureUlcer.create({
+        data: { tenantId, residentId: resident.id, location: 'Sacro', stage: 2, onsetDate: new Date('2026-01-08'), acquired: UPPOrigin.CENTRO, active: true },
+      });
+      await db.uPPCuring.create({
+        data: { tenantId, pressureUlcerId: ulcer.id, date: new Date('2026-01-09'), treatment: 'Apósito hidrocoloide Mepillex 10×10 cm', evolution: 'igual' },
+      });
+      await db.uPPCuring.create({
+        data: { tenantId, pressureUlcerId: ulcer.id, date: new Date('2026-01-12'), treatment: 'Renovación apósito + desbridamiento mecánico', evolution: 'mejor' },
+      });
+      // Historia de vida
+      await db.lifeStory.upsert({
+        where: { residentId: resident.id },
+        update: {},
+        create: {
+          tenantId,
+          residentId: resident.id,
+          profession: 'Maestra de escuela primaria',
+          hobbies: 'Lectura, punto de cruz, huerta',
+          music: 'Zarzuela, Joselito, Marifé de Triana',
+          religion: 'Católica — misa dominical, rosario por las noches',
+          preferences: 'Ducha mañanas, pelo corto, no le gustan las comidas muy frías',
+          notes: 'Familia muy implicada. Hija Ana visita cada día a mediodía.',
+        },
+      });
+      // Consentimientos
+      await db.consentRecord.create({
+        data: { tenantId, residentId: resident.id, type: ConsentType.INGRESO, granted: true, grantedBy: 'Ana García (representante legal)', date: new Date('2023-01-15') },
+      });
+      await db.consentRecord.create({
+        data: { tenantId, residentId: resident.id, type: ConsentType.IMAGEN, granted: true, grantedBy: 'Ana García', date: new Date('2023-01-15') },
+      });
+    }
+
+    // Residente 1: sujeción activa con consentimiento firmado + escala Pfeiffer
+    if (idx === startIdx + 1) {
+      await db.resident.update({
+        where: { id: resident.id },
+        data: {
+          cip: `CAT${String(20000000 + idx).slice(0, 9)}`,
+          internalRecordNo: `EXP-2026-${String(idx + 1).padStart(3, '0')}`,
+          placeRegime: PlaceRegime.PRIVADA,
+          preferredLanguage: 'es',
+          bloodGroup: 'O-',
+          dietType: DietType.BLANDA,
+          liquidTexture: LiquidTexture.MIEL,
+          wanderingRisk: true,
+          fallRisk: true,
+        },
+      });
+      // Escala Pfeiffer con deterioro moderado
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.PFEIFFER, score: 6, assessedAt: new Date('2026-01-15'), notes: 'Deterioro cognitivo moderado (demencia tipo Alzheimer)' },
+      });
+      // Escala GDS-Reisberg
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.GDS_REISBERG, score: 4, assessedAt: new Date('2026-01-15') },
+      });
+      // Dispositivo: marcapasos
+      await db.residentDevice.create({
+        data: { tenantId, residentId: resident.id, type: DeviceType.MARCAPASOS, description: 'Marcapasos Medtronic VVIR — revisión cardiología junio 2026', since: new Date('2020-03-10'), active: true },
+      });
+      // Sujeción activa con consentimiento
+      await db.restraint.create({
+        data: {
+          tenantId,
+          residentId: resident.id,
+          type: RestraintType.BARANDILLAS,
+          justification: 'Deambulación nocturna sin control con riesgo de caída grave. Demencia moderada-grave (GDS-4). Fractura de cadera previa en 2024.',
+          prescribedAt: new Date('2026-01-16'),
+          consentObtained: true,
+          consentDate: new Date('2026-01-16'),
+          consentBy: 'Miguel López (hijo — representante legal)',
+          reviewedAt: new Date('2026-02-01'),
+          active: true,
+        },
+      });
+      // Consentimiento de sujeción
+      await db.consentRecord.create({
+        data: { tenantId, residentId: resident.id, type: ConsentType.INGRESO, granted: true, grantedBy: 'Miguel López', date: new Date('2024-06-01') },
+      });
+      // Caída previa
+      await db.fallRecord.create({
+        data: { tenantId, residentId: resident.id, occurredAt: new Date('2025-12-20T03:15:00'), location: 'Habitación 205', circumstances: 'Deambulación nocturna sin supervisión', injuries: 'Contusión en cadera derecha sin fractura', witnessed: false, measures: 'Valoración médica inmediata. Radiografía. Inicio protocolo de caídas.' },
+      });
+      // Peso + MNA
+      await db.weightRecord.create({
+        data: { tenantId, residentId: resident.id, weightKg: 67, heightCm: 168, bmi: 23.7, recordedAt: new Date('2026-01-20') },
+      });
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.MNA, score: 19, assessedAt: new Date('2026-01-20'), notes: 'Riesgo de desnutrición — seguimiento mensual' },
+      });
+      // Historia de vida
+      await db.lifeStory.upsert({
+        where: { residentId: resident.id },
+        update: {},
+        create: {
+          tenantId,
+          residentId: resident.id,
+          profession: 'Agricultor. Viticultori en la comarca de Requena.',
+          hobbies: 'Dominó, fútbol (valencianista), televisión',
+          music: 'Copla española, pasodobles',
+          importantPeople: 'Esposa fallecida 2019. Hijo Miguel vive en Valencia.',
+          religion: 'Católico poco practicante',
+          preferences: 'Ducha por las tardes. No le gusta que le corten el bigote.',
+        },
+      });
+    }
+
+    // Residente 2: alergia alimentaria + Braden en riesgo + escala DOWNTON
+    if (idx === startIdx + 2) {
+      await db.resident.update({
+        where: { id: resident.id },
+        data: {
+          cip: `CAT${String(30000000 + idx).slice(0, 9)}`,
+          internalRecordNo: `EXP-2026-${String(idx + 1).padStart(3, '0')}`,
+          placeRegime: PlaceRegime.CONCERTADA,
+          preferredLanguage: 'es',
+          dietType: DietType.DIABETICA,
+          nutritionSupplements: null,
+          fallRisk: true,
+        },
+      });
+      // Alergia alimentaria
+      await db.allergy.create({
+        data: { tenantId, residentId: resident.id, substance: 'Gluten (celiaquía)', allergyType: AllergyType.ALIMENTARIA, severity: AllergySeverity.GRAVE, reaction: 'Síntomas gastrointestinales graves' },
+      });
+      // Braden en riesgo (score 15 → riesgo moderado)
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.BRADEN, score: 15, assessedAt: new Date('2026-01-12'), notes: 'Riesgo moderado UPP — inmovilidad parcial + humedad' },
+      });
+      // Downton
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.DOWNTON, score: 4, assessedAt: new Date('2026-01-12'), notes: 'Riesgo alto caídas: fármacos + deficit visual + historia de caídas' },
+      });
+      // Dispositivo: oxígeno domiciliario
+      await db.residentDevice.create({
+        data: { tenantId, residentId: resident.id, type: DeviceType.OXIGENO_DOMICILIARIO, description: 'Concentrador O2 2 l/min en reposo, 3 l/min en esfuerzo', since: new Date('2024-08-01'), active: true },
+      });
+      // Vacunas
+      await db.vaccine.create({
+        data: { tenantId, residentId: resident.id, type: 'neumococo', date: new Date('2024-09-15'), lot: 'PNV-2024-C' },
+      });
+      await db.vaccine.create({
+        data: { tenantId, residentId: resident.id, type: 'gripe', date: new Date('2025-10-20') },
+      });
+      // Peso
+      await db.weightRecord.create({
+        data: { tenantId, residentId: resident.id, weightKg: 78.5, heightCm: 165, bmi: 28.8, recordedAt: new Date('2026-01-05') },
+      });
+      // Historia de vida
+      await db.lifeStory.upsert({
+        where: { residentId: resident.id },
+        update: {},
+        create: {
+          tenantId,
+          residentId: resident.id,
+          profession: 'Funcionaria de correos (30 años)',
+          hobbies: 'Bordado, series de televisión, paseos por el parque',
+          music: 'Peret, Raffaella Carrà, Rocío Jurado',
+          importantPeople: 'Hijas Marta y Eva. Nietos. Amiga Paquita (también residente en planta 2).',
+          preferences: 'Siempre con el pelo recogido. Desayuno temprano (7h). No le gusta el café.',
+        },
+      });
+    }
+
+    // Residente 3: historia de vida completa + escala Lawton-Brody (centro de día)
+    if (idx === startIdx + 3) {
+      await db.resident.update({
+        where: { id: resident.id },
+        data: {
+          cip: `CAT${String(40000000 + idx).slice(0, 9)}`,
+          internalRecordNo: `EXP-2026-${String(idx + 1).padStart(3, '0')}`,
+          placeRegime: PlaceRegime.PRIVADA,
+          preferredLanguage: 'ca',
+          bloodGroup: 'B+',
+          dietType: DietType.NORMAL,
+        },
+      });
+      // Lawton-Brody (AIVD)
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.LAWTON_BRODY, score: 5, assessedAt: new Date('2026-01-08'), notes: 'Independencia parcial — necesita supervisión para gestión económica y medicación' },
+      });
+      // MEC-Lobo (estado cognitivo)
+      await db.assessment.create({
+        data: { tenantId, residentId: resident.id, type: AssessmentType.MEC_LOBO, score: 26, assessedAt: new Date('2026-01-08'), notes: 'Sin deterioro cognitivo significativo' },
+      });
+      // Peso
+      await db.weightRecord.create({
+        data: { tenantId, residentId: resident.id, weightKg: 71, heightCm: 172, bmi: 24.0, recordedAt: new Date('2026-01-15') },
+      });
+      // Historia de vida
+      await db.lifeStory.upsert({
+        where: { residentId: resident.id },
+        update: {},
+        create: {
+          tenantId,
+          residentId: resident.id,
+          profession: 'Ingeniero industrial. Director de fábrica de cerámica.',
+          hobbies: 'Ajedrez, lectura de prensa (El País), bricolaje, pesca',
+          music: 'Música clásica (Beethoven, Falla), jazz',
+          importantPeople: 'Esposa Carmen. Tres hijos. Nietos. Amigos del club de ajedrez.',
+          religion: 'Agnóstico',
+          preferences: 'Ducha a las 8h. Café solo sin azúcar. Lee el periódico cada mañana. Muy independiente, no le gusta que le ayuden si puede hacerlo solo.',
+          notes: 'Habla catalán en casa. Muy activo mentalmente. Buen candidato para actividades de estimulación cognitiva.',
+        },
+      });
+      // Consentimiento portal familias
+      await db.consentRecord.create({
+        data: { tenantId, residentId: resident.id, type: ConsentType.PORTAL_FAMILIAS, granted: true, grantedBy: 'El propio residente', date: new Date('2026-01-10') },
       });
     }
   }
