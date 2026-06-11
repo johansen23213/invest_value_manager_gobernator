@@ -7,7 +7,14 @@ import type { AllergySeverity } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
-import { ALLERGY_SEVERITY_LABELS, DEPENDENCY_GRADE_LABELS, RESIDENT_STATUS_LABELS } from '@/lib/labels';
+import {
+  ALLERGY_SEVERITY_LABELS,
+  DEPENDENCY_GRADE_LABELS,
+  DEVICE_TYPE_LABELS,
+  DIET_TYPE_LABELS,
+  LIQUID_TEXTURE_LABELS,
+  RESIDENT_STATUS_LABELS,
+} from '@/lib/labels';
 
 // ---------------------------------------------------------------------------
 // Avatar con iniciales y color estable derivado del nombre
@@ -83,6 +90,113 @@ function IconAlert({ className }: { className?: string }) {
       <line x1="12" y1="9" x2="12" y2="13" />
       <line x1="12" y1="17" x2="12" y2="17.01" />
     </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Icono de actividad / dispositivo (decorativo)
+// ---------------------------------------------------------------------------
+function IconActivity({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Chips de seguridad a pie de cama
+// ---------------------------------------------------------------------------
+
+/**
+ * Chips siempre visibles con alertas de seguridad a pie de cama:
+ * - Dieta + textura de líquidos cuando hay restricción (riesgo broncoaspiración)
+ * - Dispositivos activos (sonda, marcapasos, CPAP…)
+ * - Riesgo de fuga
+ *
+ * El color nunca es el ÚNICO canal de información (WCAG 1.4.1): cada chip
+ * lleva texto descriptivo y el icono es decorativo (aria-hidden).
+ */
+interface SafetyChipsProps {
+  dietType?: string | null;
+  liquidTexture?: string | null;
+  wanderingRisk?: boolean;
+  devices: Array<{ id: string; type: string; description?: string | null }>;
+  t: (k: string) => string;
+}
+
+function SafetyChips({ dietType, liquidTexture, wanderingRisk, devices, t }: SafetyChipsProps) {
+  const hasDietRestriction =
+    dietType && dietType !== 'NORMAL';
+  const hasLiquidRestriction =
+    liquidTexture && liquidTexture !== 'LIBRE';
+
+  const chips: React.ReactNode[] = [];
+
+  // Chip de dieta + textura — riesgo broncoaspiración (ámbar/warm)
+  if (hasDietRestriction || hasLiquidRestriction) {
+    const dietLabel = hasDietRestriction ? (DIET_TYPE_LABELS[dietType!] ?? dietType!) : null;
+    const liquidLabel = hasLiquidRestriction ? (LIQUID_TEXTURE_LABELS[liquidTexture!] ?? liquidTexture!) : null;
+    const label = [dietLabel, liquidLabel].filter(Boolean).join(' · ');
+    chips.push(
+      <Badge
+        key="diet"
+        tone="amber"
+        icon={<IconActivity />}
+        aria-label={`${t('chrome.safety.diet')}: ${label}`}
+      >
+        {label}
+      </Badge>,
+    );
+  }
+
+  // Chips de dispositivos activos
+  for (const d of devices) {
+    const label = DEVICE_TYPE_LABELS[d.type] ?? d.type;
+    chips.push(
+      <Badge
+        key={d.id}
+        tone="neutral"
+        icon={<IconActivity />}
+        aria-label={`Dispositivo: ${label}${d.description ? ` — ${d.description}` : ''}`}
+      >
+        {label}
+        {d.description ? ` — ${d.description}` : ''}
+      </Badge>,
+    );
+  }
+
+  // Chip riesgo de fuga — rojo (crítico para seguridad)
+  if (wanderingRisk) {
+    chips.push(
+      <Badge key="wandering" tone="red" aria-label={t('chrome.safety.wandering')}>
+        {t('chrome.safety.wandering')}
+      </Badge>,
+    );
+  }
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div
+      className="mt-2 flex flex-wrap gap-1.5"
+      aria-label={t('chrome.safety.devices')}
+      data-testid="safety-chips"
+    >
+      {chips}
+    </div>
   );
 }
 
@@ -199,6 +313,10 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
   const fullName = r ? `${r.firstName} ${r.lastName}` : '…';
   const allergies: AllergyChip[] = r?.allergies ?? [];
   const age = calcAge(r?.birthDate);
+  const activeDevices = r?.devices ?? [];
+  const dietType = r?.dietType ?? null;
+  const liquidTexture = r?.liquidTexture ?? null;
+  const wanderingRisk = r?.wanderingRisk ?? false;
 
   return (
     <div className="flex flex-col">
@@ -265,6 +383,15 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
           <span className="sr-only">{t('med.allergies.label')}: </span>
           <AllergyBanner allergies={allergies} t={t} />
         </div>
+
+        {/* Chips de seguridad a pie de cama: dieta, dispositivos, riesgo fuga */}
+        <SafetyChips
+          dietType={dietType}
+          liquidTexture={liquidTexture}
+          wanderingRisk={wanderingRisk}
+          devices={activeDevices}
+          t={t}
+        />
 
         {/* Sub-navegación */}
         <nav
