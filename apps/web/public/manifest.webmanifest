@@ -1,0 +1,15 @@
+{
+  "name": "Vetlla",
+  "short_name": "Vetlla",
+  "description": "Gestión sociosanitaria cloud-native",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "lang": "es-ES",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

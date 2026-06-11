@@ -1,0 +1,771 @@
+# project_state.yaml — Única fuente de verdad del avance de Vetlla
+# Se actualiza al cerrar cada hito (tests verdes + checkpoint + resumen).
+
+project:
+  name: Vetlla
+  description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
+  phase: building            # planning | building | done
+  current_milestone: H5      # en construcción (reactivado 2026-06-09, ADR-0010); resto del MVP completo
+  last_updated: 2026-06-11
+  # 2026-06-11 (GC-2 · ejecución en bloque "producto vendible"): tras cerrar INC-1 se
+  # ejecutaron consecutivamente TODOS los sprints no bloqueados por Angel, verificados
+  # contra Postgres 16 LOCAL con RLS real (rol vetlla_app NOSUPERUSER NOBYPASSRLS creado
+  # en este entorno) además del CI:
+  #   - INC-5 MAR offline (ADR-0012 -> Aceptada): mergeAdministration/applyMedicationAdminPush
+  #     (LWW por EVENTO), tabla medication_sync_conflicts con RLS, medications.push, cola
+  #     medOutbox (IndexedDB v2), badge PENDIENTE_SYNC en el MAR. 7 tests puros + 4 integración.
+  #   - INC-7 Treatment (M-09) + editor momentDoses (M-11): tabla treatments con RLS + test
+  #     aislamiento, router treatments, prescribe con treatmentId, editor de dosis por hora,
+  #     sección Tratamientos en el MAR, chip diagnóstico clickable (M-10).
+  #   - INC-2 DSAR (mecánica): exportResidentData (art.15, SHA-256 integridad) +
+  #     anonymizeResident (art.17, política PARAMETRIZABLE — la decisión es Q-003; default
+  #     conservador), permiso dsar:manage, pestaña RGPD en expediente. 4 tests integración.
+  #   - VENTA (ADR-0015): onboarding self-service /registro (tenant TRIAL 30d + Dirección +
+  #     centro en transacción, AuditLog SIGNUP) + pricing por plaza (Tenant.plan + catálogo
+  #     en código, página /plan, banner trial). VERIFICADO en runtime real: registro ->
+  #     login del director nuevo OK.
+  #   - INC-6 observabilidad (capa app): logger JSON sin PII (redactFields, 5 tests),
+  #     onError tRPC sin input, timing de procedures lentas, /api/health con check BD.
+  #   - INC-8 UX/i18n: /centros completa es/ca + validación inline Zod (UX-09 restante),
+  #     títulos i18n de /residentes y /ocupacion, nav.audit.
+  # Totales: 98 tests db + 157 tests web; lint+typecheck+build verdes en cada sprint.
+  # Pendiente bloqueado por Angel: INC-3 deploy UE (Q-004), INC-4 copiloto real (Q-004),
+  # política de retención definitiva (Q-003). H5 re-validación con Ollama: en vuestra máquina.
+  # 2026-06-11 (CIO · cierre INC-1): run #56 (commit 40fb4f0) completado con SUCCESS. El gate
+  # RLS dinámico (rls.test.ts, paso #13) VERDE con el rol vetlla_app NOSUPERUSER NOBYPASSRLS.
+  # INC-1 CERRADO. Invariante #1 (aislamiento multitenant) protegido en CI. Siguiente: el plan
+  # de sprints pendientes (INC-2 a INC-8 + H5 re-validar) está documentado abajo.
+  # 2026-06-11 (CIO · gobierno INC-1): el gate RLS corrió por 1ª vez en CI (run #53, f4f7905)
+  # y FALLÓ — la app conectaba como rol SUPERUSUARIO y Postgres ignora RLS para superusers
+  # (FORCE solo somete al owner). Riesgo de seguridad de cara a producción, no solo de CI.
+  # DECISIÓN: rol de app no-propietario NOSUPERUSER NOBYPASSRLS (vetlla_app) + doble URL
+  # (DATABASE_URL owner / APP_DATABASE_URL runtime). ADR-0014 (ADR-0002 enmendado). INC-1
+  # REABIERTO -> FIX_ROL_APP_EN_CURSO. Handoff a nuria-backend/leo-devops/quim-qa. Nueva
+  # open_question Q-005 (provisión del rol en OVHcloud gestionado). Ver decision_incremento_1.
+  # 2026-06-10 (CIO · ciclo de gobierno #1): arranque de la iteración MVP->producción.
+  # Entregado el roadmap de brechas en docs/roadmap-produccion.md (gap analysis por áreas:
+  # seguridad/RGPD, fiabilidad/CI/deploy UE, copiloto/IA, datos/migraciones, UX/a11y,
+  # observabilidad, multicentro) + secuencia de 8 épicas con responsable y criterios.
+  # DECISIÓN: incremento #1 = INC-1 "Blindar el aislamiento RLS en CI" (owner quim-qa +
+  # leo-devops): protege el invariante #1 (multitenant/RLS), es verificable aquí (CI ya
+  # levanta Postgres de servicio), reversible y desbloquea las épicas que tocan schema.
+  # Nuevas open_questions para Angel: Q-003 (política de retención RGPD/DSAR) y Q-004
+  # (credenciales OVHcloud + firma de DPA para cerrar deploy UE e IA). Ver ciclo abajo.
+  # 2026-06-10: (1) copiloto: arreglo de prompts v2 (contrato JSON explícito para modelos
+  # reales) tras fallar la validación con Ollama; queda pendiente de re-validar es/ca.
+  # (2) Sprint Dirección: UX-19 (plano de ocupación + KPIs, /ocupacion) y UX-18 (centro de
+  # alertas priorizado, /alertas). Router overview (occupancy/alerts), lógica pura
+  # occupancy.ts + alerts.ts con tests. 137 tests web · typecheck/lint/build verde.
+  # 2026-06-09: refinamiento UX-first de Medicación y RBAC a partir del análisis
+  # competitivo de ResiPlus. Diseño priorizado (docs/ux/medicacion-y-rbac.md) +
+  # ADR-0009 (modelo de pauta de medicación). Implementado y verificado (79 tests,
+  # build OK): quick wins (alergias visibles, estados accesibles, cabecera sticky,
+  # tarjetas de rol PUEDE/NO-PUEDE, auditoría de cambio de rol) y Sprint M
+  # (prescripción separada del MAR, vía/forma como enum, pauta por días, PRN,
+  # alergia bloqueante con AuditLog OVERRIDE_ALLERGY, /equipo con jobTitle). Tooling:
+  # `pnpm run bootstrap` (arranque local de un comando, sin depender de Docker).
+  # 2026-06-08: análisis de modelo de negocio (5 informes en docs/negocio/) con
+  # investigación de mercado propia. Surface una tensión estratégica: el diferencial
+  # declarado (IA Copilot) está en H5 diferido -> decisión pendiente (ver Q-001).
+  # 2026-06-07: cerrada deuda de UX en estado "doing": UX-10 (paginación de
+  # listados) y UX-17 (MAR por turno + motivo en no-administrado). 54 tests verde.
+  # 2026-06-07: UX-08 design system accesible sobre Radix (Dialog/Tabs/Toast en
+  # @vetlla/ui); confirm y toast reimplementados sobre las primitivas (focus-trap,
+  # scroll-lock, retorno de foco, aria-live gestionada). Tabs queda lista para UX-12.
+
+# --------------------------------------------------------------------------
+# Decisiones tomadas (las no triviales también van a docs/adr/)
+# --------------------------------------------------------------------------
+decisions:
+  - id: D-001
+    date: 2026-06-06
+    decision: >-
+      Esta branch (claude/vetlla-saas-mvp-spec-PuHOW) se dedica exclusivamente a
+      Vetlla. Se reemplaza el CLAUDE.md previo (sistema Gobernator de inversiones),
+      que permanece en la branch main.
+  - id: D-002
+    date: 2026-06-06
+    decision: >-
+      Stack confirmado del spec: monorepo pnpm+Turborepo, Next.js App Router + TS,
+      tRPC, Prisma + Postgres con RLS, Auth.js, PWA offline (IndexedDB + cola sync),
+      Tailwind + shadcn/ui, Zod, Vitest + Playwright, @anthropic-ai/sdk. Todo en UE.
+  - id: D-003
+    date: 2026-06-08
+    decision: >-
+      Se documenta el modelo de negocio de Vetlla en docs/negocio/ (5 informes +
+      metodología y un dossier ejecutivo), adaptando un framework de análisis de
+      empresas cotizadas al caso de una startup pre-ingresos. Fuente de verdad del
+      análisis: evidencia de sector/competidores/cliente/regulación; el spec es
+      hipótesis, no hecho. Sustenta investigación web de junio 2026 con fuentes
+      citadas y datos etiquetados (Confirmado/Estimado/Hipótesis/No confirmado).
+
+# --------------------------------------------------------------------------
+# Supuestos pendientes de confirmar (ver chat de planificación)
+# --------------------------------------------------------------------------
+assumptions:
+  - id: A-001
+    text: Auth.js (NextAuth) con adaptador Postgres en lugar de Supabase Auth, para mantener el control del schema y RLS en un solo Postgres.
+    status: pending_confirmation
+  - id: A-002
+    text: Transcripción de voz se deja como interfaz/stub en el MVP (entrada por texto operativa); motor UE/on-prem se integra cuando se elija proveedor.
+    status: pending_confirmation
+  - id: A-003
+    text: Despliegue concreto (proveedor app + Postgres EU) se decide en H0/ADR; el MVP corre en local con docker-compose para Postgres.
+    status: resolved
+    resolution_2026-06-09: >-
+      DECIDIDO: OVHcloud (HDS desde 2015 + SecNumCloud) para app + Postgres gestionado +
+      inferencia (AI Endpoints open-weight). Scaleway, también HDS, queda como alternativa
+      equivalente (cambio = AI_VLLM_BASE_URL). Ver ADR-0011. Pendiente: credenciales +
+      benchmark es/ca; verificar ENS para sector público español. (En local sigue docker-compose.)
+  - id: A-004
+    text: 2FA opcional se modela en datos pero su implementación completa puede caer en H1 o roadmap según esfuerzo.
+    status: pending_confirmation
+
+# --------------------------------------------------------------------------
+# Análisis de modelo de negocio (docs/negocio/)
+# --------------------------------------------------------------------------
+business_analysis:
+  date: 2026-06-08
+  location: docs/negocio/
+  method: >-
+    Framework de análisis de empresas cotizadas adaptado a startup pre-ingresos.
+    Investigación web propia en 4 líneas (estructura del sector, financiación/
+    regulación/personal, competidores/pricing, benchmarks SaaS) + dossier ejecutivo.
+  documents:
+    - docs/negocio/00-metodologia.md
+    - docs/negocio/01-sector-map.md
+    - docs/negocio/02-business-model.md
+    - docs/negocio/03-economics-engine.md
+    - docs/negocio/04-strategy-map.md
+    - docs/negocio/05-contradiction-check.md
+    - docs/negocio/06-dossier-ejecutivo.md
+  key_findings:
+    - "Hueco real: el líder (ResiPlus, +2.750 centros) sigue siendo escritorio cliente-servidor, no cloud-native."
+    - "Diferencial de IA libre: ningún competidor de gestión tiene copiloto agéntico administrativo (la IA del sector es visión/sensores para caídas)."
+    - "Dolor del cliente confirmado: escasez de personal + carga documental/inspección + UNE 158101 obligatoria (Madrid nov-2026)."
+    - "Único precio público del mercado: GdR = 59 EUR/centro + 2 EUR/residente/mes. ResiPlus/Resilife/Resiges no publican precio."
+    - "Mercado fragmentado: ~78% de las camas fuera del top-15 -> beachhead natural en centros pequeños/independientes y nuevos."
+    - "Economía atractiva pero CONDICIONAL: el LTV:CAC depende de pricing y churn reales aún sin validar."
+  tension: >-
+    Palabras vs. actos: el diferencial declarado (IA Copilot) está en H5 diferido.
+    A corto, Vetlla compite solo por arquitectura+UX, terreno más fácil de igualar.
+
+# --------------------------------------------------------------------------
+# Preguntas abiertas (decisiones pendientes de Angel)
+# --------------------------------------------------------------------------
+open_questions:
+  - id: Q-001
+    date: 2026-06-08
+    question: >-
+      Rumbo del diferencial de IA: ¿reactivar H5 (decidir modelo UE/coste y
+      construir el copiloto) o reposicionar el relato a "cloud + cumplimiento ahora,
+      IA en roadmap" mientras tanto? Es la principal tensión del análisis de negocio.
+    status: resolved           # 2026-06-09: reactivar H5, estrategia open-source soberano (ADR-0010)
+    resolution_2026-06-09: >-
+      RESUELTA. Angel confirma reactivar H5 con estrategia open-source soberano
+      (docs/adr/0010, enmienda ADR-0008): capa provider-agnóstica liderando LLM
+      open-source auto-alojados en la UE; Claude-UE como fallback. Pendiente solo la
+      elección de proveedor/modelo concretos (ligada a A-003), que no bloquea el Slice 1.
+    update_2026-06-08: >-
+      Resuelta la incógnita técnica de "qué modelo UE" (docs/adr/0008): hay vía viable
+      (Claude en Bedrock/Vertex UE). Queda la decisión de Angel: (a) reactivar H5 ahora
+      construyendo packages/ai sobre esa vía, o (b) mantener diferido y reposicionar el
+      relato a "cloud+cumplimiento ahora, IA en roadmap". Y, si (a), elegir vía de hosting
+      (ligada a A-003).
+    update_2026-06-09: >-
+      Angel inclina a (a) reactivar H5 sobre la vía cloud-EU, dejando el proveedor
+      cloud (Bedrock vs Vertex / A-003) por decidir; por eso packages/ai se diseñará
+      provider-agnóstico. Mientras tanto se ha avanzado en refinamiento UX (Sprint M:
+      medicación + RBAC). La construcción de H5 (packages/ai) sigue siendo el próximo
+      gran hito pendiente.
+    related: [H5, D-003, ADR-0008, ADR-0010]
+  - id: Q-002
+    date: 2026-06-08
+    question: >-
+      Validar las dos incógnitas que mueven la economía (informe 03): precio real
+      por plaza/mes y adopción/churn real, idealmente con 3-5 centros piloto.
+    status: open
+    related: [D-003]
+  - id: Q-003
+    date: 2026-06-10
+    question: >-
+      Política de retención y supresión de datos (RGPD/DSAR, INC-2). ¿Cuánto tiempo
+      se conservan los datos clínicos del residente tras el alta/baja/fallecimiento, y
+      qué se anonimiza vs. se borra (respetando obligaciones legales de conservación
+      sanitaria en España y la integridad del AuditLog)? Es decisión de negocio/legal,
+      no técnica: condiciona el diseño de export/borrado del interesado (art. 15-17).
+    status: open
+    related: [INC-2, A1, A6]
+  - id: Q-004
+    date: 2026-06-10
+    question: >-
+      Aprovisionar OVHcloud (ADR-0011): credenciales de AI Endpoints + Postgres
+      gestionado + app, y firma del DPA/SCC con residencia UE. Tiene coste recurrente y
+      es contrato con tercero -> decisión de Angel. Desbloquea INC-3 (deploy UE) y INC-4
+      (cablear el copiloto real + benchmark es/ca que cierra H5). Verificar ENS para
+      clientes del sector público español antes de contratar.
+    status: open
+    related: [INC-3, INC-4, ADR-0011, A-003, H5]
+  - id: Q-005
+    date: 2026-06-11
+    question: >-
+      Provisión del rol de aplicación vetlla_app (NOSUPERUSER NOBYPASSRLS, solo CRUD) en el
+      Postgres GESTIONADO de OVHcloud (A-003/Q-004). En CI y local lo crea el script de
+      bootstrap (packages/db/prisma/sql/app-role.sql) como owner, pero algunos Postgres
+      gestionados NO conceden CREATEROLE al usuario base, o exigen crear roles desde la
+      consola del proveedor. Necesito saber, al contratar OVHcloud: (a) si el usuario base
+      puede CREATE ROLE / GRANT, o (b) si el rol de app y su contraseña los provisiona
+      operaciones/Angel desde la consola. La contraseña del rol va a secretos, nunca al repo.
+      Bloquea que el aislamiento RLS se enforce en el entorno UE de producción (invariante #1).
+    status: open
+    related: [INC-1, INC-3, ADR-0014, ADR-0002, A-003, Q-004]
+
+# --------------------------------------------------------------------------
+# Hitos
+# --------------------------------------------------------------------------
+milestones:
+  - id: H0
+    name: Andamiaje
+    status: done               # not_started | in_progress | done
+    effort: M
+    goal: Monorepo, Next.js, Prisma+Postgres (docker), Auth.js, CI básico, CLAUDE.md, project_state.yaml, login funcional.
+    exit_criteria:
+      - Monorepo arranca (pnpm install + dev) y lint/typecheck en verde.
+      - Postgres local vía docker-compose; primera migración Prisma aplicada.
+      - Pantalla de login funcional con Auth.js.
+      - CI básico (lint + typecheck + tests) en verde.
+    result:
+      summary: >-
+        Monorepo pnpm+Turborepo con apps/web (Next 15 App Router + tRPC v11 +
+        Auth.js v5 + Tailwind) y packages/db (Prisma 6 + Postgres). Login por
+        credenciales funcional (verificado en runtime: sesión con role+tenantId,
+        rechazo de credenciales inválidas). lint + build + typecheck + 5 tests en
+        verde. Migración inicial aplicada y seed con tenant demo + 5 roles.
+      verified:
+        - "pnpm lint / build / typecheck: verde"
+        - "Vitest: 5 tests verde (auth-schema, login-form, UserRole)"
+        - "Runtime: /login 200, / -> 307 /login, tRPC health ok, login credenciales -> sesión"
+      notes:
+        - Docker presente pero el registry está bloqueado por la política de red; en
+          este entorno se usó el Postgres 16 del sistema. docker-compose.yml queda
+          para entornos con acceso al registry.
+        - E2E (Playwright) configurado con smoke test; se integrará en CI con BD de test (post-H0).
+      adr: docs/adr/0001-monorepo-stack-andamiaje.md
+
+  - id: H1
+    name: Multitenancy + RBAC
+    status: done
+    effort: L
+    goal: Tenants, usuarios, roles, RLS y aislamiento verificado por test.
+    exit_criteria:
+      - tenant_id + RLS en todas las tablas con datos.
+      - Contexto de tenant inyectado en middleware de auth.
+      - Test demuestra que un tenant no ve datos de otro por ninguna ruta/query.
+      - RBAC por rol + pertenencia a tenant (mínimo privilegio).
+    result:
+      summary: >-
+        RLS en Postgres (ENABLE + FORCE) sobre tenants y users, con políticas por
+        GUC app.tenant_id y bypass para superadmin/seed (fallo en cerrado). Cliente
+        Prisma forTenant/asPlatformAdmin que fija el contexto por transacción. tRPC
+        con tenantProcedure (inyecta ctx.db aislado) y permissionProcedure (RBAC).
+        Login adaptado a bypass (lookup cross-tenant por email).
+      verified:
+        - "DB: 6 tests de aislamiento RLS (lectura/escritura cruzada, fallo en cerrado, bypass)"
+        - "RBAC: 5 tests unitarios de la matriz de permisos"
+        - "Runtime API: dirección ve solo sus 4 usuarios; auxiliar -> FORBIDDEN en users.list; tenant.current aislado"
+        - "lint + build + typecheck verde; 16 tests en total"
+      adr: docs/adr/0002-rls-multitenancy.md
+      notes:
+        - Un solo rol de Postgres con FORCE RLS (app y migraciones comparten rol). En
+          producción se valorará un rol de app no propietario (ADR-0002).
+        - Cada tabla futura con datos debe añadir tenant_id + RLS+FORCE + política en su migración.
+
+  - id: H2
+    name: Centros, plazas y residentes
+    status: done
+    effort: L
+    goal: CRUD de centro/unidad/plaza y expediente sociosanitario básico + escalas.
+    exit_criteria:
+      - CRUD Center (residencia|centro_dia|vivienda_tutelada), Unit, Bed/Plaza, ocupación.
+      - Expediente Resident con contactos, dependencia, alergias, diagnósticos.
+      - Assessment con escalas Barthel y Tinetti.
+    result:
+      summary: >-
+        Modelo de datos de centros/unidades/plazas + expediente del residente
+        (contactos, alergias, diagnósticos, escalas), todo con tenant_id y RLS+FORCE.
+        API tRPC CRUD (centers, units, beds, residents + sub-recursos) con RBAC e
+        integridad cross-tenant. Escalas Barthel/Tinetti como dominio tipado con
+        validación de rango e interpretación. packages/ui (estilo shadcn) y UI con
+        shell autenticado: panel, centros (+detalle con ocupación), residentes
+        (+expediente). Seed §13 con 2 centros (30+8 plazas) y 28 residentes.
+      verified:
+        - "DB: 8 tests (aislamiento RLS incluye centros/residentes)"
+        - "Web: 17 tests (rbac, escalas, schemas, login-form)"
+        - "Runtime API: centers.list/residents.list, alta de centro (dir) vs FORBIDDEN (auxiliar), validación de rango de escala (BAD_REQUEST)"
+        - "lint + build + typecheck verde; 25 tests en total; 9 rutas construidas"
+      adr: docs/adr/0003-modelo-centros-residentes.md
+      notes:
+        - Ocupación derivada de Resident.bedId (1-1 @unique); BedStatus solo DISPONIBLE/FUERA_SERVICIO.
+        - UI sin Radix (primitivas Tailwind). shadcn con Radix si se necesitan modales/combobox.
+
+  - id: H3
+    name: Atención directa offline
+    status: done
+    effort: XL
+    goal: Flujo tablet, CareRecord, PWA + cola de sync con resolución de conflictos.
+    exit_criteria:
+      - PWA instalable; flujo a pie de cama con objetivos táctiles amplios.
+      - CareRecord (constantes, ABVD, deposiciones, ingesta, incidencias) con autor+timestamp+syncStatus.
+      - Registro sin red y sincronización sin duplicados al volver online (last-write-wins por campo + log de conflictos).
+    result:
+      summary: >-
+        CareRecord + SyncConflict (tenant_id + RLS+FORCE). Motor de sync en
+        packages/db: mergeCareRecord (puro, LWW por campo + conflictos) y
+        applyCareRecordPush (idempotente por tenant_id+client_id). Router tRPC
+        care.push/listByResident con RBAC (care:*). Cliente offline: IndexedDB
+        (cola outbox) + motor de sync (online/intervalo) + cliente tRPC vanilla +
+        provider/hook + badge de estado en la shell. PWA: manifest + service
+        worker network-first + registro. Página /atencion a pie de cama
+        (constantes, ingesta, deposición, incidencia) con objetivos táctiles.
+      verified:
+        - "DB: 16 tests (merge puro 5, integración sync 3 -idempotencia/LWW/RLS-, RLS 7, enum 1)"
+        - "Web: 18 tests"
+        - "Runtime HTTP: care.push mismo clientId -> CREATED luego MERGED, mismo id, 1 solo registro (sin duplicados)"
+        - "lint + build + typecheck verde; 34 tests en total"
+      adr: docs/adr/0004-atencion-offline-sync.md
+      notes:
+        - Conflictos se registran y gana el más reciente; revisión/resolución manual en UI queda pendiente.
+        - El offline real de datos lo da IndexedDB; el SW cubre navegación. E2E offline con navegador no ejecutado aquí (sin browser); cubierto por tests de integración + verificación HTTP del push.
+
+  - id: H4
+    name: Medicación + PIA
+    status: done
+    effort: L
+    goal: Prescripción, MAR con alertas de no-administrado, PIA con objetivos y revisión.
+    exit_criteria:
+      - Medication (prescripción) + MedicationAdministration (MAR).
+      - Alertas de no-administración.
+      - CarePlan (PIA) con CarePlanGoal y CarePlanReview.
+    result:
+      summary: >-
+        Medication + MedicationAdministration + CarePlan/Goal/Review (tenant_id +
+        RLS+FORCE). MAR calculado on-the-fly (computeSchedule/computeAlerts, lógica
+        pura) con alertas de no-administrado derivadas; registro idempotente por
+        (tenant, medicación, hora). Routers medications (prescribe/schedule/record/
+        alertsToday) y carePlans (plan/goal/review) con RBAC. UI: sub-páginas
+        medicación (prescripción + MAR + administrar) y PIA (objetivos + revisiones),
+        más alerta de no-administrado en el panel. Seed con medicación y PIA demo.
+      verified:
+        - "Web: 26 tests (mar 6, rbac 11, scales 5, schema 3, login 1)"
+        - "DB: 16 tests (sin cambios; RLS/sync siguen verdes)"
+        - "Runtime: prescripción -> dosis NO_ADMINISTRADO (alerta) -> administración por auxiliar -> resuelto; auxiliar no prescribe (FORBIDDEN); PIA crea plan+objetivo"
+        - "lint + build + typecheck verde; 42 tests en total"
+      adr: docs/adr/0005-medicacion-mar-pia.md
+      notes:
+        - "MAR no pre-genera dosis: se calculan; alerta = dosis vencida (>hora+60min) sin registro."
+        - "Numeración de migración RLS de H3 corregida (orden lexicográfico para deploy en fresco)."
+
+  - id: H5
+    name: IA Copilot
+    status: in_progress        # reactivado 2026-06-09 con estrategia open-source soberano (ADR-0010)
+    effort: XL
+    strategy_2026-06-09: >-
+      Reactivado. Estrategia de modelos en docs/adr/0010: capa provider-agnóstica en
+      packages/ai (ModelProvider + StubProvider), liderando open-source auto-alojado en
+      la UE (Mistral/Llama vía vLLM en cloud EU-soberano) por soberanía RGPD; Claude vía
+      Bedrock/Vertex UE como fallback para razonamiento de alta exigencia. Se mide por
+      feature sobre prompts es/ca. Casos de uso del copiloto catalogados en el ADR-0010.
+    progress_2026-06-09:
+      - "Slice 1 — Fundación @vetlla/ai provider-agnóstica (ModelProvider, StubProvider,
+        registro de modelos por tier, redactPii/rehydrate, tools Zod, prompts es/ca).
+        Testeable sin modelo. 48 tests."
+      - "Slice 2 — Feature 1: NL -> CareRecord con confirmación humana en /atencion.
+        Router copilot (draftCareRecord/confirmCareRecord), PII minimizada, AuditLog
+        COPILOT_DRAFT/CONFIRM, reutiliza care.push idempotente. UI tablet con badge art.50."
+      - "Slice 3 — Feature 2: borrador de PIA (tier razonamiento) en /residentes/[id]/pia.
+        draftCarePlan/confirmCarePlan, helper createCarePlanWithGoals, título+objetivos
+        editables, mismas garantías."
+      - "Verificación: 62 tests @vetlla/ai · 123 web · typecheck 5/5 · suite E2E Playwright
+        31/31 con navegador real (incl. copiloto y copiloto-pia)."
+    progress_2026-06-10:
+      - "Validación con modelo real (Ollama qwen2.5:14b) destapó un fallo que el
+        StubProvider enmascaraba: las plantillas de prompt (v1) NO describían el contrato
+        de salida JSON y aún pedían 'usar herramientas tipadas', pero la ruta de inferencia
+        usa responseFormat:json y parsea el texto (sin tool-calling). Un modelo real
+        devolvía JSON con otra forma -> careDraftSchema/carePlanDraftSchema lo rechazaban
+        (CopilotDraftError -> BAD_REQUEST, toast rojo al 'Generar')."
+      - "Arreglo: prompts reescritos a v2 (careRecordExtraction.v2 / carePlanDraft.v2) con
+        el contrato JSON explícito por tipo + ejemplos few-shot es/ca y 'responde solo JSON,
+        sin markdown'. Parseo del modelo endurecido (parseModelJson): tolera vallas ```json
+        y texto alrededor del objeto. promptVersion en AuditLog pasa a .v2. 88 @vetlla/ai +
+        125 web (2 nuevos de tolerancia de parseo) · typecheck/lint verde."
+    pendiente_para_cerrar_H5:
+      - "PENDIENTE DE VALIDAR (2026-06-10): re-probar el copiloto con modelo real
+        (Ollama qwen2.5:14b) tras el arreglo de prompts v2. Recoger 3-4 casos es/ca de
+        Feature 1 + el PIA y juzgar si la calidad es 'suficiente para piloto' o si el PIA
+        debe reservarse al modelo grande (OVHcloud). Es el benchmark es/ca que cierra H5."
+      - "Cablear proveedor real (vLLM open-source UE / Claude-UE fallback) — solo config
+        (AI_PROVIDER + AI_MODEL_*); depende de A-003. Benchmark es/ca del PIA con modelo real."
+      - "Transparencia art.50 en UI ya presente; revisar checklist DPIA/RoPA y pasar
+        ADR-0008/0010 a 'Aceptada' definitiva cuando se elija proveedor."
+      - "Entrada por voz (Whisper UE) — A-002, hoy stub/texto."
+    goal: Las 2 features estrella con tool use y human-in-the-loop.
+    exit_criteria:
+      - Lenguaje natural -> CareRecord estructurados, con confirmación previa (es y ca).
+      - Borrador automático de PIA/seguimiento que requiere aprobación humana.
+      - Herramientas tipadas respetan RLS+rol; cada acción en AuditLog; nada de PII fuera de UE.
+    deferral:
+      reason: >-
+        No se usará API key de Anthropic por ahora; queda pendiente decidir qué modelo
+        usar (UE/coste/capacidad). Se retoma cuando Angel defina el modelo.
+      preparado: >-
+        La arquitectura ya soporta tool use: el modelo llamará a los routers tRPC
+        tipados (centers/residents/care/medications/carePlans), que ya validan rol,
+        tenant y RLS. Faltará packages/ai (definición de tools + prompts + SDK) y los
+        endpoints de confirmación/aprobación (human-in-the-loop) + AuditLog.
+      analisis_2026-06-08: >-
+        Resuelto el "qué modelo" en docs/adr/0008 (estado: Propuesta). HALLAZGO CLAVE:
+        la API 1P de Anthropic NO ofrece residencia UE (solo us/global) -> incompatible
+        con el principio "datos de salud no salen de la UE". Solución: acceder a Claude
+        vía AWS Bedrock UE in-region (Fráncfort) o Google Vertex AI (endpoint eu); ambos
+        confirmados (datos en UE, no compartidos con Anthropic, retención cero). Modelos:
+        Sonnet 4.6 (copiloto) + Haiku 4.5 (extracción). Bedrock/Vertex no soportan Managed
+        Agents/server-tools -> usar tool use con bucle manual (encaja con human-in-the-loop).
+        El desempate Bedrock vs Vertex sigue a A-003 (dónde vivan app+Postgres). AI Act:
+        mantener "asistencia administrativa con humano en el bucle" (riesgo limitado +
+        transparencia art. 50 desde 2-ago-2026); evitar apoyo a decisión clínica (alto riesgo).
+        Voz: Whisper auto-hospedado en UE. Pendiente para pasar a "Aceptada": modelos exactos
+        por región en consola, DPA/SCC con el cloud, y decidir A-003.
+
+  - id: H6
+    name: Portal de familias + pulido
+    status: done
+    effort: M
+    goal: Portal de familias (solo lectura) + pulido de accesibilidad e i18n.
+    exit_criteria:
+      - Familiar ve resumen y novedades de su residente vinculado y nada más.
+      - WCAG 2.1 AA en flujos de auxiliar y familia.
+      - i18n es-ES y ca-ES completos en los flujos del MVP.
+    result:
+      summary: >-
+        FamilyLink (usuario↔residente) con RLS+FORCE. Router family.portal con
+        resumen minimizado y doble aislamiento (RLS + filtro por vínculo del usuario).
+        Portal de familias de solo lectura; shell con navegación reducida y redirección
+        del familiar al portal. i18n propio es/ca (cookie + catálogos + useT/getT +
+        selector), html lang dinámico; login, shell y portal traducidos. Accesibilidad:
+        skip-link, aria-live, nav/main etiquetados, objetivos táctiles, color no único.
+      verified:
+        - "Web: 30 tests (incluye i18n translate y rbac portal)"
+        - "DB: 16 tests"
+        - "Runtime: familiar ve solo su residente vinculado; residents.list -> FORBIDDEN; i18n es/ca (subtítulo, botón, html lang)"
+        - "lint + build + typecheck verde; 46 tests en total; /portal construido"
+      adr: docs/adr/0006-portal-familias-i18n-accesibilidad.md
+      notes:
+        - Pantallas de gestión quedan en castellano (i18n extensible añadiendo claves); ca cubre login/shell/portal.
+        - Superadmin de plataforma sin consola propia en el MVP (no opera dentro de tenant).
+
+# --------------------------------------------------------------------------
+# Criterios de aceptación globales del MVP (§12 del spec)
+# --------------------------------------------------------------------------
+acceptance_criteria:
+  - Operador se da de alta, crea residencia + vivienda tutelada, da de alta plazas y residentes.
+  - Auxiliar registra atención desde tablet sin red; datos aparecen al volver online sin duplicados.
+  - Sanitario prescribe medicación y ve alertas de no-administración.
+  - Copiloto convierte frase libre en registros estructurados (es y ca) y redacta borrador de PIA con aprobación.
+  - Familiar ve solo el resumen de su residente.
+  - Aislamiento total entre tenants demostrado por test.
+  - Toda acción sobre datos personales en AuditLog. Datos alojados en la UE. [HECHO — ver docs/adr/0007]
+
+# --------------------------------------------------------------------------
+# Trazabilidad / RGPD (post-MVP, transversal)
+# --------------------------------------------------------------------------
+auditlog:
+  status: done
+  date: 2026-06-07
+  summary: >-
+    AuditLog inmutable (trigger BEFORE UPDATE) con RLS+FORCE. Helper logAudit y
+    ctx.audit en tenantProcedure. Cobertura: residentes y expediente, medicación
+    (prescripción y MAR), PIA, atención directa y login. Página /auditoria y router
+    audit.list con permiso audit:read (dirección + superadmin).
+  adr: docs/adr/0007-auditlog-rgpd.md
+  verified:
+    - "DB: 3 tests (escritura, RLS, inmutabilidad UPDATE bloqueado)"
+    - "RBAC: audit:read solo dirección/superadmin"
+    - "Runtime: login y prescripción generan traza; auxiliar -> FORBIDDEN; aislamiento por tenant"
+    - "lint + build + typecheck verde; 50 tests en total"
+
+# --------------------------------------------------------------------------
+# Backlog de UX (equipo de Elena — ver docs/ux/)
+# Prioridad: ya | sprint1 | backlog · Estado: todo | doing | done
+# --------------------------------------------------------------------------
+ux_backlog:
+  owner: Elena (UX Lead)
+  source: docs/ux/informes/2026-06-07-auditoria-ux.md
+  items:
+    - { id: UX-01, titulo: "Localizar fechas/horas (Intl según idioma)", prioridad: ya, estado: done }
+    - { id: UX-02, titulo: "Editor de horas de medicación (chips, no texto)", prioridad: ya, estado: done }
+    - { id: UX-03, titulo: "Confirmación en acciones destructivas", prioridad: ya, estado: done }
+    - { id: UX-04, titulo: "Sistema de notificaciones (toasts) + errores consistentes", prioridad: ya, estado: done }
+    - { id: UX-05, titulo: "Estados de carga (skeletons) y vacíos con CTA", prioridad: sprint1, estado: done }
+    - { id: UX-06, titulo: "Reequilibrar el Panel + accesos rápidos por rol", prioridad: sprint1, estado: done }
+    - { id: UX-07, titulo: "Identidad visual / tokens de marca (Vetlla teal)", prioridad: sprint1, estado: done }
+    - { id: UX-08, titulo: "Design system accesible (Radix): Dialog, Toast, Tabs", prioridad: sprint1, estado: done }
+    - { id: UX-09, titulo: "Patrón de formularios con validación inline (Zod en cliente)", prioridad: sprint1, estado: done }
+    - { id: UX-10, titulo: "Búsqueda y filtros en listados + paginación", prioridad: sprint1, estado: done }
+    - { id: UX-11, titulo: "Migas de pan y cabecera de residente persistente", prioridad: backlog, estado: done }
+    - { id: UX-12, titulo: "Expediente en pestañas", prioridad: backlog, estado: done }
+    - { id: UX-13, titulo: "Auxiliar: lista 'mi unidad' de 1 toque", prioridad: sprint1, estado: done }
+    - { id: UX-14, titulo: "Auxiliar: confirmación con deshacer + pendientes de sync", prioridad: sprint1, estado: done }
+    - { id: UX-15, titulo: "Entrada táctil (inputMode, steppers, botones grandes)", prioridad: sprint1, estado: done }
+    - { id: UX-16, titulo: "Indicador offline visible y educativo", prioridad: backlog, estado: done }
+    - { id: UX-17, titulo: "MAR como pase por turno + motivo en no-administrado", prioridad: sprint1, estado: done }
+    - { id: UX-18, titulo: "Centro de alertas priorizado", prioridad: backlog, estado: done }
+    - { id: UX-19, titulo: "Dirección: plano de ocupación + KPIs", prioridad: backlog, estado: done }
+    - { id: UX-20, titulo: "Portal de familias más humano + control de privacidad", prioridad: backlog, estado: done }
+
+# --------------------------------------------------------------------------
+# Rediseño UX de Medicación + RBAC (2026-06-09, a partir del análisis de ResiPlus)
+# Diseño: docs/ux/medicacion-y-rbac.md · Decisión de modelo: docs/adr/0009
+# Owner: Elena (UX Lead).
+# --------------------------------------------------------------------------
+medication_rbac_redesign:
+  design: docs/ux/medicacion-y-rbac.md
+  adr: docs/adr/0009-modelo-pauta-medicacion.md
+  done:
+    - { id: M-01, titulo: "Alergias visibles (banner sticky en MAR y prescripción)" }
+    - { id: M-02, titulo: "Estados del MAR accesibles (icono+texto+color, aria-label)" }
+    - { id: M-03, titulo: "Cabecera sticky del residente en medicación" }
+    - { id: M-04, titulo: "Separar prescripción (/medicacion/prescribir) del MAR" }
+    - { id: M-05, titulo: "Vía y forma farmacéutica como enum (MedicationRoute)" }
+    - { id: M-06, titulo: "Pauta por días de la semana (daysOfWeek)" }
+    - { id: M-07, titulo: "Tipo Crónico/Agudo/PRN + sección 'A demanda' en el MAR" }
+    - { id: M-08, titulo: "Alergia bloqueante en prescripción + AuditLog OVERRIDE_ALLERGY" }
+    - { id: R-01, titulo: "User.jobTitle + presets función→rol" }
+    - { id: R-02, titulo: "Tarjetas de rol PUEDE/NO-PUEDE (RoleCapabilitiesCard)" }
+    - { id: R-03, titulo: "Pantalla /equipo (gestión + 'ver acceso efectivo')" }
+    - { id: R-04, titulo: "Auditoría de cambio de rol y de función (RGPD)" }
+    - { id: M-10, titulo: "Vínculo de prescripción a diagnóstico (diagnosisId): schema+router+UI prescribir+badge en MAR" }
+    - { id: M-11, titulo: "Dosis por franja del día (momentDoses): schema + motor MAR (doseAt) + tests. Editor de UI en prescribir: pendiente" }
+    - { id: R-06, titulo: "Custom roles por tenant: DECISIÓN documentada de diferir hasta demanda real -> docs/adr/0013" }
+    - { id: R-05, titulo: "Acceso familiar: vinculación desde UI + control de privacidad por sección (UX-20)" }
+  backlog: []
+  done_2026-06-11:
+    - { id: M-09, titulo: "Cabecera de tratamiento (Treatment): tabla con RLS + router + UI agrupada en el MAR + selector/creación inline en prescribir" }
+    - { id: M-11b, titulo: "Editor UI de momentDoses en prescribir (dosis por hora, en blanco usa la base)" }
+    - { id: M-10b, titulo: "Chip de diagnóstico clickable hacia el expediente (en prescripciones y tratamientos)" }
+    - { id: AUTH-1, titulo: "Email transaccional UE provider-agnóstico (console dev / http UE) + reset de contraseña (AuthToken un-solo-uso, /recuperar + /restablecer, anti-enumeración) + invitación por enlace (users.sendAccessLink)", commit: "24ec344" }
+    - { id: R-360, titulo: "Visión 360 del residente: pantalla /residentes/[id]/resumen con pestañas (Hoy/Salud/Atención) y acciones rápidas in-situ (administrar dosis, registrar constantes/incidencia) sobre la cola offline; subnav 'Resumen' en ResidentChrome. i18n es/ca (r360.*). E2E e2e/resumen-360.spec.ts (4 casos)", commit: "fe0ce0e" }
+    - { id: R-CONF, titulo: "Revisión de conflictos de sync (UI): campos reviewedAt/reviewedById en SyncConflict+MedicationSyncConflict, router conflicts (list/pendingCount/acknowledge), permiso conflicts:review (DIR/SAN/SUPERADMIN), pantalla /conflictos + nav, test integración ciclo de revisión + RLS", commit: "fe0ce0e" }
+  pendientes_menores_hechos:
+    - "lastLoginAt -> 'último acceso' visible en /equipo (el tracking ya existía en auth.ts)."
+    - "Alta de usuario del equipo desde /equipo (users.invite, contraseña provisional). Email transaccional YA NO diferido: AUTH-1 añade reset por enlace e invitación por email (users.sendAccessLink)."
+  adr_hecho:
+    - "ADR-C -> docs/adr/0012-mar-offline-administraciones.md (ACEPTADA 2026-06-11: implementado y verificado con Postgres+RLS local y en CI)."
+    - "ADR-0015 -> onboarding self-service + pricing por plaza/módulo (Aceptada 2026-06-11)."
+
+# --------------------------------------------------------------------------
+# Equipo agéntico (2026-06-10) — plataforma de trabajo para iterar el MVP
+# Definiciones en .claude/agents/ (ver .claude/agents/README.md). El CIO
+# gobierna y desbloquea cuando un especialista se atasca.
+# --------------------------------------------------------------------------
+team:
+  location: .claude/agents/
+  governance: >-
+    El CIO (cio-vetlla) es la autoridad final de criterio técnico: desbloquea
+    atascos, decide arquitectura/seguridad no trivial, arbitra conflictos,
+    custodia los principios (CLAUDE.md) y cierra hitos con checkpoint. Lo de
+    negocio se escala a Angel como open_question.
+  members:
+    - { id: cio-vetlla,      rol: "CIO / Gobernador (desbloquea y decide)", model: opus }
+    - { id: marc-arquitecto, rol: "Tech Lead / Arquitecto (diseño, ADRs, RLS)", model: opus }
+    - { id: pau-product,     rol: "Product Manager (backlog, project_state, criterios)", model: sonnet }
+    - { id: nuria-backend,   rol: "Backend (Prisma, RLS, tRPC+RBAC, dominio puro)", model: sonnet }
+    - { id: dani-frontend,   rol: "Frontend (Next.js, tRPC, PWA/offline, a11y, i18n)", model: sonnet }
+    - { id: iris-ai,         rol: "IA / Copiloto (packages/ai, prompts, tool-use, PII)", model: sonnet }
+    - { id: elena-ux,        rol: "UX Lead (auditoría, design system, flujos tablet)", model: sonnet }
+    - { id: quim-qa,         rol: "QA / Test (Vitest, Playwright, aislamiento RLS)", model: sonnet }
+    - { id: leo-devops,      rol: "DevOps/SRE (CI/CD, deploy UE, migraciones)", model: sonnet }
+    - { id: sofia-dpo,       rol: "DPO / Seguridad & RGPD (art.9, residencia UE, DPIA)", model: sonnet }
+  loop: >-
+    Pau prioriza -> Marc diseña y reparte slices -> Núria/Dani/Iris/Elena construyen ->
+    Sofía revisa privacidad -> Quim prueba (incl. RLS) + Leo CI/deploy -> el CIO cierra
+    el hito con el checkpoint (lint+typecheck+build+test verdes + project_state + ADR).
+
+# --------------------------------------------------------------------------
+# Ciclos de gobierno del CIO (iteración MVP -> producción)
+# --------------------------------------------------------------------------
+governance_cycles:
+  - id: GC-1
+    date: 2026-06-10
+    cio: cio-vetlla
+    objetivo: >-
+      Arrancar la iteración MVP -> producción (MVP H0-H6 completo; H5 a falta de
+      re-validar con modelo real). Producir roadmap de brechas y decidir el incremento #1.
+    entrega:
+      roadmap: docs/roadmap-produccion.md
+      gap_areas: [seguridad_rgpd, fiabilidad_ci_deploy_ue, copiloto_ia, datos_migraciones, ux_a11y, observabilidad, multicentro]
+    brechas_criticas:
+      - "B1 — CI no protege el aislamiento RLS (ni RLS de packages/db ni Playwright E2E en pipeline). Invariante #1 sin red de seguridad."
+      - "A1/A3 — RGPD bloqueante para datos reales: sin DSAR (export/borrado) y sin DPIA/DPA no se opera legalmente."
+      - "B2 — Sin camino reproducible a producción UE (deploy/IaC/secretos/backups)."
+      - "C1/C2 — Diferencial (copiloto) sin validar (benchmark es/ca) ni cablear (OVHcloud); H5 no cierra."
+    decision_incremento_1:
+      id: INC-1
+      titulo: "Blindar el aislamiento RLS en CI"
+      owner: quim-qa
+      apoyo: leo-devops, nuria-backend
+      status: done  # CERRADO: CI run #56 (commit 40fb4f0) completado SUCCESS. Gate dinámico (rls.test.ts, paso #13) VERDE con rol vetlla_app NOSUPERUSER NOBYPASSRLS. 2026-06-11.
+      porque: >-
+        Protege el principio central (multitenant/RLS) y es VERIFICABLE en este entorno
+        porque CI ya levanta Postgres de servicio (no requiere BD local). Es reversible,
+        barato, y desbloquea toda épica que toque schema (DSAR, MAR offline) al darles red
+        de seguridad de aislamiento. No toca producto: solo añade garantías a la pipeline.
+      criterios_aceptacion:
+        - "CI ejecuta como paso dedicado la suite de aislamiento RLS de packages/db (falla si hay fuga cross-tenant). [IMPLEMENTADO — paso '[INC-1] RLS isolation gate' en ci.yml]"
+        - "CI ejecuta Playwright E2E de flujos críticos contra la BD de servicio. [PENDIENTE — nota/instrucciones añadidas en ci.yml; requiere job dedicado con playwright install]"
+        - "Test meta: enumera tablas con tenant_id y falla si alguna no tiene RLS+FORCE+política (garantía estructural, no puntual). [VERDE AQUÍ — 56 tests estáticos, rls-coverage.test.ts]"
+        - "pnpm lint && typecheck && build && test verde en pipeline. [VERDE AQUÍ para lint+typecheck; test con BD solo verde en CI de GitHub]"
+      entregado_2026-06-11:
+        quim_qa: >-
+          Inventario completo de la suite packages/db (ver abajo). Bug detectado y corregido
+          en rls-coverage.test.ts: el parser de schema.prisma usaba [^}]+ que se cortaba en
+          comentarios con } literal (p.ej. el modelo Medication tenía '// array [{ ... }]'),
+          resultando en tabla "medication" en vez de "medications". Reemplazado por scanner
+          balanceado de llaves línea a línea. Tests estáticos: 56 verde (todos los modelos
+          con tenantId verificados). Gate dedicado añadido en ci.yml ANTES del step genérico.
+          E2E: instrucciones documentadas en ci.yml para leo-devops; no habilitado (requiere
+          playwright install + seed + app en :3000).
+        hallazgo_bug_parser: >-
+          HALLAZGO REAL: El parser original del test meta (rls-coverage.test.ts) usaba regex
+          [^}]+ para capturar el cuerpo de los bloques 'model X { ... }'. El campo 'momentDoses'
+          del modelo Medication tiene un comentario inline con '// array [{ "time": "HH:MM",
+          "dose": "2 comp" }]' — la '}' en ese comentario terminaba el regex prematuramente,
+          haciendo que @@map("medications") quedara fuera del bloque capturado. El fallback
+          retornaba modelName.toLowerCase() = "medication", que no coincide con ninguna
+          migración RLS, resultando en 3 fallos falsos-negativos (ENABLE+FORCE+política). Corregido
+          con scanner de profundidad de llaves que ignora el contenido tras '//'.
+      inventario_packages_db:
+        tests_estaticos:
+          - "rls-coverage.test.ts: test meta sin BD (56 tests). VERDE AQUÍ. Cubre las 18 tablas con tenantId: verifica ENABLE+FORCE+política en migraciones por tabla."
+          - "care-merge.test.ts: 5 tests de lógica pura de sync (LWW, idempotencia). VERDE AQUÍ."
+          - "enum.test.ts: 1 test de enumeración UserRole. VERDE AQUÍ."
+        tests_integracion_pendientes_bd:
+          - "rls.test.ts: 7 tests RLS reales (aislamiento lectura/escritura, WITH CHECK, fallo en cerrado, bypass). PENDIENTE-BD — verde solo en CI de GitHub."
+          - "audit.integration.test.ts: 3 tests AuditLog (escritura, RLS, inmutabilidad). PENDIENTE-BD."
+          - "care-sync.integration.test.ts: 3 tests sync con RLS (idempotencia, LWW, cross-tenant). PENDIENTE-BD."
+        nota: >-
+          Los tests de integración usan describe.skipIf(!hasDb) pero en el entorno local el
+          .env define DATABASE_URL (sin Postgres activo), por lo que los tests no se saltan sino
+          que fallan en beforeAll. Comportamiento correcto en CI donde Postgres SÍ está disponible.
+      inventario_e2e:
+        ficheros:
+          - "smoke.spec.ts: login visible"
+          - "medicacion-mar.spec.ts: MAR (M-01..M-04, M-07)"
+          - "prescripcion.spec.ts: prescripción (M-05..M-08)"
+          - "equipo-rbac.spec.ts: equipo/RBAC (R-01..R-04)"
+          - "auditoria.spec.ts: trazabilidad (cambio de rol)"
+          - "copiloto.spec.ts / copiloto-pia.spec.ts: flujos IA (copiloto, PIA)"
+        estado: NO_EN_CI  # requiere playwright install + seed + next start; instrucciones en ci.yml
+      entorno_nota: >-
+        Escritura de tests/workflow verificada aquí (tipos/lint/tests estáticos VERDE).
+        Ejecución verde con Postgres (integración) la confirma la pipeline de GitHub
+        (PENDIENTE-BD, resuelto por CI). No firmo como "cerrado" hasta que el gate
+        dinámico esté verde en la pipeline real.
+    hallazgo_rls_bypass:
+      fecha: 2026-06-11
+      run: "GitHub CI run #53, commit f4f7905"
+      titulo: "RLS se bypasseaba: la app conectaba como rol SUPERUSUARIO (Postgres ignora RLS para superusers)"
+      detectado_por: quim-qa (QA) + leo-devops (DevOps), tras arreglar el build del CI
+      sintoma: >-
+        Por PRIMERA VEZ se ejecutó rls.test.ts contra el Postgres real (antes el build
+        siempre estuvo rojo y los tests de integración nunca corrieron en CI). FALLARON:
+        (1) "sin contexto de tenant no se ve ninguna fila (falla en cerrado)" esperaba 0,
+        obtuvo 3 (rls.test.ts:81); (2) "centros y residentes aislados por RLS"
+        dbB.center.findMany() esperaba 0, obtuvo 1 (rls.test.ts:103).
+      causa_raiz_confirmada: >-
+        CONFIRMADA por el CIO leyendo el código. PostgreSQL IGNORA RLS para usuarios
+        SUPERUSER, incluso con ENABLE+FORCE (FORCE somete al PROPIETARIO de la tabla, NO al
+        superusuario — son dos exenciones distintas). El servicio postgres:16-alpine del CI
+        crea POSTGRES_USER=vetlla como SUPERUSUARIO (imagen oficial). La app conecta con un
+        único rol vía DATABASE_URL (schema.prisma:13 fija url=env("DATABASE_URL");
+        client.ts es un único PrismaClient sin selección de URL). Por tanto forTenant Y
+        asPlatformAdmin conectan como superusuario y RLS se salta entero. El bypass de
+        plataforma es CORRECTO y se mantiene: es por GUC (app.bypass_rls en rls.ts:29-32 y
+        políticas que leen current_setting), NO por privilegio de rol. En H1 (local) pasaban
+        porque el rol local NO era superusuario. NO es regresión: estos tests nunca corrieron
+        en CI. El gate de INC-1 hizo su trabajo: destapar que el aislamiento se saltaba.
+      por_que_importa: >-
+        Invariante #1 del producto (un tenant nunca ve datos de otro) NO se enforce-a si la
+        app conecta como superusuario. Riesgo de seguridad latente DE CARA A PRODUCCIÓN, no
+        solo de CI (datos de salud, art. 9 RGPD).
+      decision: >-
+        Rol de aplicación NO-propietario NOSUPERUSER NOBYPASSRLS con GRANTs de solo CRUD,
+        distinto del rol owner (que aplica migraciones/seed). Dos cadenas: DATABASE_URL
+        (owner, migraciones/seed) + APP_DATABASE_URL (rol app vetlla_app, runtime y tests
+        RLS). Bypass de plataforma sigue por GUC. SQL del rol vive en script de bootstrap
+        (packages/db/prisma/sql/app-role.sql), NO en migración Prisma (los roles son infra,
+        y OVHcloud gestionado puede no conceder CREATEROLE). Documentado en ADR-0014;
+        ADR-0002 enmendado.
+      adr: docs/adr/0014-rol-app-no-propietario-rls.md
+      handoff:
+        nuria-backend: >-
+          Crear packages/db/prisma/sql/app-role.sql (SQL idempotente del ADR-0014: DO-block
+          CREATE/ALTER ROLE vetlla_app + ALTER ROLE NOSUPERUSER NOBYPASSRLS NOCREATEDB
+          NOCREATEROLE + GRANT USAGE schema + GRANT CRUD ON ALL TABLES + GRANT USAGE,SELECT
+          ON ALL SEQUENCES + ALTER DEFAULT PRIVILEGES para tablas/secuencias futuras).
+          Wiring: client.ts instancia PrismaClient con
+          datasourceUrl: process.env.APP_DATABASE_URL ?? process.env.DATABASE_URL (fallback
+          = degradación, no rotura). schema.prisma deja la datasource en env("DATABASE_URL")
+          (migrate/generate siguen como owner). Verificar que forTenant y asPlatformAdmin
+          siguen funcionando (bypass por GUC, no por privilegio). Documentar APP_DATABASE_URL
+          en .env.example. Ficheros: packages/db/prisma/sql/app-role.sql (nuevo),
+          packages/db/src/client.ts, .env.example.
+        leo-devops: >-
+          En ci.yml: tras 'Apply migrations' (como owner/DATABASE_URL), añadir step que
+          ejecuta app-role.sql contra el Postgres de servicio inyectando la contraseña por
+          -v (psql -v app_password=...), y exportar APP_DATABASE_URL=postgresql://vetlla_app:
+          <pwd>@localhost:5432/vetlla?schema=public para el step del gate RLS y tests. En
+          docker-compose/.env.example: documentar cómo crear vetlla_app en local (mismo
+          script de bootstrap) y la variable APP_DATABASE_URL. Re-aplicar los GRANT ON ALL
+          TABLES tras cada migración que cree tablas (idempotente).
+        quim-qa: >-
+          Verificación: el gate '[INC-1] RLS isolation gate' (rls.test.ts) debe PASAR en CI
+          con la app conectando como APP_DATABASE_URL (rol vetlla_app no-superusuario). El
+          test meta estático (rls-coverage.test.ts, 56 verde) sigue verde aquí sin BD. INC-1
+          NO se cierra hasta que el gate dinámico esté verde en CI con el rol de app.
+    escalado_a_angel:
+      - "Q-003: política de retención/supresión RGPD (condiciona INC-2 / DSAR)."
+      - "Q-004: credenciales OVHcloud + DPA (desbloquea INC-3 deploy UE e INC-4 copiloto/H5)."
+      - "Q-005: provisión del rol de app vetlla_app en OVHcloud Postgres gestionado (ver open_question)."
+    resultado_final: >-
+      CERRADO 2026-06-11. CI run #56 (commit 40fb4f0) SUCCESS: gate RLS dinámico (paso #13)
+      VERDE con rol vetlla_app NOSUPERUSER NOBYPASSRLS, app-role.sql ejecutado correctamente
+      (paso #9), lint+build+typecheck+tests verdes. El invariante de aislamiento multitenant
+      (#1) queda protegido en CI. Checkpoint validado — se puede avanzar a INC-2 y resto de
+      sprints. Ver plan de sprints pendientes en el chat (2026-06-11).
+
+  - id: GC-2
+    date: 2026-06-11
+    cio: cio-vetlla
+    objetivo: >-
+      Ejecutar en bloque todo lo pendiente NO bloqueado por Angel y ampliar features hacia
+      "producto listo para vender" (directiva del usuario). Entorno de verificación local
+      completo: Postgres 16 del sistema + rol vetlla_app, integración RLS verde aquí y en CI.
+    sprints_ejecutados:
+      - { id: INC-5, titulo: "MAR offline (ADR-0012 Aceptada)", estado: done, commit: 0ed92d4 }
+      - { id: INC-7, titulo: "Treatment M-09 + editor momentDoses M-11", estado: done, commit: 9028e7b }
+      - { id: INC-2, titulo: "DSAR art.15/17 (política parametrizable, Q-003)", estado: done_mecanica, commit: d15ffcf }
+      - { id: VENTA, titulo: "Onboarding self-service + pricing por plaza (ADR-0015)", estado: done, commit: acabe04 }
+      - { id: INC-6, titulo: "Observabilidad capa app sin PII", estado: done_capa_app, commit: 32682c0 }
+      - { id: INC-8, titulo: "UX/i18n gestión + validación inline centros", estado: done, commit: 72e22ed }
+    verificacion: >-
+      98 tests @vetlla/db (incl. 11 nuevos de integración con RLS real) + 157 tests web.
+      lint+typecheck+build verdes en cada sprint. Smokes de runtime real: signup público ->
+      tenant TRIAL + director + centro + AuditLog -> login OK; /api/health 200 con BD;
+      log JSON estructurado de errores tRPC sin PII.
+    pendiente_bloqueado:
+      - "INC-3 deploy UE OVHcloud — bloqueado por Q-004 (credenciales + DPA) y Q-005 (rol app en gestionado)."
+      - "INC-4 copiloto real + benchmark es/ca (cierra H5) — bloqueado por Q-004."
+      - "Q-003: política de retención definitiva (la mecánica DSAR ya está; la política se inyecta como AnonymizePolicy)."
+      - "H5 re-validación con Ollama: en la máquina del usuario (prompts v2 listos)."
+      - "Decisión de negocio: qué pasa al caducar el TRIAL (avisar vs bloquear) y validar cifras de pricing con pilotos (Q-002)."
