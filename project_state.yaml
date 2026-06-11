@@ -7,6 +7,15 @@ project:
   phase: building            # planning | building | done
   current_milestone: H5      # en construcción (reactivado 2026-06-09, ADR-0010); resto del MVP completo
   last_updated: 2026-06-10
+  # 2026-06-10 (CIO · ciclo de gobierno #1): arranque de la iteración MVP->producción.
+  # Entregado el roadmap de brechas en docs/roadmap-produccion.md (gap analysis por áreas:
+  # seguridad/RGPD, fiabilidad/CI/deploy UE, copiloto/IA, datos/migraciones, UX/a11y,
+  # observabilidad, multicentro) + secuencia de 8 épicas con responsable y criterios.
+  # DECISIÓN: incremento #1 = INC-1 "Blindar el aislamiento RLS en CI" (owner quim-qa +
+  # leo-devops): protege el invariante #1 (multitenant/RLS), es verificable aquí (CI ya
+  # levanta Postgres de servicio), reversible y desbloquea las épicas que tocan schema.
+  # Nuevas open_questions para Angel: Q-003 (política de retención RGPD/DSAR) y Q-004
+  # (credenciales OVHcloud + firma de DPA para cerrar deploy UE e IA). Ver ciclo abajo.
   # 2026-06-10: (1) copiloto: arreglo de prompts v2 (contrato JSON explícito para modelos
   # reales) tras fallar la validación con Ollama; queda pendiente de re-validar es/ca.
   # (2) Sprint Dirección: UX-19 (plano de ocupación + KPIs, /ocupacion) y UX-18 (centro de
@@ -142,6 +151,26 @@ open_questions:
       por plaza/mes y adopción/churn real, idealmente con 3-5 centros piloto.
     status: open
     related: [D-003]
+  - id: Q-003
+    date: 2026-06-10
+    question: >-
+      Política de retención y supresión de datos (RGPD/DSAR, INC-2). ¿Cuánto tiempo
+      se conservan los datos clínicos del residente tras el alta/baja/fallecimiento, y
+      qué se anonimiza vs. se borra (respetando obligaciones legales de conservación
+      sanitaria en España y la integridad del AuditLog)? Es decisión de negocio/legal,
+      no técnica: condiciona el diseño de export/borrado del interesado (art. 15-17).
+    status: open
+    related: [INC-2, A1, A6]
+  - id: Q-004
+    date: 2026-06-10
+    question: >-
+      Aprovisionar OVHcloud (ADR-0011): credenciales de AI Endpoints + Postgres
+      gestionado + app, y firma del DPA/SCC con residencia UE. Tiene coste recurrente y
+      es contrato con tercero -> decisión de Angel. Desbloquea INC-3 (deploy UE) y INC-4
+      (cablear el copiloto real + benchmark es/ca que cierra H5). Verificar ENS para
+      clientes del sector público español antes de contratar.
+    status: open
+    related: [INC-3, INC-4, ADR-0011, A-003, H5]
 
 # --------------------------------------------------------------------------
 # Hitos
@@ -506,3 +535,53 @@ team:
     Pau prioriza -> Marc diseña y reparte slices -> Núria/Dani/Iris/Elena construyen ->
     Sofía revisa privacidad -> Quim prueba (incl. RLS) + Leo CI/deploy -> el CIO cierra
     el hito con el checkpoint (lint+typecheck+build+test verdes + project_state + ADR).
+
+# --------------------------------------------------------------------------
+# Ciclos de gobierno del CIO (iteración MVP -> producción)
+# --------------------------------------------------------------------------
+governance_cycles:
+  - id: GC-1
+    date: 2026-06-10
+    cio: cio-vetlla
+    objetivo: >-
+      Arrancar la iteración MVP -> producción (MVP H0-H6 completo; H5 a falta de
+      re-validar con modelo real). Producir roadmap de brechas y decidir el incremento #1.
+    entrega:
+      roadmap: docs/roadmap-produccion.md
+      gap_areas: [seguridad_rgpd, fiabilidad_ci_deploy_ue, copiloto_ia, datos_migraciones, ux_a11y, observabilidad, multicentro]
+    brechas_criticas:
+      - "B1 — CI no protege el aislamiento RLS (ni RLS de packages/db ni Playwright E2E en pipeline). Invariante #1 sin red de seguridad."
+      - "A1/A3 — RGPD bloqueante para datos reales: sin DSAR (export/borrado) y sin DPIA/DPA no se opera legalmente."
+      - "B2 — Sin camino reproducible a producción UE (deploy/IaC/secretos/backups)."
+      - "C1/C2 — Diferencial (copiloto) sin validar (benchmark es/ca) ni cablear (OVHcloud); H5 no cierra."
+    decision_incremento_1:
+      id: INC-1
+      titulo: "Blindar el aislamiento RLS en CI"
+      owner: quim-qa
+      apoyo: leo-devops
+      porque: >-
+        Protege el principio central (multitenant/RLS) y es VERIFICABLE en este entorno
+        porque CI ya levanta Postgres de servicio (no requiere BD local). Es reversible,
+        barato, y desbloquea toda épica que toque schema (DSAR, MAR offline) al darles red
+        de seguridad de aislamiento. No toca producto: solo añade garantías a la pipeline.
+      criterios_aceptacion:
+        - "CI ejecuta como paso dedicado la suite de aislamiento RLS de packages/db (falla si hay fuga cross-tenant)."
+        - "CI ejecuta Playwright E2E de flujos críticos contra la BD de servicio."
+        - "Test meta: enumera tablas con tenant_id y falla si alguna no tiene RLS+FORCE+política (garantía estructural, no puntual)."
+        - "pnpm lint && typecheck && build && test verde en pipeline."
+      primer_paso: >-
+        quim-qa inventaria la suite de aislamiento de packages/db y los E2E existentes;
+        propone cómo invocarlos como paso dedicado en .github/workflows/ci.yml y diseña el
+        test meta de cobertura de RLS por tabla. Confirma con el CIO el diseño del test meta
+        antes de escribir (es lo que convierte la garantía en estructural).
+      entorno_nota: >-
+        Escritura de tests/workflow verificable aquí (tipos/lint); ejecución verde con
+        Postgres la confirma la pipeline de GitHub, no este entorno local (PENDIENTE-BD,
+        resuelto por CI).
+    escalado_a_angel:
+      - "Q-003: política de retención/supresión RGPD (condiciona INC-2 / DSAR)."
+      - "Q-004: credenciales OVHcloud + DPA (desbloquea INC-3 deploy UE e INC-4 copiloto/H5)."
+    siguiente_revision: >-
+      Al cerrar INC-1 (CI verde con el paso RLS dedicado + test meta), el CIO valida el
+      checkpoint y Pau prioriza INC-2 (DSAR) o INC-3 (deploy) según respuesta de Angel a
+      Q-003/Q-004.
