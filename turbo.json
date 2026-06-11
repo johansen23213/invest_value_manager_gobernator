@@ -3,6 +3,7 @@
   "globalDependencies": [".env", "tsconfig.base.json"],
   "globalPassThroughEnv": [
     "DATABASE_URL",
+    "APP_DATABASE_URL",
     "AUTH_SECRET",
     "AUTH_URL",
     "ANTHROPIC_API_KEY",

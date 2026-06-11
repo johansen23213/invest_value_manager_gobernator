@@ -29,7 +29,12 @@ jobs:
           --health-retries 10
 
     env:
+      # Rol OWNER (vetlla): aplica migraciones y seed (DDL + ownership).
       DATABASE_URL: postgresql://vetlla:vetlla_dev_password@localhost:5432/vetlla?schema=public
+      # Rol de APP no propietario (vetlla_app): runtime + tests de RLS. Que RLS se
+      # enforce de verdad (ADR-0014): Postgres ignora RLS para superusuarios y en la
+      # imagen oficial 'vetlla' es superusuario, así que la app NO debe usarlo.
+      APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
       AUTH_SECRET: ci-secret-not-for-production
 
     steps:
@@ -52,6 +57,24 @@ jobs:
 
       - name: Apply migrations
         run: pnpm --filter @vetlla/db migrate:deploy
+
+      # ADR-0014: crear el rol de app NO propietario DESPUÉS de las migraciones
+      # (necesita las tablas creadas por el owner para concederle CRUD). Se ejecuta
+      # como OWNER (vetlla). Idempotente. La app/tests conectan luego como vetlla_app
+      # vía APP_DATABASE_URL, de modo que RLS sí aplica (no es superusuario ni owner).
+      - name: "[INC-1] Create non-owner app role for RLS (ADR-0014)"
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: vetlla
+          PGPASSWORD: vetlla_dev_password
+          PGDATABASE: vetlla
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
+            -f packages/db/prisma/sql/app-role.sql
 
       - name: Lint
         run: pnpm lint

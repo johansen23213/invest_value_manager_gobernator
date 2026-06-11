@@ -6,7 +6,14 @@ project:
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
   current_milestone: H5      # en construcción (reactivado 2026-06-09, ADR-0010); resto del MVP completo
-  last_updated: 2026-06-10
+  last_updated: 2026-06-11
+  # 2026-06-11 (CIO · gobierno INC-1): el gate RLS corrió por 1ª vez en CI (run #53, f4f7905)
+  # y FALLÓ — la app conectaba como rol SUPERUSUARIO y Postgres ignora RLS para superusers
+  # (FORCE solo somete al owner). Riesgo de seguridad de cara a producción, no solo de CI.
+  # DECISIÓN: rol de app no-propietario NOSUPERUSER NOBYPASSRLS (vetlla_app) + doble URL
+  # (DATABASE_URL owner / APP_DATABASE_URL runtime). ADR-0014 (ADR-0002 enmendado). INC-1
+  # REABIERTO -> FIX_ROL_APP_EN_CURSO. Handoff a nuria-backend/leo-devops/quim-qa. Nueva
+  # open_question Q-005 (provisión del rol en OVHcloud gestionado). Ver decision_incremento_1.
   # 2026-06-10 (CIO · ciclo de gobierno #1): arranque de la iteración MVP->producción.
   # Entregado el roadmap de brechas en docs/roadmap-produccion.md (gap analysis por áreas:
   # seguridad/RGPD, fiabilidad/CI/deploy UE, copiloto/IA, datos/migraciones, UX/a11y,
@@ -171,6 +178,19 @@ open_questions:
       clientes del sector público español antes de contratar.
     status: open
     related: [INC-3, INC-4, ADR-0011, A-003, H5]
+  - id: Q-005
+    date: 2026-06-11
+    question: >-
+      Provisión del rol de aplicación vetlla_app (NOSUPERUSER NOBYPASSRLS, solo CRUD) en el
+      Postgres GESTIONADO de OVHcloud (A-003/Q-004). En CI y local lo crea el script de
+      bootstrap (packages/db/prisma/sql/app-role.sql) como owner, pero algunos Postgres
+      gestionados NO conceden CREATEROLE al usuario base, o exigen crear roles desde la
+      consola del proveedor. Necesito saber, al contratar OVHcloud: (a) si el usuario base
+      puede CREATE ROLE / GRANT, o (b) si el rol de app y su contraseña los provisiona
+      operaciones/Angel desde la consola. La contraseña del rol va a secretos, nunca al repo.
+      Bloquea que el aislamiento RLS se enforce en el entorno UE de producción (invariante #1).
+    status: open
+    related: [INC-1, INC-3, ADR-0014, ADR-0002, A-003, Q-004]
 
 # --------------------------------------------------------------------------
 # Hitos
@@ -558,8 +578,8 @@ governance_cycles:
       id: INC-1
       titulo: "Blindar el aislamiento RLS en CI"
       owner: quim-qa
-      apoyo: leo-devops
-      status: PARCIALMENTE_CERRADO  # estático verde aquí; gate dinámico PENDIENTE-BD (solo verde en CI de GitHub)
+      apoyo: leo-devops, nuria-backend
+      status: FIX_ROL_APP_EN_CURSO  # NO cerrado: el gate corrió por 1ª vez en CI y FALLÓ — el aislamiento se bypasseaba (rol superusuario). Ver hallazgo_rls_bypass.
       porque: >-
         Protege el principio central (multitenant/RLS) y es VERIFICABLE en este entorno
         porque CI ya levanta Postgres de servicio (no requiere BD local). Es reversible,
@@ -616,10 +636,73 @@ governance_cycles:
         Ejecución verde con Postgres (integración) la confirma la pipeline de GitHub
         (PENDIENTE-BD, resuelto por CI). No firmo como "cerrado" hasta que el gate
         dinámico esté verde en la pipeline real.
+    hallazgo_rls_bypass:
+      fecha: 2026-06-11
+      run: "GitHub CI run #53, commit f4f7905"
+      titulo: "RLS se bypasseaba: la app conectaba como rol SUPERUSUARIO (Postgres ignora RLS para superusers)"
+      detectado_por: quim-qa (QA) + leo-devops (DevOps), tras arreglar el build del CI
+      sintoma: >-
+        Por PRIMERA VEZ se ejecutó rls.test.ts contra el Postgres real (antes el build
+        siempre estuvo rojo y los tests de integración nunca corrieron en CI). FALLARON:
+        (1) "sin contexto de tenant no se ve ninguna fila (falla en cerrado)" esperaba 0,
+        obtuvo 3 (rls.test.ts:81); (2) "centros y residentes aislados por RLS"
+        dbB.center.findMany() esperaba 0, obtuvo 1 (rls.test.ts:103).
+      causa_raiz_confirmada: >-
+        CONFIRMADA por el CIO leyendo el código. PostgreSQL IGNORA RLS para usuarios
+        SUPERUSER, incluso con ENABLE+FORCE (FORCE somete al PROPIETARIO de la tabla, NO al
+        superusuario — son dos exenciones distintas). El servicio postgres:16-alpine del CI
+        crea POSTGRES_USER=vetlla como SUPERUSUARIO (imagen oficial). La app conecta con un
+        único rol vía DATABASE_URL (schema.prisma:13 fija url=env("DATABASE_URL");
+        client.ts es un único PrismaClient sin selección de URL). Por tanto forTenant Y
+        asPlatformAdmin conectan como superusuario y RLS se salta entero. El bypass de
+        plataforma es CORRECTO y se mantiene: es por GUC (app.bypass_rls en rls.ts:29-32 y
+        políticas que leen current_setting), NO por privilegio de rol. En H1 (local) pasaban
+        porque el rol local NO era superusuario. NO es regresión: estos tests nunca corrieron
+        en CI. El gate de INC-1 hizo su trabajo: destapar que el aislamiento se saltaba.
+      por_que_importa: >-
+        Invariante #1 del producto (un tenant nunca ve datos de otro) NO se enforce-a si la
+        app conecta como superusuario. Riesgo de seguridad latente DE CARA A PRODUCCIÓN, no
+        solo de CI (datos de salud, art. 9 RGPD).
+      decision: >-
+        Rol de aplicación NO-propietario NOSUPERUSER NOBYPASSRLS con GRANTs de solo CRUD,
+        distinto del rol owner (que aplica migraciones/seed). Dos cadenas: DATABASE_URL
+        (owner, migraciones/seed) + APP_DATABASE_URL (rol app vetlla_app, runtime y tests
+        RLS). Bypass de plataforma sigue por GUC. SQL del rol vive en script de bootstrap
+        (packages/db/prisma/sql/app-role.sql), NO en migración Prisma (los roles son infra,
+        y OVHcloud gestionado puede no conceder CREATEROLE). Documentado en ADR-0014;
+        ADR-0002 enmendado.
+      adr: docs/adr/0014-rol-app-no-propietario-rls.md
+      handoff:
+        nuria-backend: >-
+          Crear packages/db/prisma/sql/app-role.sql (SQL idempotente del ADR-0014: DO-block
+          CREATE/ALTER ROLE vetlla_app + ALTER ROLE NOSUPERUSER NOBYPASSRLS NOCREATEDB
+          NOCREATEROLE + GRANT USAGE schema + GRANT CRUD ON ALL TABLES + GRANT USAGE,SELECT
+          ON ALL SEQUENCES + ALTER DEFAULT PRIVILEGES para tablas/secuencias futuras).
+          Wiring: client.ts instancia PrismaClient con
+          datasourceUrl: process.env.APP_DATABASE_URL ?? process.env.DATABASE_URL (fallback
+          = degradación, no rotura). schema.prisma deja la datasource en env("DATABASE_URL")
+          (migrate/generate siguen como owner). Verificar que forTenant y asPlatformAdmin
+          siguen funcionando (bypass por GUC, no por privilegio). Documentar APP_DATABASE_URL
+          en .env.example. Ficheros: packages/db/prisma/sql/app-role.sql (nuevo),
+          packages/db/src/client.ts, .env.example.
+        leo-devops: >-
+          En ci.yml: tras 'Apply migrations' (como owner/DATABASE_URL), añadir step que
+          ejecuta app-role.sql contra el Postgres de servicio inyectando la contraseña por
+          -v (psql -v app_password=...), y exportar APP_DATABASE_URL=postgresql://vetlla_app:
+          <pwd>@localhost:5432/vetlla?schema=public para el step del gate RLS y tests. En
+          docker-compose/.env.example: documentar cómo crear vetlla_app en local (mismo
+          script de bootstrap) y la variable APP_DATABASE_URL. Re-aplicar los GRANT ON ALL
+          TABLES tras cada migración que cree tablas (idempotente).
+        quim-qa: >-
+          Verificación: el gate '[INC-1] RLS isolation gate' (rls.test.ts) debe PASAR en CI
+          con la app conectando como APP_DATABASE_URL (rol vetlla_app no-superusuario). El
+          test meta estático (rls-coverage.test.ts, 56 verde) sigue verde aquí sin BD. INC-1
+          NO se cierra hasta que el gate dinámico esté verde en CI con el rol de app.
     escalado_a_angel:
       - "Q-003: política de retención/supresión RGPD (condiciona INC-2 / DSAR)."
       - "Q-004: credenciales OVHcloud + DPA (desbloquea INC-3 deploy UE e INC-4 copiloto/H5)."
+      - "Q-005: provisión del rol de app vetlla_app en OVHcloud Postgres gestionado (ver open_question)."
     siguiente_revision: >-
-      Al cerrar INC-1 (CI verde con el paso RLS dedicado + test meta), el CIO valida el
-      checkpoint y Pau prioriza INC-2 (DSAR) o INC-3 (deploy) según respuesta de Angel a
-      Q-003/Q-004.
+      INC-1 reabierto como FIX_ROL_APP_EN_CURSO tras el hallazgo de bypass (run #53). Cierra
+      cuando el gate RLS pase en CI con el rol de app (APP_DATABASE_URL). Hasta entonces NO
+      se valida el checkpoint ni se avanza a INC-2/INC-3.
