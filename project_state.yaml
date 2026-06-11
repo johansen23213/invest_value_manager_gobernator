@@ -7,6 +7,10 @@ project:
   phase: building            # planning | building | done
   current_milestone: H5      # en construcción (reactivado 2026-06-09, ADR-0010); resto del MVP completo
   last_updated: 2026-06-11
+  # 2026-06-11 (CIO · cierre INC-1): run #56 (commit 40fb4f0) completado con SUCCESS. El gate
+  # RLS dinámico (rls.test.ts, paso #13) VERDE con el rol vetlla_app NOSUPERUSER NOBYPASSRLS.
+  # INC-1 CERRADO. Invariante #1 (aislamiento multitenant) protegido en CI. Siguiente: el plan
+  # de sprints pendientes (INC-2 a INC-8 + H5 re-validar) está documentado abajo.
   # 2026-06-11 (CIO · gobierno INC-1): el gate RLS corrió por 1ª vez en CI (run #53, f4f7905)
   # y FALLÓ — la app conectaba como rol SUPERUSUARIO y Postgres ignora RLS para superusers
   # (FORCE solo somete al owner). Riesgo de seguridad de cara a producción, no solo de CI.
@@ -579,7 +583,7 @@ governance_cycles:
       titulo: "Blindar el aislamiento RLS en CI"
       owner: quim-qa
       apoyo: leo-devops, nuria-backend
-      status: FIX_ROL_APP_EN_CURSO  # NO cerrado: el gate corrió por 1ª vez en CI y FALLÓ — el aislamiento se bypasseaba (rol superusuario). Ver hallazgo_rls_bypass.
+      status: done  # CERRADO: CI run #56 (commit 40fb4f0) completado SUCCESS. Gate dinámico (rls.test.ts, paso #13) VERDE con rol vetlla_app NOSUPERUSER NOBYPASSRLS. 2026-06-11.
       porque: >-
         Protege el principio central (multitenant/RLS) y es VERIFICABLE en este entorno
         porque CI ya levanta Postgres de servicio (no requiere BD local). Es reversible,
@@ -702,7 +706,9 @@ governance_cycles:
       - "Q-003: política de retención/supresión RGPD (condiciona INC-2 / DSAR)."
       - "Q-004: credenciales OVHcloud + DPA (desbloquea INC-3 deploy UE e INC-4 copiloto/H5)."
       - "Q-005: provisión del rol de app vetlla_app en OVHcloud Postgres gestionado (ver open_question)."
-    siguiente_revision: >-
-      INC-1 reabierto como FIX_ROL_APP_EN_CURSO tras el hallazgo de bypass (run #53). Cierra
-      cuando el gate RLS pase en CI con el rol de app (APP_DATABASE_URL). Hasta entonces NO
-      se valida el checkpoint ni se avanza a INC-2/INC-3.
+    resultado_final: >-
+      CERRADO 2026-06-11. CI run #56 (commit 40fb4f0) SUCCESS: gate RLS dinámico (paso #13)
+      VERDE con rol vetlla_app NOSUPERUSER NOBYPASSRLS, app-role.sql ejecutado correctamente
+      (paso #9), lint+build+typecheck+tests verdes. El invariante de aislamiento multitenant
+      (#1) queda protegido en CI. Checkpoint validado — se puede avanzar a INC-2 y resto de
+      sprints. Ver plan de sprints pendientes en el chat (2026-06-11).
