@@ -460,6 +460,16 @@ const es: Record<string, string> = {
   'empty.centers.desc': 'Crea el primer centro con el formulario de arriba.',
   'empty.alerts.title': 'Sin alertas hoy',
   'empty.alerts.desc': 'No hay medicación pendiente ni incidencias. Todo al día.',
+
+  // MAR — filtro de turno (UX-17)
+  'mar.shift.filter.label': 'Filtrar por turno',
+  'mar.shift.all': 'Todos',
+  'mar.shift.MANANA': 'Mañana',
+  'mar.shift.TARDE': 'Tarde',
+  'mar.shift.NOCHE': 'Noche',
+  'mar.shift.notice': 'Mostrando turno de {shift}',
+  'mar.shift.showAll': 'Ver todos',
+  'mar.shift.noticeSuffix': ' · ',
 };
 
 const ca: Record<string, string> = {
@@ -919,6 +929,16 @@ const ca: Record<string, string> = {
   'empty.centers.desc': 'Crea el primer centre amb el formulari de dalt.',
   'empty.alerts.title': 'Sense alertes avui',
   'empty.alerts.desc': 'No hi ha medicació pendent ni incidències. Tot al dia.',
+
+  // MAR — filtre de torn (UX-17)
+  'mar.shift.filter.label': 'Filtrar per torn',
+  'mar.shift.all': 'Tots',
+  'mar.shift.MANANA': 'Matí',
+  'mar.shift.TARDE': 'Tarda',
+  'mar.shift.NOCHE': 'Nit',
+  'mar.shift.notice': 'Mostrant torn de {shift}',
+  'mar.shift.showAll': 'Veure tots',
+  'mar.shift.noticeSuffix': ' · ',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };

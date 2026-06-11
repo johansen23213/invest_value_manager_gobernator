@@ -166,8 +166,92 @@ enum AllergySeverity {
 }
 
 enum AssessmentType {
-  BARTHEL // ABVD (0–100)
-  TINETTI // marcha y equilibrio (0–28)
+  BARTHEL      // ABVD (0–100)
+  TINETTI      // marcha y equilibrio (0–28)
+  // Fase 1 — escalas geriátricas adicionales
+  PFEIFFER     // estado cognitivo (0–10 errores; 0 = normal)
+  MEC_LOBO     // Mini-Examen Cognoscitivo Lobo (0–35; ≤23 deterioro)
+  GDS_REISBERG // estadio demencia (1–7)
+  NORTON       // riesgo UPP (5–20; ≤14 = riesgo alto)
+  BRADEN       // riesgo UPP (6–23; ≤18 = riesgo)
+  MNA          // estado nutricional (0–30)
+  PAINAD       // dolor en demencia avanzada (0–10)
+  DOWNTON      // riesgo de caídas (0–12; ≥3 = alto riesgo)
+  LAWTON_BRODY // AIVD (0–8)
+}
+
+/// Régimen de la plaza (Ley 39/2006 + contrato con CCAA).
+enum PlaceRegime {
+  PRIVADA
+  CONCERTADA
+  PRESTACION_VINCULADA // PVS — plaza financiada por la CCAA directamente al centro
+}
+
+/// Tipo de dieta habitual del residente (protocolo disfagia + nutrición).
+enum DietType {
+  NORMAL
+  TRITURADA
+  PASTOSA
+  BLANDA
+  DIABETICA
+  HIPOSODICA
+  OTRA
+}
+
+/// Textura de líquidos según IDDSI Framework 2019.
+enum LiquidTexture {
+  LIBRE  // sin restricción
+  NECTAR // IDDSI nivel 2
+  MIEL   // IDDSI nivel 3
+  PUDING // IDDSI nivel 4
+}
+
+/// Tipo de dispositivo que porta el residente.
+enum DeviceType {
+  SONDA_VESICAL
+  SONDA_NASOGASTRICA
+  OXIGENO_DOMICILIARIO
+  CPAP
+  MARCAPASOS
+  DESFIBRILADOR_IMPLANTABLE
+  PROTESIS_CADERA
+  PROTESIS_RODILLA
+  PROTESIS_AUDITIVA
+  PROTESIS_DENTAL
+  OTRO
+}
+
+/// Origen de la úlcera por presión (indicador de calidad e inspección).
+enum UPPOrigin {
+  INGRESO // la traía al entrar; no imputable al centro
+  CENTRO  // apareció durante la estancia; indicador de calidad/inspección
+}
+
+/// Tipo de sujeción mecánica (regulado Ley 41/2002).
+enum RestraintType {
+  BARANDILLAS    // barandilla de cama
+  CINTURON_SILLA // cinturón en silla de ruedas
+  MUNEQUERAS
+  CHALECO
+  OTRO
+}
+
+/// Tipo de consentimiento RGPD/clínico.
+enum ConsentType {
+  INGRESO                  // consentimiento informado de ingreso
+  IMAGEN                   // fotografía/vídeo
+  PORTAL_FAMILIAS
+  DATOS_SANITARIOS_EXTERNOS
+  IA_ANONIMA               // uso de datos anonimizados en mejora del servicio/IA
+}
+
+/// Tipo de alergia (Fase 1: campo retrocompatible en Allergy).
+enum AllergyType {
+  MEDICAMENTOSA
+  ALIMENTARIA
+  AMBIENTAL
+  LATEX
+  OTRA
 }
 
 /// Centro físico del operador (residencia, centro de día o vivienda tutelada).
@@ -248,6 +332,39 @@ model Resident {
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
+  // --- Fase 1: Bloque A — Identificación y administrativo ---
+  internalRecordNo   String?     @map("internal_record_no")   // nº historia interna del centro
+  cip                String?                                  // Tarjeta Sanitaria / CIP autonómico
+  socialSecurityNo   String?     @map("social_security_no")
+  insurerName        String?     @map("insurer_name")         // mutua / aseguradora complementaria
+  placeRegime        PlaceRegime @default(PRIVADA) @map("place_regime")
+  dischargeDate      DateTime?   @map("discharge_date")
+  dischargeReason    String?     @map("discharge_reason")     // alta médica / traslado / fallecimiento / voluntaria
+  originCenter       String?     @map("origin_center")        // centro/hospital de procedencia al ingreso
+  nationalIdExpiry   DateTime?   @map("national_id_expiry")   // caducidad DNI
+  judicialCapacity   Boolean     @default(true) @map("judicial_capacity") // true = capaz; false = incapacitado
+  legalRepName       String?     @map("legal_rep_name")       // tutor/curador/apoderado
+  legalRepPhone      String?     @map("legal_rep_phone")
+  legalRepEmail      String?     @map("legal_rep_email")
+  advanceDirectives  Boolean?    @map("advance_directives")   // Sí/No
+  advanceDirLocation String?     @map("advance_dir_location") // localización del documento
+  preferredLanguage  String      @default("es") @map("preferred_language") // "es" | "ca" | otro
+  bloodGroup         String?     @map("blood_group")          // A+, O-, etc.
+
+  // --- Fase 1: Consentimientos explícitos (RGPD — resumen de estado actual) ---
+  consentImage        Boolean   @default(false) @map("consent_image")
+  consentFamilyPortal Boolean   @default(false) @map("consent_family_portal")
+  consentAdmission    DateTime? @map("consent_admission")    // fecha firma consentimiento de ingreso
+
+  // --- Fase 1: Bloque E — Ficha de cuidados operativos a pie de cama ---
+  dietType             DietType?      @map("diet_type")
+  liquidTexture        LiquidTexture? @map("liquid_texture")
+  nutritionSupplements String?        @map("nutrition_supplements") // Ensure, Fortimel, etc.
+  continenceType       String?        @map("continence_type")  // absorbente/sonda/control
+  absorbentSize        String?        @map("absorbent_size")   // S/M/L/XL
+  wanderingRisk        Boolean        @default(false) @map("wandering_risk")
+  fallRisk             Boolean        @default(false) @map("fall_risk")
+
   contacts    EmergencyContact[]
   allergies   Allergy[]
   diagnoses   Diagnosis[]
@@ -259,6 +376,16 @@ model Resident {
   carePlans   CarePlan[]
   familyLinks FamilyLink[]
 
+  // --- Fase 1: relaciones nuevas ---
+  devices        ResidentDevice[]
+  vaccines       Vaccine[]
+  weights        WeightRecord[]
+  pressureUlcers PressureUlcer[]
+  falls          FallRecord[]
+  restraints     Restraint[]
+  consents       ConsentRecord[]
+  lifeStory      LifeStory?
+
   @@index([tenantId])
   @@index([centerId])
   @@map("residents")
@@ -266,17 +393,21 @@ model Resident {
 
 /// Contacto de emergencia / familiar de referencia.
 model EmergencyContact {
-  id         String          @id @default(cuid())
-  tenantId   String          @map("tenant_id")
-  residentId String          @map("resident_id")
-  resident   Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
-  name       String
-  relation   ContactRelation
-  phone      String?
-  email      String?
-  isPrimary  Boolean         @default(false) @map("is_primary")
-  createdAt  DateTime        @default(now()) @map("created_at")
-  updatedAt  DateTime        @updatedAt @map("updated_at")
+  id            String          @id @default(cuid())
+  tenantId      String          @map("tenant_id")
+  residentId    String          @map("resident_id")
+  resident      Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  name          String
+  relation      ContactRelation
+  phone         String?
+  email         String?
+  isPrimary     Boolean         @default(false) @map("is_primary")
+  // Fase 1: datos adicionales del contacto
+  callOrder     Int?            @map("call_order")    // 1 = llamar primero en urgencias
+  availability  String?                              // "mañanas", "tardes + fines de semana"
+  postalAddress String?         @map("postal_address")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
 
   @@index([tenantId])
   @@index([residentId])
@@ -285,15 +416,17 @@ model EmergencyContact {
 
 /// Alergia/intolerancia conocida.
 model Allergy {
-  id         String           @id @default(cuid())
-  tenantId   String           @map("tenant_id")
-  residentId String           @map("resident_id")
-  resident   Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
-  substance  String
-  severity   AllergySeverity?
-  reaction   String?
-  createdAt  DateTime         @default(now()) @map("created_at")
-  updatedAt  DateTime         @updatedAt @map("updated_at")
+  id          String           @id @default(cuid())
+  tenantId    String           @map("tenant_id")
+  residentId  String           @map("resident_id")
+  resident    Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  substance   String
+  severity    AllergySeverity?
+  reaction    String?
+  // Fase 1: tipo de alergia (retrocompatible — campo opcional)
+  allergyType AllergyType?     @map("allergy_type")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   @@index([tenantId])
   @@index([residentId])
@@ -645,4 +778,194 @@ model AuditLog {
   @@index([tenantId, entity, entityId])
   @@index([tenantId, createdAt])
   @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Fase 1 — Expediente sociosanitario ampliado
+// ---------------------------------------------------------------------------
+
+/// Dispositivos que porta el residente (sonda, oxígeno, marcapasos, prótesis…).
+/// Un residente puede tener varios simultáneamente.
+model ResidentDevice {
+  id          String     @id @default(cuid())
+  tenantId    String     @map("tenant_id")
+  residentId  String     @map("resident_id")
+  resident    Resident   @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type        DeviceType
+  description String?    // detalle libre ("Sonda Foley 16F", "Marcapasos Medtronic")
+  since       DateTime?  // fecha de implantación/colocación
+  notes       String?
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("resident_devices")
+}
+
+/// Vacunación del residente (gripe, COVID, neumococo, tétanos…).
+model Vaccine {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  residentId String   @map("resident_id")
+  resident   Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type       String   // "gripe", "COVID", "neumococo", "tétanos", etc.
+  date       DateTime
+  lot        String?  // lote del vial — trazabilidad
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("vaccines")
+}
+
+/// Registro periódico de peso y talla (detectar desnutrición o retención de líquidos).
+model WeightRecord {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  residentId   String   @map("resident_id")
+  resident     Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  weightKg     Float    @map("weight_kg")
+  heightCm     Float?   @map("height_cm") // solo si cambia; suele medirse al ingreso
+  bmi          Float?                     // calculado y almacenado para tendencias
+  recordedAt   DateTime @map("recorded_at")
+  recordedById String?  @map("recorded_by_id")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("weight_records")
+}
+
+/// Úlcera por presión (UPP) activa o resuelta. Indicador de calidad e inspección.
+model PressureUlcer {
+  id           String     @id @default(cuid())
+  tenantId     String     @map("tenant_id")
+  residentId   String     @map("resident_id")
+  resident     Resident   @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  location     String     // localización anatómica (sacro, talón, trocánter…)
+  stage        Int        // 1–4 (escala NPUAP/EPUAP)
+  onsetDate    DateTime   @map("onset_date")
+  resolvedDate DateTime?  @map("resolved_date")
+  acquired     UPPOrigin  // INGRESO | CENTRO — indicador de calidad/legal
+  notes        String?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  curings UPPCuring[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("pressure_ulcers")
+}
+
+/// Registro de cura de una UPP.
+model UPPCuring {
+  id              String        @id @default(cuid())
+  tenantId        String        @map("tenant_id")
+  pressureUlcerId String        @map("pressure_ulcer_id")
+  pressureUlcer   PressureUlcer @relation(fields: [pressureUlcerId], references: [id], onDelete: Cascade)
+  date            DateTime
+  treatment       String        // descripción del apósito y técnica
+  evolution       String?       // mejor / igual / peor / resuelto
+  doneById        String?       @map("done_by_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([pressureUlcerId])
+  @@map("upp_curings")
+}
+
+/// Caída registrada. Registro obligatorio (indicador de calidad e inspección).
+model FallRecord {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  residentId   String   @map("resident_id")
+  resident     Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  occurredAt   DateTime @map("occurred_at")
+  location     String?  // habitación, pasillo, baño…
+  circumstances String? // qué estaba haciendo el residente
+  injuries     String?  // contusión, fractura, herida…
+  witnessed    Boolean  @default(false)
+  measures     String?  // medidas adoptadas tras la caída
+  reportedById String?  @map("reported_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("fall_records")
+}
+
+/// Sujeción mecánica (MUY REGULADO: Ley 41/2002 + jurisprudencia).
+/// Requiere prescripción médica + consentimiento + revisión periódica + registro.
+/// La inspección puede suspender la licencia si no hay protocolo.
+model Restraint {
+  id              String        @id @default(cuid())
+  tenantId        String        @map("tenant_id")
+  residentId      String        @map("resident_id")
+  resident        Resident      @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type            RestraintType
+  justification   String        // motivo clínico documentado (obligatorio)
+  prescribedById  String?       @map("prescribed_by_id") // sanitario que prescribe
+  prescribedAt    DateTime      @map("prescribed_at")
+  consentObtained Boolean       @default(false) @map("consent_obtained")
+  consentDate     DateTime?     @map("consent_date")
+  consentBy       String?       @map("consent_by")  // quién firma (residente o representante)
+  active          Boolean       @default(true)
+  endDate         DateTime?     @map("end_date")
+  endReason       String?       @map("end_reason")
+  reviewedAt      DateTime?     @map("reviewed_at") // última revisión periódica
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("restraints")
+}
+
+/// Registro de consentimientos RGPD/clínicos (art. 7 RGPD — trazabilidad explícita).
+/// No reemplaza los campos boolean en Resident (resumen de estado actual);
+/// esta tabla es el historial de cambios de consentimiento.
+model ConsentRecord {
+  id         String      @id @default(cuid())
+  tenantId   String      @map("tenant_id")
+  residentId String      @map("resident_id")
+  resident   Resident    @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type       ConsentType
+  granted    Boolean     // true = concede / false = revoca
+  grantedBy  String?     @map("granted_by") // nombre de quien firma
+  date       DateTime
+  notes      String?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@map("consent_records")
+}
+
+/// Historia de vida del residente (atención centrada en la persona, UNE 158101).
+/// Un único registro por residente; se actualiza por upsert.
+model LifeStory {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  residentId      String   @unique @map("resident_id")
+  resident        Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  profession      String?  // ocupación/profesión anterior
+  hobbies         String?  // aficiones y actividades que le gustaban
+  music           String?  // géneros o artistas favoritos
+  importantPeople String?  @map("important_people") // familia, amigos clave
+  religion        String?  // religión y prácticas (dieta, fiestas, ritos)
+  preferences     String?  // preferencias en el aseo, comidas favoritas, rutinas
+  notes           String?  // campo libre para el trabajador social
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("life_stories")
 }
