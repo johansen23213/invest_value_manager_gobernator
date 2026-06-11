@@ -71,6 +71,7 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
   const r = resident.data;
 
   const base = `/residentes/${residentId}`;
+  const isResumen = pathname === `${base}/resumen`;
   const isExpediente = pathname === base;
   const isMedicacion = pathname.startsWith(`${base}/medicacion`);
   const isPia = pathname.startsWith(`${base}/pia`);
@@ -117,6 +118,9 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
 
         {/* Sub-navegación de las secciones del residente */}
         <nav className="-mb-3 mt-2 flex gap-1 border-t border-slate-100 pt-1" aria-label="Secciones del residente">
+          <SubnavTab href={`${base}/resumen`} active={isResumen}>
+            Resumen
+          </SubnavTab>
           <SubnavTab href={base} active={isExpediente}>
             Expediente
           </SubnavTab>

@@ -553,9 +553,11 @@ medication_rbac_redesign:
     - { id: M-09, titulo: "Cabecera de tratamiento (Treatment): tabla con RLS + router + UI agrupada en el MAR + selector/creación inline en prescribir" }
     - { id: M-11b, titulo: "Editor UI de momentDoses en prescribir (dosis por hora, en blanco usa la base)" }
     - { id: M-10b, titulo: "Chip de diagnóstico clickable hacia el expediente (en prescripciones y tratamientos)" }
+    - { id: AUTH-1, titulo: "Email transaccional UE provider-agnóstico (console dev / http UE) + reset de contraseña (AuthToken un-solo-uso, /recuperar + /restablecer, anti-enumeración) + invitación por enlace (users.sendAccessLink)", commit: "24ec344" }
+    - { id: R-360, titulo: "Visión 360 del residente: pantalla /residentes/[id]/resumen con pestañas (Hoy/Salud/Atención) y acciones rápidas in-situ (administrar dosis, registrar constantes/incidencia) sobre la cola offline; subnav 'Resumen' en ResidentChrome" }
   pendientes_menores_hechos:
     - "lastLoginAt -> 'último acceso' visible en /equipo (el tracking ya existía en auth.ts)."
-    - "Alta de usuario del equipo desde /equipo (users.invite, contraseña provisional; email transaccional diferido)."
+    - "Alta de usuario del equipo desde /equipo (users.invite, contraseña provisional). Email transaccional YA NO diferido: AUTH-1 añade reset por enlace e invitación por email (users.sendAccessLink)."
   adr_hecho:
     - "ADR-C -> docs/adr/0012-mar-offline-administraciones.md (ACEPTADA 2026-06-11: implementado y verificado con Postgres+RLS local y en CI)."
     - "ADR-0015 -> onboarding self-service + pricing por plaza/módulo (Aceptada 2026-06-11)."
