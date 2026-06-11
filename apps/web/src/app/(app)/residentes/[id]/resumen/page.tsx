@@ -128,16 +128,16 @@ export default function Resident360Page() {
   }
 
   if (resident.isLoading) {
-    return <p className="mt-6 text-slate-500">{t('r360.loading')}</p>;
+    return <p className="mt-6 text-[#1A3A3F]/60">{t('r360.loading')}</p>;
   }
   if (!r) {
-    return <p className="mt-6 text-slate-500">{t('r360.notFound')}</p>;
+    return <p className="mt-6 text-[#1A3A3F]/60">{t('r360.notFound')}</p>;
   }
 
   return (
     <div className="mt-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{t('r360.title')}</h2>
+        <h2 className="text-lg font-semibold text-[#1A3A3F]">{t('r360.title')}</h2>
         <Badge tone={online ? 'green' : 'amber'}>{online ? t('r360.online') : t('r360.offline')}</Badge>
       </div>
 
@@ -163,7 +163,7 @@ export default function Resident360Page() {
                     {t('r360.med.viewMar')}
                   </Link>
                 </div>
-                <p className="mb-3 text-sm text-slate-600" aria-live="polite">
+                <p className="mb-3 text-sm text-[#1A3A3F]/70" aria-live="polite">
                   {t('r360.med.summary', { administered: medSummary.administered, total: medSummary.total })}
                   {medSummary.notAdministered > 0 && (
                     <>
@@ -180,7 +180,7 @@ export default function Resident360Page() {
                       <li
                         key={`${d.medicationId}-${d.scheduledAt}`}
                         className={`flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${
-                          d.overdue ? 'bg-amber-50' : 'bg-slate-50'
+                          d.overdue ? 'bg-amber-50' : 'bg-brand-50'
                         }`}
                       >
                         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -208,7 +208,7 @@ export default function Resident360Page() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('r360.med.noPending')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.med.noPending')}</p>
                 )}
               </CardContent>
             </Card>
@@ -285,17 +285,17 @@ export default function Resident360Page() {
                 ) : records.data && records.data.length > 0 ? (
                   <ul className="flex flex-col gap-1 text-sm">
                     {records.data.slice(0, 6).map((rec) => (
-                      <li key={rec.id} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+                      <li key={rec.id} className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2">
                         <span className="min-w-0">
                           <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
-                          <span className="text-slate-600">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
+                          <span className="text-[#1A3A3F]/70">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
                         </span>
-                        <span className="shrink-0 text-slate-400">{formatDateTime(locale, rec.recordedAt)}</span>
+                        <span className="shrink-0 text-[#1A3A3F]/40">{formatDateTime(locale, rec.recordedAt)}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('r360.records.empty')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.records.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -314,12 +314,12 @@ export default function Resident360Page() {
                     {r.allergies.map((al) => (
                       <li key={al.id} className="flex items-center gap-2">
                         <Badge tone="red">{al.substance.toUpperCase()}</Badge>
-                        {al.reaction && <span className="text-slate-500">{al.reaction}</span>}
+                        {al.reaction && <span className="text-[#1A3A3F]/60">{al.reaction}</span>}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('med.allergies.none')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('med.allergies.none')}</p>
                 )}
               </CardContent>
             </Card>
@@ -333,15 +333,15 @@ export default function Resident360Page() {
                     {latestAssessments.map((a) => (
                       <li key={a.id} className="flex items-center justify-between">
                         <span>{ASSESSMENT_TYPE_LABELS[a.type] ?? a.type}</span>
-                        <span className="text-slate-600">
+                        <span className="text-[#1A3A3F]/70">
                           <strong>{a.score ?? '—'}</strong>{' '}
-                          <span className="text-slate-400">· {formatDateTime(locale, a.assessedAt)}</span>
+                          <span className="text-[#1A3A3F]/40">· {formatDateTime(locale, a.assessedAt)}</span>
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('r360.scales.empty')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.scales.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -355,12 +355,12 @@ export default function Resident360Page() {
                     {r.diagnoses.map((dx) => (
                       <li key={dx.id} className="flex flex-wrap items-center gap-2">
                         {dx.code && <Badge tone="blue">{dx.code}</Badge>}
-                        <span>{dx.description}</span>
+                        <span className="text-[#1A3A3F]">{dx.description}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('r360.dx.empty')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.dx.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -381,19 +381,19 @@ export default function Resident360Page() {
                   <ul className="flex flex-col gap-1 text-sm">
                     {activeMeds.map((m) => (
                       <li key={m.id} className="flex flex-wrap items-center gap-2">
-                        <strong>{m.name}</strong>
-                        <span className="text-slate-500">· {m.dose}</span>
+                        <strong className="text-[#1A3A3F]">{m.name}</strong>
+                        <span className="text-[#1A3A3F]/60">· {m.dose}</span>
                         {m.type === 'PRN' && <Badge tone="blue">{t('r360.prn')}</Badge>}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('r360.activeMed.empty')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.activeMed.empty')}</p>
                 )}
               </CardContent>
             </Card>
           </div>
-          <p className="mt-3 text-sm text-slate-500">
+          <p className="mt-3 text-sm text-[#1A3A3F]/60">
             {t('r360.health.editHint')}{' '}
             <Link href={`/residentes/${residentId}`} className="text-brand-700 hover:underline">
               {t('r360.health.openRecord')}
@@ -426,7 +426,7 @@ export default function Resident360Page() {
                           <Badge tone="green">{CARE_PLAN_STATUS_LABELS[plan.status] ?? plan.status}</Badge>
                         </div>
                         {plan.goals.length > 0 ? (
-                          <ul className="flex flex-col gap-1 border-l-2 border-slate-200 pl-3 text-sm">
+                          <ul className="flex flex-col gap-1 border-l-2 border-brand-100 pl-3 text-sm">
                             {plan.goals.map((g) => (
                               <li key={g.id} className="flex flex-wrap items-center gap-2">
                                 <span>{g.description}</span>
@@ -437,13 +437,13 @@ export default function Resident360Page() {
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-xs text-slate-500">{t('r360.pia.noGoals')}</p>
+                          <p className="text-xs text-[#1A3A3F]/60">{t('r360.pia.noGoals')}</p>
                         )}
                       </section>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('r360.pia.empty')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.pia.empty')}</p>
                 )}
               </CardContent>
             </Card>
@@ -457,17 +457,17 @@ export default function Resident360Page() {
                 ) : records.data && records.data.length > 0 ? (
                   <ol className="flex flex-col gap-2">
                     {records.data.map((rec) => (
-                      <li key={rec.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 pb-2 text-sm last:border-0">
+                      <li key={rec.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-brand-100/60 pb-2 text-sm last:border-0">
                         <span className="min-w-0">
                           <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
-                          <span className="text-slate-600">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
+                          <span className="text-[#1A3A3F]/70">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
                         </span>
-                        <span className="shrink-0 text-slate-400">{formatDateTime(locale, rec.recordedAt)}</span>
+                        <span className="shrink-0 text-[#1A3A3F]/40">{formatDateTime(locale, rec.recordedAt)}</span>
                       </li>
                     ))}
                   </ol>
                 ) : (
-                  <p className="text-sm text-slate-500">{t('r360.history.empty')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.history.empty')}</p>
                 )}
               </CardContent>
             </Card>

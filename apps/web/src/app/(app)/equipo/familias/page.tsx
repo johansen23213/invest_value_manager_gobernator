@@ -114,8 +114,8 @@ export default function FamilyAccessPage() {
         <Link href="/equipo" className="text-sm text-brand-700 hover:underline">
           ← Equipo
         </Link>
-        <h1 className="mt-1 text-2xl font-bold">Acceso de familias</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#1A3A3F]">Acceso de familias</h1>
+        <p className="text-sm text-[#1A3A3F]/60">
           Vincula familiares a un residente y controla qué pueden ver en el portal.
         </p>
       </div>
@@ -195,9 +195,9 @@ export default function FamilyAccessPage() {
         <CardContent>
           <CardTitle className="mb-3 text-base">Vínculos actuales</CardTitle>
           {links.isLoading ? (
-            <p className="text-sm text-slate-500">Cargando…</p>
+            <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
           ) : (links.data ?? []).length === 0 ? (
-            <p className="text-sm text-slate-500">Todavía no hay familiares con acceso.</p>
+            <p className="text-sm text-[#1A3A3F]/60">Todavía no hay familiares con acceso.</p>
           ) : (
             <ul className="flex flex-col gap-3">
               {(links.data ?? []).map((l) => {
@@ -207,14 +207,14 @@ export default function FamilyAccessPage() {
                   canSeeAssessments: l.canSeeAssessments,
                 };
                 return (
-                  <li key={l.id} className="rounded-md border border-slate-200 p-3">
+                  <li key={l.id} className="rounded-md border border-brand-100 p-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <p className="font-medium">
                           {l.user.name ?? l.user.email}{' '}
                           {l.relationship && <Badge tone="blue">{l.relationship}</Badge>}
                         </p>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-[#1A3A3F]/60">
                           {l.user.email} · Residente:{' '}
                           <Link href={`/residentes/${l.resident.id}`} className="text-brand-700 hover:underline">
                             {l.resident.firstName} {l.resident.lastName}
@@ -228,7 +228,7 @@ export default function FamilyAccessPage() {
                       )}
                     </div>
                     {canManage && (
-                      <fieldset className="mt-2 flex flex-wrap gap-4 border-t border-slate-100 pt-2 text-sm">
+                      <fieldset className="mt-2 flex flex-wrap gap-4 border-t border-brand-100/60 pt-2 text-sm">
                         <legend className="sr-only">Privacidad del portal</legend>
                         <label className="flex items-center gap-2">
                           <input

@@ -106,19 +106,19 @@ interface PrnSectionProps {
 
 function PrnSection({ prnMeds, canAdminister, t, onRecord }: PrnSectionProps) {
   if (prnMeds.length === 0) {
-    return <p className="text-sm text-slate-500">{t('med.prn.empty')}</p>;
+    return <p className="text-sm text-[#1A3A3F]/60">{t('med.prn.empty')}</p>;
   }
   return (
     <ul className="flex flex-col gap-2">
       {prnMeds.map((m) => (
         <li
           key={m.id}
-          className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-blue-50 px-3 py-2 text-sm"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-brand-50 border border-brand-100 px-3 py-2 text-sm"
           aria-label={`${m.name} ${m.dose} — a demanda`}
         >
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <strong className="shrink-0">{m.name}</strong>
-            <span className="text-slate-500">({m.dose})</span>
+            <span className="text-[#1A3A3F]/60">({m.dose})</span>
             <Badge tone="blue" icon={<IconZap />}>
               {t('med.type.PRN')}
             </Badge>
@@ -280,7 +280,7 @@ export default function MedicationPage() {
             <Link
               href={`/residentes/${residentId}/medicacion/prescribir`}
               data-testid="prescribir-link"
-              className="inline-flex min-h-[48px] items-center gap-2 rounded-md border border-brand-600 bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-brand-700 bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             >
               <IconPlus />
               {t('med.prescribe.link')}
@@ -293,12 +293,12 @@ export default function MedicationPage() {
           <CardContent>
             <CardTitle className="mb-3 text-base">{t('med.today')}</CardTitle>
             {schedule.isLoading ? (
-              <p className="text-slate-500">Cargando…</p>
+              <p className="text-[#1A3A3F]/60">Cargando…</p>
             ) : shiftGroups.length > 0 ? (
               <div className="flex flex-col gap-5">
                 {shiftGroups.map((group) => (
                   <section key={group.shift} aria-label={`Turno de ${SHIFT_LABELS[group.shift]}`}>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#1A3A3F]/40">
                       {SHIFT_LABELS[group.shift]}
                     </h3>
                     <ul className="flex flex-col gap-2">
@@ -317,8 +317,8 @@ export default function MedicationPage() {
                               d.overdue && d.status === 'PENDIENTE'
                                 ? 'bg-amber-50'
                                 : d.status === 'NO_ADMINISTRADO'
-                                  ? 'bg-red-50'
-                                  : 'bg-slate-50'
+                                  ? 'bg-warm-50 border border-warm-200'
+                                  : 'bg-brand-50'
                             }`}
                           >
                             {/* Información de la dosis */}
@@ -341,7 +341,7 @@ export default function MedicationPage() {
                                 </Badge>
                               )}
                               {d.notes && (
-                                <span className="text-slate-500">— {d.notes}</span>
+                                <span className="text-[#1A3A3F]/60">— {d.notes}</span>
                               )}
                             </span>
 
@@ -384,7 +384,7 @@ export default function MedicationPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-500">{t('med.noDoses')}</p>
+              <p className="text-sm text-[#1A3A3F]/60">{t('med.noDoses')}</p>
             )}
           </CardContent>
         </Card>
@@ -413,7 +413,7 @@ export default function MedicationPage() {
               <CardTitle className="mb-3 text-base">{t('med.treatment.title')}</CardTitle>
               <ul className="flex flex-col gap-3">
                 {treatments.data!.map((tr) => (
-                  <li key={tr.id} className="rounded-md border border-slate-200 p-3">
+                  <li key={tr.id} className="rounded-md border border-brand-100 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="flex flex-wrap items-center gap-2 text-sm">
                         <strong>{tr.name}</strong>
@@ -442,17 +442,17 @@ export default function MedicationPage() {
                       )}
                     </div>
                     {tr.medications.length > 0 ? (
-                      <ul className="mt-2 flex flex-col gap-1 border-l-2 border-slate-200 pl-3 text-sm">
+                      <ul className="mt-2 flex flex-col gap-1 border-l-2 border-brand-100 pl-3 text-sm">
                         {tr.medications.map((line) => (
                           <li key={line.id} className="flex flex-wrap items-center gap-2">
                             {line.name}
-                            <span className="text-slate-500">· {line.dose}</span>
+                            <span className="text-[#1A3A3F]/60">· {line.dose}</span>
                             {!line.active && <Badge tone="neutral">Inactiva</Badge>}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="mt-2 text-xs text-slate-500">{t('med.treatment.linesEmpty')}</p>
+                      <p className="mt-2 text-xs text-[#1A3A3F]/60">{t('med.treatment.linesEmpty')}</p>
                     )}
                   </li>
                 ))}
@@ -470,7 +470,7 @@ export default function MedicationPage() {
                 {meds.data.map((m) => (
                   <li key={m.id} className="flex flex-wrap items-center gap-2 py-0.5">
                     <strong>{m.name}</strong>
-                    <span className="text-slate-500">· {m.dose}</span>
+                    <span className="text-[#1A3A3F]/60">· {m.dose}</span>
                     {m.route && (
                       <Badge tone="neutral">{m.route as string}</Badge>
                     )}
@@ -510,7 +510,7 @@ export default function MedicationPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-500">{t('med.noPrescriptions')}</p>
+              <p className="text-sm text-[#1A3A3F]/60">{t('med.noPrescriptions')}</p>
             )}
           </CardContent>
         </Card>

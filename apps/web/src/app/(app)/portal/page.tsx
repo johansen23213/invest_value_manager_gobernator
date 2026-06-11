@@ -15,20 +15,20 @@ import {
 
 /** Aviso amable cuando el centro ha ocultado una sección a este acceso (UX-20). */
 function PrivacyNotice({ text }: { text: string }) {
-  return <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">{text}</p>;
+  return <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">{text}</p>;
 }
 
 export default function PortalPage() {
   const { t, locale } = useT();
   const portal = api.family.portal.useQuery();
 
-  if (portal.isLoading) return <p className="text-slate-500">…</p>;
+  if (portal.isLoading) return <p className="text-[#1A3A3F]/60">…</p>;
   const residents = portal.data ?? [];
   if (residents.length === 0) {
     return (
       <div>
-        <h1 className="mb-4 text-2xl font-bold">{t('portal.title')}</h1>
-        <p className="text-slate-500">{t('portal.noResident')}</p>
+        <h1 className="mb-4 text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('portal.title')}</h1>
+        <p className="text-[#1A3A3F]/60">{t('portal.noResident')}</p>
       </div>
     );
   }
@@ -36,18 +36,18 @@ export default function PortalPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">{t('portal.title')}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t('portal.intro')}</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('portal.title')}</h1>
+        <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('portal.intro')}</p>
       </div>
 
       {residents.map((r) => (
         <Card key={r.id}>
           <CardContent className="flex flex-col gap-5">
             <div>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-xl font-semibold text-[#1A3A3F]">
                 {r.firstName} {r.lastName}
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[#1A3A3F]/60">
                 {t('portal.center')}: {r.center.name} ·{' '}
                 {t('portal.bed')}: {r.bed ? `${r.bed.code} (${r.bed.unit.name})` : '—'} ·{' '}
                 {t('portal.status')}: <Badge tone={r.status === 'ACTIVO' ? 'green' : 'neutral'}>{RESIDENT_STATUS_LABELS[r.status]}</Badge>
@@ -61,14 +61,14 @@ export default function PortalPage() {
               {!r.privacy.canSeeCare ? (
                 <PrivacyNotice text={t('portal.privacyHidden')} />
               ) : r.careRecords.length === 0 ? (
-                <p className="text-sm text-slate-500">{t('portal.noNovedades')}</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('portal.noNovedades')}</p>
               ) : (
                 <ul className="flex flex-col gap-2 text-sm">
                   {r.careRecords.map((rec) => (
-                    <li key={rec.id} className="rounded-md bg-slate-50 px-3 py-2">
+                    <li key={rec.id} className="rounded-xl bg-brand-50 px-3 py-2">
                       <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
                       {humanizeCareRecord(rec.type, rec.payload)}{' '}
-                      <span className="text-slate-400">· {formatDateTime(locale, rec.recordedAt)}</span>
+                      <span className="text-[#1A3A3F]/40">· {formatDateTime(locale, rec.recordedAt)}</span>
                     </li>
                   ))}
                 </ul>
@@ -82,7 +82,7 @@ export default function PortalPage() {
                 {!r.privacy.canSeeMedication ? (
                   <PrivacyNotice text={t('portal.privacyHidden')} />
                 ) : r.medications.length === 0 ? (
-                  <p className="text-sm text-slate-500">{t('portal.noMedication')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('portal.noMedication')}</p>
                 ) : (
                   <ul className="flex flex-col gap-1 text-sm">
                     {r.medications.map((m) => (
@@ -98,7 +98,7 @@ export default function PortalPage() {
               <section>
                 <CardTitle className="mb-2 text-base">{t('portal.allergies')}</CardTitle>
                 {r.allergies.length === 0 ? (
-                  <p className="text-sm text-slate-500">{t('portal.noAllergies')}</p>
+                  <p className="text-sm text-[#1A3A3F]/60">{t('portal.noAllergies')}</p>
                 ) : (
                   <ul className="flex flex-col gap-1 text-sm">
                     {r.allergies.map((a) => (
@@ -118,7 +118,7 @@ export default function PortalPage() {
               {!r.privacy.canSeeAssessments ? (
                 <PrivacyNotice text={t('portal.privacyHidden')} />
               ) : r.assessments.length === 0 ? (
-                <p className="text-sm text-slate-500">{t('portal.noAssessments')}</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('portal.noAssessments')}</p>
               ) : (
                 <ul className="flex flex-col gap-1 text-sm">
                   {r.assessments.map((a) => (

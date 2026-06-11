@@ -109,7 +109,7 @@ function AllergyBanner({
   t: (k: string) => string;
 }) {
   if (allergies.length === 0) {
-    return <p className="text-xs italic text-slate-400">{t('med.allergies.none')}</p>;
+    return <p className="text-xs italic text-[#1A3A3F]/40">{t('med.allergies.none')}</p>;
   }
 
   const graveAllergies = allergies.filter((a) => a.severity === 'GRAVE');
@@ -122,10 +122,10 @@ function AllergyBanner({
         <div
           key={al.id}
           role="listitem"
-          className="mb-1.5 flex items-center gap-2 rounded-lg border border-red-300 bg-red-600 px-3 py-2 text-white"
+          className="mb-1.5 flex items-center gap-2 rounded-lg border border-warm-300 bg-warm-600 px-3 py-2 text-white"
           aria-label={`${t('resident.allergyBannerGrave')}: ${al.substance}`}
         >
-          <IconAlert className="h-4 w-4 shrink-0 text-red-100" />
+          <IconAlert className="h-4 w-4 shrink-0 text-warm-100" />
           <span className="text-xs font-bold uppercase tracking-wide">{t('resident.allergyBannerGrave')}:</span>
           <span className="text-sm font-semibold">
             {al.substance.toUpperCase()}
@@ -167,7 +167,7 @@ function SubnavTab({
       className={`min-h-touch inline-flex items-center border-b-2 px-3 py-2 text-sm font-medium transition-smooth ${
         active
           ? 'border-brand-600 text-brand-700'
-          : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
+          : 'border-transparent text-[#1A3A3F]/60 hover:border-brand-100 hover:text-[#1A3A3F]'
       }`}
     >
       {children}
@@ -203,19 +203,19 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
   return (
     <div className="flex flex-col">
       {/* Migas de pan */}
-      <nav aria-label="Migas de pan" className="mb-2 text-sm text-slate-500">
+      <nav aria-label="Migas de pan" className="mb-2 text-sm text-[#1A3A3F]/60">
         <Link href="/residentes" className="text-brand-700 hover:underline focus-visible:underline">
           Residentes
         </Link>
         <span className="mx-1.5" aria-hidden="true">
           /
         </span>
-        <span className="text-slate-700">{fullName}</span>
+        <span className="text-[#1A3A3F]/70">{fullName}</span>
       </nav>
 
       {/* Cabecera sticky */}
       <header
-        className="sticky top-0 z-20 -mx-4 border-b border-slate-200 bg-white px-4 py-3 shadow-sm"
+        className="sticky top-0 z-20 -mx-4 border-b border-brand-100 bg-white px-4 py-3 shadow-sm"
         aria-label="Datos del residente"
         data-testid="resident-sticky-header"
       >
@@ -226,7 +226,7 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-bold leading-tight text-slate-900">{fullName}</h1>
+              <h1 className="text-xl font-bold leading-tight text-[#1A3A3F]">{fullName}</h1>
               {r && (
                 <Badge tone={r.status === 'ACTIVO' ? 'green' : 'neutral'}>
                   {RESIDENT_STATUS_LABELS[r.status]}
@@ -234,7 +234,7 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
               )}
             </div>
             {r && (
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-slate-500">
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-[#1A3A3F]/60">
                 {/* Edad */}
                 {age !== null ? (
                   <span>
@@ -268,7 +268,7 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
 
         {/* Sub-navegación */}
         <nav
-          className="-mb-3 mt-2 flex gap-1 border-t border-slate-100 pt-1"
+          className="-mb-3 mt-2 flex gap-1 border-t border-brand-100/60 pt-1"
           aria-label="Secciones del residente"
         >
           <SubnavTab href={`${base}/resumen`} active={isResumen}>

@@ -22,8 +22,8 @@ export default function AuditPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">Registro de actividad</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">Registro de actividad</h1>
+        <p className="text-sm text-[#1A3A3F]/60">
           Trazabilidad de las acciones sobre datos personales (RGPD). Registro inmutable.
         </p>
       </div>
@@ -38,19 +38,19 @@ export default function AuditPage() {
             </div>
           ) : logs.data && logs.data.length > 0 ? (
             <Table>
-              <thead>
+              <thead className="bg-brand-50">
                 <tr>
-                  <Th>Fecha</Th>
-                  <Th>Usuario</Th>
-                  <Th>Acción</Th>
-                  <Th>Entidad</Th>
-                  <Th>Detalle</Th>
+                  <Th className="text-brand-700">Fecha</Th>
+                  <Th className="text-brand-700">Usuario</Th>
+                  <Th className="text-brand-700">Acción</Th>
+                  <Th className="text-brand-700">Entidad</Th>
+                  <Th className="text-brand-700">Detalle</Th>
                 </tr>
               </thead>
               <tbody>
                 {logs.data.map((l) => (
                   <tr key={l.id}>
-                    <Td className="whitespace-nowrap text-slate-500">
+                    <Td className="whitespace-nowrap text-[#1A3A3F]/60">
                       {formatDateTime(locale, l.createdAt)}
                     </Td>
                     <Td>{l.actorEmail ?? '—'}</Td>
