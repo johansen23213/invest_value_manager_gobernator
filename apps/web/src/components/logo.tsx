@@ -1,6 +1,6 @@
 import { cn } from '@vetlla/ui';
 
-// Logotipo de Vetlla: marca "V" en teal con degradado sutil + wordmark.
+// Logotipo de Vetlla: marca "V" en petróleo (dirección de arte Lifecare) + wordmark.
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
@@ -10,7 +10,7 @@ export function Logo({ className }: { className?: string }) {
       >
         V
       </span>
-      <span className="text-lg font-extrabold tracking-tight text-slate-900">Vetlla</span>
+      <span className="text-lg font-extrabold tracking-tight text-[#1A3A3F]">Vetlla</span>
     </span>
   );
 }
