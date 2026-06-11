@@ -21,6 +21,7 @@ export const PERMISSIONS = [
   'careplan:write',
   'portal:read', // portal de familias (solo el residente vinculado)
   'audit:read', // registro de actividad (RGPD)
+  'dsar:manage', // derechos del interesado: export (art. 15) y supresión (art. 17)
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -44,6 +45,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'careplan:read',
     'careplan:write',
     'audit:read',
+    'dsar:manage',
   ],
   SANITARIO: [
     'tenant:read',

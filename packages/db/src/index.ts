@@ -11,6 +11,17 @@ export type {
 } from './med-sync';
 export { logAudit } from './audit';
 export type { AuditEntry } from './audit';
+export {
+  exportResidentData,
+  anonymizeResident,
+  DEFAULT_ANONYMIZE_POLICY,
+} from './dsar';
+export type {
+  AnonymizePolicy,
+  AnonymizeResult,
+  ResidentExport,
+  ResidentExportResult,
+} from './dsar';
 export type {
   Payload,
   FieldTimestamps,

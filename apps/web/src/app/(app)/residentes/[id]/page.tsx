@@ -23,6 +23,7 @@ import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
 import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm';
 import { useZodForm } from '@/lib/form';
 import { interpretScale, SCALE_RANGES, type ScaleType } from '@/lib/scales';
 import {
@@ -55,10 +56,57 @@ export default function ResidentDetailPage() {
   const { locale } = useT();
   const fmtDate = (d: Date | string | null | undefined) => formatDate(locale, d);
   const toast = useToast();
+  const confirm = useConfirm();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('residents:write') ?? false;
   const canClinical = me.data?.permissions.includes('clinical:write') ?? false;
+  const canDsar = me.data?.permissions.includes('dsar:manage') ?? false;
   const resident = api.residents.get.useQuery({ id: residentId });
+
+  // INC-2 — DSAR (RGPD): export art. 15 y supresión art. 17.
+  const [dsarConfirmLastName, setDsarConfirmLastName] = useState('');
+  const [dsarReason, setDsarReason] = useState('');
+  const exportDsar = api.dsar.exportResident.useMutation({
+    onSuccess: ({ data, sha256 }) => {
+      const blob = new Blob([JSON.stringify({ sha256, ...data }, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dsar-export-${residentId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Exportación generada y descargada.');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const anonymize = api.dsar.anonymizeResident.useMutation({
+    onSuccess: async (res) => {
+      setDsarConfirmLastName('');
+      setDsarReason('');
+      await refresh();
+      toast.success(`Residente anonimizado (${res.pseudonym}).`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  async function handleAnonymize() {
+    const ok = await confirm({
+      title: 'Suprimir datos del residente (art. 17)',
+      description:
+        'Operación IRREVERSIBLE: se elimina la identificación directa (nombre, DNI, fecha de nacimiento), se borran contactos y vínculos familiares. Los registros clínicos se conservan anonimizados según la política de retención sanitaria.',
+      confirmLabel: 'Anonimizar definitivamente',
+      tone: 'danger',
+    });
+    if (ok) {
+      anonymize.mutate({
+        residentId,
+        confirmLastName: dsarConfirmLastName,
+        reason: dsarReason,
+      });
+    }
+  }
 
   const refresh = () => utils.residents.get.invalidate({ id: residentId });
 
@@ -133,6 +181,7 @@ export default function ResidentDetailPage() {
         <TabsTrigger value="contactos">Contactos</TabsTrigger>
         <TabsTrigger value="alergias">Alergias</TabsTrigger>
         <TabsTrigger value="diagnosticos">Diagnósticos</TabsTrigger>
+        {canDsar && <TabsTrigger value="rgpd">RGPD</TabsTrigger>}
       </TabsList>
 
       {/* Datos personales */}
@@ -427,6 +476,84 @@ export default function ResidentDetailPage() {
           </CardContent>
         </Card>
       </TabsContent>
+
+      {/* INC-2 — DSAR: derechos del interesado (solo dsar:manage) */}
+      {canDsar && (
+        <TabsContent value="rgpd">
+          <div className="flex flex-col gap-4">
+            <Card>
+              <CardContent>
+                <CardTitle className="mb-2 text-base">
+                  Derecho de acceso y portabilidad (art. 15 y 20)
+                </CardTitle>
+                <p className="mb-3 text-sm text-slate-600">
+                  Genera un fichero JSON con todos los datos que Vetlla guarda de este residente
+                  (expediente, atención directa, medicación, PIA y trazas de auditoría), con hash
+                  SHA-256 de integridad. La exportación queda registrada en el AuditLog.
+                </p>
+                <Button
+                  onClick={() => exportDsar.mutate({ residentId })}
+                  disabled={exportDsar.isPending}
+                  data-testid="dsar-export"
+                >
+                  {exportDsar.isPending ? 'Generando…' : 'Exportar datos del residente'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent>
+                <CardTitle className="mb-2 text-base text-red-700">
+                  Derecho de supresión (art. 17)
+                </CardTitle>
+                <p className="mb-3 text-sm text-slate-600">
+                  Anonimización irreversible: elimina nombre, DNI y fecha de nacimiento, borra
+                  contactos y vínculos familiares, y libera la plaza. Los registros clínicos se
+                  conservan <strong>anonimizados</strong> (obligación de conservación sanitaria;
+                  política de retención pendiente de definición — Q-003). El AuditLog no se
+                  modifica: es la evidencia de trazabilidad.
+                </p>
+                <div className="flex flex-col gap-3" style={{ maxWidth: '420px' }}>
+                  <div>
+                    <Label htmlFor="dsar-confirm">
+                      Escribe el apellido del residente para confirmar
+                    </Label>
+                    <Input
+                      id="dsar-confirm"
+                      value={dsarConfirmLastName}
+                      onChange={(e) => setDsarConfirmLastName(e.target.value)}
+                      placeholder={r.lastName}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dsar-reason">Motivo de la solicitud</Label>
+                    <Input
+                      id="dsar-reason"
+                      value={dsarReason}
+                      onChange={(e) => setDsarReason(e.target.value)}
+                      placeholder="p. ej. solicitud del interesado tras el alta"
+                      maxLength={500}
+                    />
+                  </div>
+                  <Button
+                    variant="danger"
+                    onClick={() => void handleAnonymize()}
+                    disabled={
+                      anonymize.isPending ||
+                      dsarConfirmLastName.trim() === '' ||
+                      dsarReason.trim().length < 5
+                    }
+                    data-testid="dsar-anonymize"
+                  >
+                    {anonymize.isPending ? 'Anonimizando…' : 'Anonimizar residente (irreversible)'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

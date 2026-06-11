@@ -255,6 +255,7 @@ const es: Record<string, string> = {
   'rbac.perm.careplan:write': 'Crear y modificar el PIA',
   'rbac.perm.portal:read': 'Acceder al portal de familias (residente vinculado)',
   'rbac.perm.audit:read': 'Ver el registro de actividad (auditoría RGPD)',
+  'rbac.perm.dsar:manage': 'Gestionar derechos del interesado (exportar/suprimir, RGPD)',
 };
 
 const ca: Record<string, string> = {
@@ -509,6 +510,7 @@ const ca: Record<string, string> = {
   'rbac.perm.careplan:write': 'Crear i modificar el PIA',
   'rbac.perm.portal:read': 'Accedir al portal de famílies (resident vinculat)',
   'rbac.perm.audit:read': "Veure el registre d'activitat (auditoria RGPD)",
+  'rbac.perm.dsar:manage': "Gestionar drets de l'interessat (exportar/suprimir, RGPD)",
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };

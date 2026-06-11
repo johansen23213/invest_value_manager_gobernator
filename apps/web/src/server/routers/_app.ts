@@ -16,6 +16,7 @@ import { treatmentsRouter } from '@/server/routers/treatments';
 import { carePlansRouter } from '@/server/routers/careplans';
 import { familyRouter } from '@/server/routers/family';
 import { auditRouter } from '@/server/routers/audit';
+import { dsarRouter } from '@/server/routers/dsar';
 import { usersRouter } from '@/server/routers/users';
 import { overviewRouter } from '@/server/routers/overview';
 
@@ -56,6 +57,7 @@ export const appRouter = createTRPCRouter({
   carePlans: carePlansRouter,
   family: familyRouter,
   audit: auditRouter,
+  dsar: dsarRouter,
   overview: overviewRouter,
 });
 
