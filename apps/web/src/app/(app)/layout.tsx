@@ -32,113 +32,130 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <CareSyncProvider>
       <ToastProvider>
         <ConfirmProvider>
-      <div className="min-h-screen">
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div className="flex items-center gap-6">
-              <Link href={isFamily ? '/portal' : '/'} aria-label={t('app.name')}>
-                <Logo />
-              </Link>
-              <nav className="flex items-center gap-1 text-sm" aria-label="Principal">
-                {isFamily ? (
-                  <Link href="/portal" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                    {t('nav.portal')}
+          <div className="min-h-screen bg-surface">
+            {/* Enlace de salto al contenido (WCAG 2.4.1) */}
+            <a
+              href="#contenido"
+              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+            >
+              {t('skip.toContent')}
+            </a>
+
+            <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+              <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+                {/* Marca + nav principal */}
+                <div className="flex items-center gap-5">
+                  <Link href={isFamily ? '/portal' : '/'} aria-label={t('app.name')}>
+                    <Logo />
                   </Link>
-                ) : (
+                  <nav className="flex items-center gap-0.5 text-sm" aria-label="Principal">
+                    {isFamily ? (
+                      <Link
+                        href="/portal"
+                        className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900"
+                      >
+                        {t('nav.portal')}
+                      </Link>
+                    ) : (
+                      <>
+                        <Link href="/" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                          {t('nav.home')}
+                        </Link>
+                        <Link href="/centros" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                          {t('nav.centers')}
+                        </Link>
+                        {hasPermission(user.role, 'centers:read') && (
+                          <Link href="/ocupacion" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                            {t('nav.occupancy')}
+                          </Link>
+                        )}
+                        <Link href="/residentes" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                          {t('nav.residents')}
+                        </Link>
+                        <Link href="/atencion" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                          {t('nav.care')}
+                        </Link>
+                        {hasPermission(user.role, 'care:read') && (
+                          <Link href="/alertas" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                            {t('nav.alerts')}
+                          </Link>
+                        )}
+                        {hasPermission(user.role, 'care:read') && (
+                          <Link href="/conflictos" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                            {t('nav.conflicts')}
+                          </Link>
+                        )}
+                        {hasPermission(user.role, 'users:read') && (
+                          <Link href="/equipo" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                            {t('nav.team')}
+                          </Link>
+                        )}
+                        {hasPermission(user.role, 'audit:read') && (
+                          <Link href="/auditoria" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                            {t('nav.audit')}
+                          </Link>
+                        )}
+                        {hasPermission(user.role, 'users:write') && (
+                          <Link href="/plan" className="rounded-lg px-3 py-2 font-medium text-slate-700 transition-smooth hover:bg-slate-100 hover:text-slate-900">
+                            {t('nav.plan')}
+                          </Link>
+                        )}
+                      </>
+                    )}
+                  </nav>
+                </div>
+
+                {/* Controles de usuario */}
+                <div className="flex items-center gap-2 text-sm">
+                  <LocaleSwitcher />
+                  {!isFamily && <SyncStatusBadge />}
+                  <span className="hidden rounded-lg bg-slate-100 px-3 py-1.5 text-slate-600 sm:inline">
+                    {user.name ?? user.email}
+                    <span className="ml-1 text-slate-400">· {t(`role.${user.role}`)}</span>
+                  </span>
+                  <form
+                    action={async () => {
+                      'use server';
+                      await signOut({ redirectTo: '/login' });
+                    }}
+                  >
+                    <button
+                      type="submit"
+                      className="min-h-touch rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-700 transition-smooth hover:border-slate-300 hover:bg-slate-100"
+                    >
+                      {t('action.logout')}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </header>
+
+            {/* Banner de TRIAL */}
+            {trialDays !== null && (
+              <div
+                role="status"
+                className={`border-b px-4 py-2 text-center text-sm font-medium ${
+                  trialDays > 5
+                    ? 'border-amber-200 bg-amber-50 text-amber-800'
+                    : 'border-red-200 bg-red-50 text-red-800'
+                }`}
+              >
+                {trialDays > 0 ? t('plan.trialLeft', { days: trialDays }) : t('plan.trialEnded')}
+                {hasPermission(user.role, 'users:write') && (
                   <>
-                    <Link href="/" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                      {t('nav.home')}
+                    {' · '}
+                    <Link href="/plan" className="underline">
+                      {t('nav.plan')}
                     </Link>
-                    <Link href="/centros" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                      {t('nav.centers')}
-                    </Link>
-                    {hasPermission(user.role, 'centers:read') && (
-                      <Link href="/ocupacion" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                        {t('nav.occupancy')}
-                      </Link>
-                    )}
-                    <Link href="/residentes" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                      {t('nav.residents')}
-                    </Link>
-                    <Link href="/atencion" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                      {t('nav.care')}
-                    </Link>
-                    {hasPermission(user.role, 'care:read') && (
-                      <Link href="/alertas" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                        {t('nav.alerts')}
-                      </Link>
-                    )}
-                    {hasPermission(user.role, 'care:read') && (
-                      <Link href="/conflictos" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                        {t('nav.conflicts')}
-                      </Link>
-                    )}
-                    {hasPermission(user.role, 'users:read') && (
-                      <Link href="/equipo" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                        {t('nav.team')}
-                      </Link>
-                    )}
-                    {hasPermission(user.role, 'audit:read') && (
-                      <Link href="/auditoria" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                        {t('nav.audit')}
-                      </Link>
-                    )}
-                    {hasPermission(user.role, 'users:write') && (
-                      <Link href="/plan" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                        {t('nav.plan')}
-                      </Link>
-                    )}
                   </>
                 )}
-              </nav>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <LocaleSwitcher />
-              {!isFamily && <SyncStatusBadge />}
-              <span className="hidden text-slate-500 sm:inline">
-                {user.name ?? user.email} · {t(`role.${user.role}`)}
-              </span>
-              <form
-                action={async () => {
-                  'use server';
-                  await signOut({ redirectTo: '/login' });
-                }}
-              >
-                <button
-                  type="submit"
-                  className="min-h-touch rounded-md border border-slate-300 px-3 py-2 font-medium hover:bg-slate-100"
-                >
-                  {t('action.logout')}
-                </button>
-              </form>
-            </div>
+              </div>
+            )}
+
+            <main id="contenido" className="mx-auto max-w-6xl px-4 py-8">
+              {children}
+            </main>
           </div>
-        </header>
-          {/* Banner de TRIAL: cuántos días quedan y a dónde ir para activar el plan */}
-          {trialDays !== null && (
-            <div
-              role="status"
-              className={`border-b px-4 py-2 text-center text-sm font-medium ${
-                trialDays > 5
-                  ? 'border-amber-200 bg-amber-50 text-amber-800'
-                  : 'border-red-200 bg-red-50 text-red-800'
-              }`}
-            >
-              {trialDays > 0 ? t('plan.trialLeft', { days: trialDays }) : t('plan.trialEnded')}
-              {hasPermission(user.role, 'users:write') && (
-                <>
-                  {' · '}
-                  <Link href="/plan" className="underline">
-                    {t('nav.plan')}
-                  </Link>
-                </>
-              )}
-            </div>
-          )}
-          <main id="contenido" className="mx-auto max-w-5xl px-4 py-8">
-            {children}
-          </main>
-        </div>
         </ConfirmProvider>
       </ToastProvider>
     </CareSyncProvider>

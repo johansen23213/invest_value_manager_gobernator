@@ -419,6 +419,42 @@ const es: Record<string, string> = {
   'conf.notes': 'Notas',
   'conf.detectedAt': 'Detectado',
   'conf.toast.done': 'Divergencia marcada como revisada.',
+
+  // Dashboard wow (rediseño 2026-06-11)
+  'dashboard.greeting.morning': 'Buenos días, {name}',
+  'dashboard.greeting.afternoon': 'Buenas tardes, {name}',
+  'dashboard.greeting.evening': 'Buenas noches, {name}',
+  'dashboard.subtitle': 'Aquí tienes el estado del centro a día de hoy.',
+  'dashboard.kpi.centers': 'Centros',
+  'dashboard.kpi.residents': 'Residentes activos',
+  'dashboard.kpi.occupancy': 'Ocupación',
+  'dashboard.kpi.alerts': 'Alertas hoy',
+  'dashboard.kpi.careToday': 'Registros de hoy',
+  'dashboard.kpi.occupancyOf': 'de {total} plazas',
+  'dashboard.kpi.viewCenters': 'Ver centros',
+  'dashboard.kpi.viewResidents': 'Ver residentes',
+  'dashboard.kpi.viewAlerts': 'Ver alertas',
+  'dashboard.quickLinks': 'Accesos rápidos',
+  'dashboard.attention': 'Necesita atención ahora',
+  'dashboard.attention.empty': 'Todo en orden — sin alertas urgentes.',
+  'dashboard.medAlert': '{count, plural, one {# dosis sin administrar} other {# dosis sin administrar}} hoy',
+  'dashboard.medAlertNames': 'Afecta a: {names}',
+  'dashboard.viewAll': 'Ver todas →',
+
+  // Cabecera residente (rediseño 2026-06-11)
+  'resident.age': '{age} años',
+  'resident.ageBirthDate': '{age} años · n. {date}',
+  'resident.noBirthDate': 'Edad no registrada',
+  'resident.allergyBannerGrave': 'ALERGIA GRAVE',
+  'resident.allergyBannerOther': 'Alergia',
+
+  // Estados vacíos con contexto (rediseño 2026-06-11)
+  'empty.residents.title': 'Todavía no hay residentes',
+  'empty.residents.desc': 'Da de alta el primer residente para empezar.',
+  'empty.centers.title': 'Todavía no hay centros',
+  'empty.centers.desc': 'Crea el primer centro con el formulario de arriba.',
+  'empty.alerts.title': 'Sin alertas hoy',
+  'empty.alerts.desc': 'No hay medicación pendiente ni incidencias. Todo al día.',
 };
 
 const ca: Record<string, string> = {
@@ -837,6 +873,42 @@ const ca: Record<string, string> = {
   'conf.notes': 'Notes',
   'conf.detectedAt': 'Detectat',
   'conf.toast.done': 'Divergència marcada com a revisada.',
+
+  // Dashboard wow (redisseny 2026-06-11)
+  'dashboard.greeting.morning': 'Bon dia, {name}',
+  'dashboard.greeting.afternoon': 'Bona tarda, {name}',
+  'dashboard.greeting.evening': 'Bona nit, {name}',
+  'dashboard.subtitle': "Aquí tens l'estat del centre a data d'avui.",
+  'dashboard.kpi.centers': 'Centres',
+  'dashboard.kpi.residents': 'Residents actius',
+  'dashboard.kpi.occupancy': 'Ocupació',
+  'dashboard.kpi.alerts': 'Alertes avui',
+  'dashboard.kpi.careToday': "Registres d'avui",
+  'dashboard.kpi.occupancyOf': 'de {total} places',
+  'dashboard.kpi.viewCenters': 'Veure centres',
+  'dashboard.kpi.viewResidents': 'Veure residents',
+  'dashboard.kpi.viewAlerts': 'Veure alertes',
+  'dashboard.quickLinks': 'Accessos ràpids',
+  'dashboard.attention': 'Necessita atenció ara',
+  'dashboard.attention.empty': 'Tot en ordre — sense alertes urgents.',
+  'dashboard.medAlert': '{count} dosi{count, plural, one {} other {s}} sense administrar avui',
+  'dashboard.medAlertNames': 'Afecta a: {names}',
+  'dashboard.viewAll': 'Veure totes →',
+
+  // Capçalera resident (redisseny 2026-06-11)
+  'resident.age': '{age} anys',
+  'resident.ageBirthDate': '{age} anys · n. {date}',
+  'resident.noBirthDate': 'Edat no registrada',
+  'resident.allergyBannerGrave': "AL·LÈRGIA GREU",
+  'resident.allergyBannerOther': "Al·lèrgia",
+
+  // Estats buits amb context (redisseny 2026-06-11)
+  'empty.residents.title': 'Encara no hi ha residents',
+  'empty.residents.desc': 'Dona d\'alta el primer resident per començar.',
+  'empty.centers.title': 'Encara no hi ha centres',
+  'empty.centers.desc': 'Crea el primer centre amb el formulari de dalt.',
+  'empty.alerts.title': 'Sense alertes avui',
+  'empty.alerts.desc': 'No hi ha medicació pendent ni incidències. Tot al dia.',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };
