@@ -11,7 +11,8 @@ export default function PlanPage() {
   const { t, locale } = useT();
   const summary = api.plan.summary.useQuery();
 
-  if (summary.isLoading) return <p className="text-slate-500">Cargando…</p>;
+  if (summary.isLoading) return <p className="text-[#1A3A3F]/60">Cargando…</p>;
+
   if (!summary.data) return null;
 
   const { plan, trialEndsAt, occupiedBeds, totalBeds } = summary.data;
@@ -21,7 +22,7 @@ export default function PlanPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t('plan.title')}</h1>
+      <h1 className="text-xl font-semibold text-[#1A3A3F]">{t('plan.title')}</h1>
 
       <Card>
         <CardContent>
@@ -39,25 +40,25 @@ export default function PlanPage() {
 
           <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
             <div>
-              <dt className="text-slate-500">{t('plan.occupiedBeds')}</dt>
+              <dt className="text-[#1A3A3F]/60">{t('plan.occupiedBeds')}</dt>
               <dd className="text-lg font-semibold">{occupiedBeds}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">{t('plan.totalBeds')}</dt>
+              <dt className="text-[#1A3A3F]/60">{t('plan.totalBeds')}</dt>
               <dd className="text-lg font-semibold">{totalBeds}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">{t('plan.pricePerBed')}</dt>
+              <dt className="text-[#1A3A3F]/60">{t('plan.pricePerBed')}</dt>
               <dd className="text-lg font-semibold">
                 {formatEuros(def.pricePerBedMonthCents, locale)}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">{t('plan.monthlyEstimate')}</dt>
+              <dt className="text-[#1A3A3F]/60">{t('plan.monthlyEstimate')}</dt>
               <dd className="text-lg font-semibold">{formatEuros(monthly, locale)}</dd>
             </div>
           </dl>
-          <p className="mt-2 text-xs text-slate-500">{t('plan.priceNote')}</p>
+          <p className="mt-2 text-xs text-[#1A3A3F]/60">{t('plan.priceNote')}</p>
         </CardContent>
       </Card>
 
@@ -74,7 +75,7 @@ export default function PlanPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-sm text-slate-600">{t('plan.contact')}</p>
+          <p className="mt-4 text-sm text-[#1A3A3F]/70">{t('plan.contact')}</p>
         </CardContent>
       </Card>
     </div>

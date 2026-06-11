@@ -61,7 +61,7 @@ export default function CarePage() {
   }, [residents.data, query]);
 
   if (!canWrite) {
-    return <p className="text-slate-500">Tu rol no registra atención directa.</p>;
+    return <p className="text-[#1A3A3F]/60">Tu rol no registra atención directa.</p>;
   }
 
   async function record(
@@ -119,7 +119,7 @@ export default function CarePage() {
   if (!resident) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-bold">Atención directa</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">Atención directa</h1>
         {!online && (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Sin conexión: tus registros se guardan en el dispositivo y se envían solos al recuperar la red.
@@ -134,19 +134,19 @@ export default function CarePage() {
         />
         {grouped.map(([unit, list]) => (
           <div key={unit}>
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">{unit}</h2>
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#1A3A3F]/40">{unit}</h2>
             <div className="grid gap-2 sm:grid-cols-2">
               {list.map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   onClick={() => setResidentId(r.id)}
-                  className="min-h-[64px] rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  className="min-h-[64px] rounded-2xl border border-brand-100 bg-white px-4 py-3 text-left shadow-card transition hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
-                  <div className="text-lg font-semibold">
+                  <div className="text-lg font-semibold text-[#1A3A3F]">
                     {r.lastName}, {r.firstName}
                   </div>
-                  <div className="text-sm text-slate-500">
+                  <div className="text-sm text-[#1A3A3F]/60">
                     {r.bed ? `Plaza ${r.bed.code}` : 'Sin plaza asignada'}
                   </div>
                 </button>
@@ -154,7 +154,7 @@ export default function CarePage() {
             </div>
           </div>
         ))}
-        {grouped.length === 0 && <p className="text-slate-500">No hay residentes.</p>}
+        {grouped.length === 0 && <p className="text-[#1A3A3F]/60">No hay residentes.</p>}
         {pendingPanel}
       </div>
     );
@@ -172,10 +172,10 @@ export default function CarePage() {
           >
             ← Mi unidad
           </button>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
             {resident.firstName} {resident.lastName}
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-[#1A3A3F]/60">
             {resident.bed ? `Plaza ${resident.bed.code} · ${resident.bed.unit.name}` : 'Sin plaza'}
           </p>
         </div>
@@ -230,7 +230,7 @@ export default function CarePage() {
               id="comida"
               value={intake.comida}
               onChange={(e) => setIntake((s) => ({ ...s, comida: e.target.value }))}
-              className="min-h-touch w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-base"
+              className="min-h-touch w-full rounded-2xl border border-brand-200 bg-white px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             >
               {['Desayuno', 'Comida', 'Merienda', 'Cena'].map((c) => (
                 <option key={c}>{c}</option>
@@ -244,7 +244,7 @@ export default function CarePage() {
                   type="button"
                   onClick={() => setIntake((s) => ({ ...s, porcentaje: p }))}
                   aria-pressed={intake.porcentaje === p}
-                  className={`min-h-touch flex-1 rounded-md border text-base font-medium ${intake.porcentaje === p ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white'}`}
+                  className={`min-h-[56px] flex-1 rounded-full border text-base font-semibold transition-colors ${intake.porcentaje === p ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-[#1A3A3F] hover:bg-brand-50'}`}
                 >
                   {p}%
                 </button>
@@ -271,7 +271,7 @@ export default function CarePage() {
                   type="button"
                   onClick={() => setStool((s) => ({ ...s, deposicion: v }))}
                   aria-pressed={stool.deposicion === v}
-                  className={`min-h-touch flex-1 rounded-md border text-base font-medium ${stool.deposicion === v ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white'}`}
+                  className={`min-h-[56px] flex-1 rounded-full border text-base font-semibold transition-colors ${stool.deposicion === v ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-[#1A3A3F] hover:bg-brand-50'}`}
                 >
                   {v}
                 </button>
@@ -318,23 +318,23 @@ export default function CarePage() {
         <CardContent>
           <CardTitle className="mb-3 text-base">Registros recientes</CardTitle>
           {!online ? (
-            <p className="text-sm text-slate-500">Sin conexión: el histórico se mostrará al volver online.</p>
+            <p className="text-sm text-[#1A3A3F]/60">Sin conexión: el histórico se mostrará al volver online.</p>
           ) : records.data && records.data.length > 0 ? (
             <ul className="flex flex-col gap-1 text-sm">
               {records.data.map((rec) => (
-                <li key={rec.id} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+                <li key={rec.id} className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2">
                   <span>
                     <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
                     {Object.entries(rec.payload as Record<string, unknown>)
                       .map(([k, v]) => `${k}: ${String(v)}`)
                       .join(' · ')}
                   </span>
-                  <span className="text-slate-400">{formatDateTime(locale, rec.recordedAt)}</span>
+                  <span className="text-[#1A3A3F]/40">{formatDateTime(locale, rec.recordedAt)}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-slate-500">Sin registros todavía.</p>
+            <p className="text-sm text-[#1A3A3F]/60">Sin registros todavía.</p>
           )}
         </CardContent>
       </Card>

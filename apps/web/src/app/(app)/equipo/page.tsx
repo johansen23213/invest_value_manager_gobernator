@@ -121,7 +121,7 @@ function EditJobTitleDialog({ user, tenantTitles, canWrite, onSave, onClose }: E
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent aria-describedby={undefined}>
         <DialogTitle>{t('team.editJobTitle.title')}</DialogTitle>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-[#1A3A3F]/60">
           {user.name ?? user.email}
         </p>
         <div className="mt-4 flex flex-col gap-3">
@@ -143,7 +143,7 @@ function EditJobTitleDialog({ user, tenantTitles, canWrite, onSave, onClose }: E
             </datalist>
           </div>
           {suggestedRole && suggestedRole !== user.role && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <p className="rounded-md bg-warm-50 px-3 py-2 text-sm text-warm-700">
               {t('team.editJobTitle.presetNote', { role: ROLE_LABELS[suggestedRole] ?? suggestedRole })}
             </p>
           )}
@@ -182,7 +182,7 @@ function AccessDialog({ user, onClose }: AccessDialogProps) {
         <DialogTitle>
           {t('team.accessDialog.title')} — {user.name ?? user.email}
         </DialogTitle>
-        <p className="mb-3 text-sm text-slate-500">
+        <p className="mb-3 text-sm text-[#1A3A3F]/60">
           {t('team.accessDialog.subtitle', { role: ROLE_LABELS[user.role] ?? user.role })}
         </p>
         <RoleCapabilitiesCard role={user.role} />
@@ -210,7 +210,7 @@ function ChangeRoleDialog({ user, onSave, onClose }: ChangeRoleDialogProps) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent aria-describedby={undefined}>
         <DialogTitle>{t('team.changeRole.title')}</DialogTitle>
-        <p className="text-sm text-slate-500">{user.name ?? user.email}</p>
+        <p className="text-sm text-[#1A3A3F]/60">{user.name ?? user.email}</p>
         <div className="mt-4">
           <Label htmlFor="new-role-select">{t('team.changeRole.label')}</Label>
           <Select
@@ -348,7 +348,7 @@ export default function EquipoPage() {
   });
 
   if (canRead === null || me.isLoading) {
-    return <p className="text-slate-500">{t('state.loading')}</p>;
+    return <p className="text-[#1A3A3F]/60">{t('state.loading')}</p>;
   }
   if (!canRead) return null;
 
@@ -358,7 +358,7 @@ export default function EquipoPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{t('team.title')}</h1>
-          <p className="mt-1 text-sm text-slate-500">{t('team.subtitle')}</p>
+          <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('team.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {canWrite && (
@@ -368,13 +368,13 @@ export default function EquipoPage() {
           )}
           <Link
             href="/equipo/familias"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="rounded-md border border-brand-200 px-3 py-2 text-sm hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             Acceso de familias
           </Link>
           <Link
             href="/equipo/roles"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="rounded-md border border-brand-200 px-3 py-2 text-sm hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             {t('team.rolesReference')}
           </Link>
@@ -472,9 +472,9 @@ export default function EquipoPage() {
       </div>
 
       {/* Lista de usuarios */}
-      {usersQuery.isLoading && <p className="text-slate-500">{t('state.loading')}</p>}
+      {usersQuery.isLoading && <p className="text-[#1A3A3F]/60">{t('state.loading')}</p>}
       {!usersQuery.isLoading && filteredUsers.length === 0 && (
-        <p className="text-slate-500">{t('team.empty')}</p>
+        <p className="text-[#1A3A3F]/60">{t('team.empty')}</p>
       )}
 
       <ul className="flex flex-col gap-3" aria-label={t('team.title')}>
@@ -483,19 +483,19 @@ export default function EquipoPage() {
             key={user.id}
             data-testid="team-user-row"
             data-user-role={user.role}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-100 bg-white px-4 py-3 shadow-sm"
           >
             {/* Info */}
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
                 <IconUser />
               </span>
               <div className="min-w-0">
-                <p className="truncate font-medium text-slate-800">
+                <p className="truncate font-medium text-[#1A3A3F]">
                   {user.name ?? user.email}
                 </p>
-                <p className="truncate text-sm text-slate-500">{user.email}</p>
-                <p className="truncate text-xs text-slate-400">
+                <p className="truncate text-sm text-[#1A3A3F]/60">{user.email}</p>
+                <p className="truncate text-xs text-[#1A3A3F]/40">
                   Último acceso: {user.lastLoginAt ? formatDateTime(locale, user.lastLoginAt) : 'nunca'}
                 </p>
               </div>
@@ -507,7 +507,7 @@ export default function EquipoPage() {
                 {ROLE_LABELS[user.role] ?? user.role}
               </Badge>
               {user.jobTitle && (
-                <span className="text-sm text-slate-600">{user.jobTitle}</span>
+                <span className="text-sm text-[#1A3A3F]/70">{user.jobTitle}</span>
               )}
             </div>
 
@@ -548,7 +548,7 @@ export default function EquipoPage() {
       </ul>
 
       {/* Nota sobre familiares (R-05 pendiente) */}
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-[#1A3A3F]/40">
         {t('team.familiarNote')}
       </p>
 

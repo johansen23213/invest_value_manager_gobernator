@@ -21,13 +21,13 @@ function Kpi({ label, value, sub, loading }: { label: string; value: string; sub
   return (
     <Card>
       <CardContent>
-        <p className="text-sm text-slate-500">{label}</p>
+        <p className="text-sm text-[#1A3A3F]/60">{label}</p>
         {loading ? (
           <Skeleton className="mt-1 h-9 w-16" />
         ) : (
           <p className="text-3xl font-bold">
             {value}
-            {sub && <span className="text-base font-normal text-slate-400"> {sub}</span>}
+            {sub && <span className="text-base font-normal text-[#1A3A3F]/40"> {sub}</span>}
           </p>
         )}
       </CardContent>
@@ -56,10 +56,10 @@ function BedMap({ counts }: { counts: BedCounts }) {
 
 function UnitRow({ unit }: { unit: UnitOccupancy }) {
   return (
-    <div className="flex flex-col gap-2 border-t border-slate-100 py-3 first:border-t-0 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2 border-t border-brand-100/60 py-3 first:border-t-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="font-medium">{unit.unitName}</p>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-[#1A3A3F]/60">
           {unit.occupied}/{unit.capacity} ocupadas · {unit.free} libres
           {unit.outOfService > 0 && ` · ${unit.outOfService} fuera de servicio`}
         </p>
@@ -80,8 +80,8 @@ export default function OccupancyPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">{t('occupancy.title')}</h1>
-        <p className="text-sm text-slate-500">Plazas, ocupación y plano por centro y unidad.</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('occupancy.title')}</h1>
+        <p className="text-sm text-[#1A3A3F]/60">Plazas, ocupación y plano por centro y unidad.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -92,7 +92,7 @@ export default function OccupancyPage() {
       </div>
 
       {data && data.outOfService > 0 && (
-        <p className="text-sm text-slate-500">{data.outOfService} plaza(s) fuera de servicio (no computan en el aforo).</p>
+        <p className="text-sm text-[#1A3A3F]/60">{data.outOfService} plaza(s) fuera de servicio (no computan en el aforo).</p>
       )}
 
       {occupancy.isLoading ? (
@@ -119,7 +119,7 @@ export default function OccupancyPage() {
                   {center.units.length > 0 ? (
                     center.units.map((unit) => <UnitRow key={unit.unitId} unit={unit} />)
                   ) : (
-                    <p className="py-3 text-sm text-slate-500">Este centro no tiene unidades todavía.</p>
+                    <p className="py-3 text-sm text-[#1A3A3F]/60">Este centro no tiene unidades todavía.</p>
                   )}
                 </div>
               </CardContent>
@@ -130,7 +130,7 @@ export default function OccupancyPage() {
         <EmptyState title="No hay centros todavía" description="Crea centros, unidades y plazas para ver la ocupación." />
       )}
 
-      <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+      <div className="flex flex-wrap gap-4 text-xs text-[#1A3A3F]/60">
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded border border-brand-700 bg-brand-600" /> Ocupada</span>
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded border border-slate-300 bg-white" /> Libre</span>
         <span className="flex items-center gap-1"><span className="h-3 w-3 rounded border border-slate-300 bg-slate-200" /> Fuera de servicio</span>
