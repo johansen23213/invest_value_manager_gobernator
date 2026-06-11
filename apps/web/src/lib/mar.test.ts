@@ -3,6 +3,7 @@ import {
   computeAlerts,
   computePrn,
   computeSchedule,
+  currentShift,
   doseAt,
   groupByShift,
   shiftOf,
@@ -188,6 +189,68 @@ describe('computePrn', () => {
     const ended: MedForSchedule = { ...medPrn, id: 'm-prn-ended', endDate: new Date('2026-06-05T23:59:59Z') };
     const prn = computePrn([ended], DATE);
     expect(prn).toHaveLength(0);
+  });
+});
+
+// ── currentShift — función pura para el filtro de turno activo ───────────────
+// UX-17: al abrir el MAR se pre-selecciona el turno activo según la hora del
+// dispositivo. currentShift(date) delega en shiftOf, que ya tiene sus propios
+// tests. Aquí verificamos los límites exactos (hora en punto y adyacentes).
+
+describe('currentShift', () => {
+  // Límites del turno de Mañana: [06:00, 14:00)
+  it('devuelve MANANA a las 06:00 (inicio exacto del turno)', () => {
+    expect(currentShift(new Date('2026-06-11T06:00:00'))).toBe('MANANA');
+  });
+
+  it('devuelve MANANA a las 08:30 (mitad del turno)', () => {
+    expect(currentShift(new Date('2026-06-11T08:30:00'))).toBe('MANANA');
+  });
+
+  it('devuelve MANANA a las 13:59 (último minuto del turno)', () => {
+    expect(currentShift(new Date('2026-06-11T13:59:00'))).toBe('MANANA');
+  });
+
+  // Límites del turno de Tarde: [14:00, 22:00)
+  it('devuelve TARDE a las 14:00 (inicio exacto del turno)', () => {
+    expect(currentShift(new Date('2026-06-11T14:00:00'))).toBe('TARDE');
+  });
+
+  it('devuelve TARDE a las 18:00 (mitad del turno)', () => {
+    expect(currentShift(new Date('2026-06-11T18:00:00'))).toBe('TARDE');
+  });
+
+  it('devuelve TARDE a las 21:59 (último minuto del turno)', () => {
+    expect(currentShift(new Date('2026-06-11T21:59:00'))).toBe('TARDE');
+  });
+
+  // Límites del turno de Noche: [22:00, 06:00)
+  it('devuelve NOCHE a las 22:00 (inicio exacto del turno)', () => {
+    expect(currentShift(new Date('2026-06-11T22:00:00'))).toBe('NOCHE');
+  });
+
+  it('devuelve NOCHE a las 00:00 (medianoche)', () => {
+    expect(currentShift(new Date('2026-06-11T00:00:00'))).toBe('NOCHE');
+  });
+
+  it('devuelve NOCHE a las 03:30 (madrugada)', () => {
+    expect(currentShift(new Date('2026-06-11T03:30:00'))).toBe('NOCHE');
+  });
+
+  it('devuelve NOCHE a las 05:59 (último minuto del turno nocturno)', () => {
+    expect(currentShift(new Date('2026-06-11T05:59:00'))).toBe('NOCHE');
+  });
+
+  // Comprobación: el cambio de MANANA → TARDE es preciso en el límite
+  it('cambia de MANANA a TARDE exactamente a las 14:00 (no antes)', () => {
+    expect(currentShift(new Date('2026-06-11T13:59:59'))).toBe('MANANA');
+    expect(currentShift(new Date('2026-06-11T14:00:00'))).toBe('TARDE');
+  });
+
+  // Comprobación: el cambio de TARDE → NOCHE es preciso en el límite
+  it('cambia de TARDE a NOCHE exactamente a las 22:00 (no antes)', () => {
+    expect(currentShift(new Date('2026-06-11T21:59:59'))).toBe('TARDE');
+    expect(currentShift(new Date('2026-06-11T22:00:00'))).toBe('NOCHE');
   });
 });
 

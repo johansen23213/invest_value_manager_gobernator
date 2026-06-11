@@ -235,6 +235,37 @@ describe('paridad es/ca — Rediseño Dashboard + Residente (2026-06-11)', () =>
   });
 });
 
+describe('paridad es/ca — MAR filtro de turno (UX-17)', () => {
+  const shiftFilterKeys = [
+    'mar.shift.filter.label',
+    'mar.shift.all',
+    'mar.shift.MANANA',
+    'mar.shift.TARDE',
+    'mar.shift.NOCHE',
+    'mar.shift.notice',
+    'mar.shift.showAll',
+  ];
+
+  it('todas las claves del filtro de turno existen en es', () => {
+    for (const key of shiftFilterKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves del filtro de turno existen en ca', () => {
+    for (const key of shiftFilterKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('los nombres de turno difieren entre es y ca (paridad real)', () => {
+    // "Mañana" ≠ "Matí", "Tarde" ≠ "Tarda", "Noche" ≠ "Nit"
+    expect(DICTIONARIES.ca['mar.shift.MANANA']).not.toBe(DICTIONARIES.es['mar.shift.MANANA']);
+    expect(DICTIONARIES.ca['mar.shift.TARDE']).not.toBe(DICTIONARIES.es['mar.shift.TARDE']);
+    expect(DICTIONARIES.ca['mar.shift.NOCHE']).not.toBe(DICTIONARIES.es['mar.shift.NOCHE']);
+  });
+});
+
 describe('paridad es/ca — Ola 1 Lifecare (auth panel claim)', () => {
   const authPanelKeys = ['auth.panel.claim', 'auth.panel.sub', 'auth.panel.trust'];
 
