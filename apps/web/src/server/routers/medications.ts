@@ -48,6 +48,8 @@ export const medicationsRouter = createTRPCRouter({
         instructions: z.string().max(500).optional(),
         // M-10: vínculo opcional a un diagnóstico del residente.
         diagnosisId: z.string().optional(),
+        // M-09: línea dentro de una cabecera de tratamiento (opcional).
+        treatmentId: z.string().optional(),
         /**
          * M-08 cierre: override de alergia GRAVE.
          * Si el sanitario confirma la prescripción sobre una alergia GRAVE,
@@ -80,6 +82,16 @@ export const medicationsRouter = createTRPCRouter({
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'El diagnóstico no pertenece a este residente.' });
         }
       }
+      // M-09: el tratamiento debe ser del mismo residente (integridad + RLS).
+      if (input.treatmentId) {
+        const tr = await ctx.db.treatment.findUnique({
+          where: { id: input.treatmentId },
+          select: { residentId: true },
+        });
+        if (!tr || tr.residentId !== input.residentId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'El tratamiento no pertenece a este residente.' });
+        }
+      }
       const medication = await ctx.db.medication.create({
         data: {
           tenantId: ctx.tenantId,
@@ -98,6 +110,7 @@ export const medicationsRouter = createTRPCRouter({
           endDate: input.endDate,
           instructions: input.instructions,
           diagnosisId: input.diagnosisId,
+          treatmentId: input.treatmentId,
           prescribedById: ctx.session.user.id,
         },
       });

@@ -112,7 +112,14 @@ interface PrescribeForm {
   daysOfWeek: number[] | null; // null = todos los días
   instructions: string;
   diagnosisId: string; // M-10: vínculo opcional a un diagnóstico
+  // M-11: dosis distinta por hora (hora -> dosis); vacío = usa la dosis base.
+  momentDoses: Record<string, string>;
+  // M-09: línea de un tratamiento existente ('' = sin tratamiento; NEW = crear).
+  treatmentId: string;
+  newTreatmentName: string;
 }
+
+const NEW_TREATMENT = '__new__';
 
 const INITIAL_FORM: PrescribeForm = {
   name: '',
@@ -126,6 +133,9 @@ const INITIAL_FORM: PrescribeForm = {
   daysOfWeek: null,
   instructions: '',
   diagnosisId: '',
+  momentDoses: {},
+  treatmentId: '',
+  newTreatmentName: '',
 };
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -148,6 +158,9 @@ export default function PrescribirPage() {
 
   const resident = api.residents.get.useQuery({ id: residentId });
   const allergies = useMemo(() => resident.data?.allergies ?? [], [resident.data?.allergies]);
+  // M-09: tratamientos activos del residente para vincular la línea.
+  const treatments = api.treatments.listByResident.useQuery({ residentId });
+  const createTreatment = api.treatments.create.useMutation();
 
   const [form, setForm] = useState<PrescribeForm>(INITIAL_FORM);
   const [allergyMatch, setAllergyMatch] = useState<{
@@ -200,6 +213,7 @@ export default function PrescribirPage() {
         utils.medications.listByResident.invalidate({ residentId }),
         utils.medications.schedule.invalidate({ residentId }),
         utils.medications.prnMeds.invalidate({ residentId }),
+        utils.treatments.listByResident.invalidate({ residentId }),
       ]);
       toast.success(t('med.prescribe.success'));
       router.push(`/residentes/${residentId}/medicacion`);
@@ -224,7 +238,7 @@ export default function PrescribirPage() {
     });
     if (!result) return;
     setAllergyOverrideConfirmed(true);
-    submitPrescription({
+    await submitPrescription({
       allergyOverride:
         allergyMatch && result.reason
           ? {
@@ -236,10 +250,33 @@ export default function PrescribirPage() {
     });
   }
 
-  function submitPrescription(opts?: {
+  async function submitPrescription(opts?: {
     allergyOverride?: { substance: string; severity: string; reason: string };
   }) {
     const isPrn = form.type === MedicationType.PRN;
+    // M-11: solo las horas con dosis específica no vacía viajan en momentDoses.
+    const momentDoses = form.times
+      .filter((time) => form.momentDoses[time]?.trim())
+      .map((time) => ({ time, dose: form.momentDoses[time]!.trim() }));
+    // M-09: crear el tratamiento nuevo (si procede) antes de prescribir la línea.
+    let treatmentId = form.treatmentId || undefined;
+    if (treatmentId === NEW_TREATMENT) {
+      if (!form.newTreatmentName.trim()) {
+        toast.error(t('med.treatment.nameRequired'));
+        return;
+      }
+      try {
+        const created = await createTreatment.mutateAsync({
+          residentId,
+          name: form.newTreatmentName.trim(),
+          diagnosisId: form.diagnosisId || undefined,
+        });
+        treatmentId = created.id;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Error al crear el tratamiento');
+        return;
+      }
+    }
     prescribe.mutate({
       residentId,
       name: form.name,
@@ -248,6 +285,7 @@ export default function PrescribirPage() {
       unit: form.unit || undefined,
       type: (form.type as MedicationType) || undefined,
       times: isPrn ? [] : form.times,
+      momentDoses: !isPrn && momentDoses.length > 0 ? momentDoses : undefined,
       daysOfWeek: form.daysOfWeek ?? undefined,
       startDate: form.startDate ? new Date(form.startDate) : new Date(),
       endDate: form.endDate ? new Date(form.endDate) : undefined,
@@ -255,6 +293,7 @@ export default function PrescribirPage() {
         ? `[Override alergia: ${opts.allergyOverride.reason}] ${form.instructions}`.trim()
         : form.instructions || undefined,
       diagnosisId: form.diagnosisId || undefined,
+      treatmentId,
       allergyOverride: opts?.allergyOverride,
     });
   }
@@ -265,7 +304,7 @@ export default function PrescribirPage() {
       await handlePrescribeGrave();
       return;
     }
-    submitPrescription(undefined);
+    await submitPrescription(undefined);
   }
 
   // ── Toggle days of week ───────────────────────────────────────────────────
@@ -558,6 +597,41 @@ export default function PrescribirPage() {
                   />
                 </div>
               )}
+
+              {/* M-11 — Dosis por franja: opcional, por cada hora de la pauta.
+                  Vacío = dosis base; relleno = prevalece para esa hora. */}
+              {!isPrn && form.times.length > 0 && (
+                <div className="mt-3" data-testid="moment-doses-editor">
+                  <p className="mb-1 font-medium text-slate-700">
+                    {t('med.prescribe.field.momentDoses')}
+                  </p>
+                  <p className="mb-2 text-xs text-slate-500">
+                    {t('med.prescribe.field.momentDosesHint')}
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {form.times.map((time) => (
+                      <div key={time} className="flex items-center gap-2">
+                        <span className="w-14 shrink-0 text-sm font-semibold tabular-nums text-slate-700">
+                          {time}
+                        </span>
+                        <Input
+                          aria-label={`${t('med.prescribe.field.doseAt')} ${time}`}
+                          value={form.momentDoses[time] ?? ''}
+                          placeholder={form.dose || '—'}
+                          maxLength={80}
+                          className="w-36"
+                          onChange={(e) =>
+                            setForm((s) => ({
+                              ...s,
+                              momentDoses: { ...s.momentDoses, [time]: e.target.value },
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {isPrn && (
                 <p className="mt-2 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
                   <strong>{t('med.type.PRN')}:</strong> no requiere horas fijas. Se registra cuando ocurre.
@@ -582,6 +656,46 @@ export default function PrescribirPage() {
                   </option>
                 ))}
               </Select>
+            </fieldset>
+
+            {/* M-09 — Tratamiento: la línea puede agruparse en una cabecera */}
+            <fieldset data-testid="treatment-fieldset">
+              <legend className="mb-2 font-semibold text-slate-700">
+                {t('med.treatment.legend')}
+              </legend>
+              <div className="flex flex-wrap items-end gap-3">
+                <div style={{ minWidth: '220px' }}>
+                  <Label htmlFor="treatment">{t('med.treatment.select')}</Label>
+                  <Select
+                    id="treatment"
+                    value={form.treatmentId}
+                    onChange={(e) => setForm((s) => ({ ...s, treatmentId: e.target.value }))}
+                  >
+                    <option value="">{t('med.treatment.none')}</option>
+                    {(treatments.data ?? [])
+                      .filter((tr) => tr.active)
+                      .map((tr) => (
+                        <option key={tr.id} value={tr.id}>
+                          {tr.name}
+                          {tr.diagnosis ? ` — ${tr.diagnosis.code ?? tr.diagnosis.description}` : ''}
+                        </option>
+                      ))}
+                    <option value={NEW_TREATMENT}>{t('med.treatment.createNew')}</option>
+                  </Select>
+                </div>
+                {form.treatmentId === NEW_TREATMENT && (
+                  <div className="flex-1" style={{ minWidth: '220px' }}>
+                    <Label htmlFor="new-treatment-name">{t('med.treatment.newName')}</Label>
+                    <Input
+                      id="new-treatment-name"
+                      value={form.newTreatmentName}
+                      maxLength={160}
+                      placeholder={t('med.treatment.newNamePlaceholder')}
+                      onChange={(e) => setForm((s) => ({ ...s, newTreatmentName: e.target.value }))}
+                    />
+                  </div>
+                )}
+              </div>
             </fieldset>
 
             {/* Paso 3 — Instrucciones */}

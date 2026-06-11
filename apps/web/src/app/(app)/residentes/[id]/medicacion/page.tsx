@@ -156,14 +156,36 @@ export default function MedicationPage() {
   const meds = api.medications.listByResident.useQuery({ residentId });
   const schedule = api.medications.schedule.useQuery({ residentId });
   const prnMeds = api.medications.prnMeds.useQuery({ residentId });
+  // M-09: tratamientos del residente (cabeceras que agrupan líneas).
+  const treatments = api.treatments.listByResident.useQuery({ residentId });
 
   const refresh = async () => {
     await Promise.all([
       utils.medications.listByResident.invalidate({ residentId }),
       utils.medications.schedule.invalidate({ residentId }),
       utils.medications.prnMeds.invalidate({ residentId }),
+      utils.treatments.listByResident.invalidate({ residentId }),
     ]);
   };
+
+  // M-09: finalizar un tratamiento (no borra; cierra el histórico clínico).
+  const endTreatment = api.treatments.end.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success(t('med.treatment.ended'));
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  async function confirmEndTreatment(id: string, name: string) {
+    const result = await confirm({
+      title: `${t('med.treatment.endAction')}: ${name}`,
+      description: 'El tratamiento se marca como finalizado (las líneas no se borran).',
+      confirmLabel: t('med.treatment.endAction'),
+      tone: 'danger',
+    });
+    if (result) endTreatment.mutate({ id });
+  }
 
   // ADR-0012 — MAR offline-first: las administraciones entran en la cola local
   // (IndexedDB) y se sincronizan al instante si hay red; sin red quedan
@@ -384,6 +406,61 @@ export default function MedicationPage() {
           </CardContent>
         </Card>
 
+        {/* M-09 — Tratamientos: cabeceras que agrupan líneas de prescripción */}
+        {(treatments.data?.length ?? 0) > 0 && (
+          <Card data-testid="treatments-section">
+            <CardContent>
+              <CardTitle className="mb-3 text-base">{t('med.treatment.title')}</CardTitle>
+              <ul className="flex flex-col gap-3">
+                {treatments.data!.map((tr) => (
+                  <li key={tr.id} className="rounded-md border border-slate-200 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="flex flex-wrap items-center gap-2 text-sm">
+                        <strong>{tr.name}</strong>
+                        {/* M-10: diagnóstico de referencia como chip clickable -> expediente */}
+                        {tr.diagnosis && (
+                          <Link
+                            href={`/residentes/${residentId}`}
+                            className="inline-flex"
+                            aria-label={`Ver diagnóstico ${tr.diagnosis.description} en el expediente`}
+                          >
+                            <Badge tone="blue" title={tr.diagnosis.description}>
+                              {tr.diagnosis.code ?? tr.diagnosis.description}
+                            </Badge>
+                          </Link>
+                        )}
+                        {!tr.active && <Badge tone="neutral">{t('med.treatment.ended')}</Badge>}
+                      </span>
+                      {canPrescribe && tr.active && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void confirmEndTreatment(tr.id, tr.name)}
+                        >
+                          {t('med.treatment.endAction')}
+                        </Button>
+                      )}
+                    </div>
+                    {tr.medications.length > 0 ? (
+                      <ul className="mt-2 flex flex-col gap-1 border-l-2 border-slate-200 pl-3 text-sm">
+                        {tr.medications.map((line) => (
+                          <li key={line.id} className="flex flex-wrap items-center gap-2">
+                            {line.name}
+                            <span className="text-slate-500">· {line.dose}</span>
+                            {!line.active && <Badge tone="neutral">Inactiva</Badge>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-500">{t('med.treatment.linesEmpty')}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Listado de prescripciones */}
         <Card>
           <CardContent>
@@ -397,10 +474,17 @@ export default function MedicationPage() {
                     {m.route && (
                       <Badge tone="neutral">{m.route as string}</Badge>
                     )}
+                    {/* M-10: chip de diagnóstico clickable -> expediente del residente */}
                     {m.diagnosis && (
-                      <Badge tone="blue" title={m.diagnosis.description}>
-                        {m.diagnosis.code ? `${m.diagnosis.code}` : m.diagnosis.description}
-                      </Badge>
+                      <Link
+                        href={`/residentes/${residentId}`}
+                        className="inline-flex"
+                        aria-label={`Ver diagnóstico ${m.diagnosis.description} en el expediente`}
+                      >
+                        <Badge tone="blue" title={m.diagnosis.description}>
+                          {m.diagnosis.code ? `${m.diagnosis.code}` : m.diagnosis.description}
+                        </Badge>
+                      </Link>
                     )}
                     {m.type === 'PRN' && (
                       <Badge tone="blue" icon={<IconZap />}>

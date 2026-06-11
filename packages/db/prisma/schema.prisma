@@ -219,6 +219,7 @@ model Resident {
   careRecords CareRecord[]
   medications Medication[]
   administrations MedicationAdministration[]
+  treatments  Treatment[]
   carePlans   CarePlan[]
   familyLinks FamilyLink[]
 
@@ -276,10 +277,37 @@ model Diagnosis {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   medications Medication[] // M-10: prescripciones vinculadas a este diagnóstico
+  treatments  Treatment[]  // M-09: tratamientos con este diagnóstico de referencia
 
   @@index([tenantId])
   @@index([residentId])
   @@map("diagnoses")
+}
+
+/// Cabecera de tratamiento (M-09): agrupa líneas de prescripción bajo un
+/// objetivo clínico común, con un diagnóstico de referencia opcional.
+/// Sigue el modelo de ResiPlus que el sector conoce (tratamiento -> líneas).
+model Treatment {
+  id          String     @id @default(cuid())
+  tenantId    String     @map("tenant_id")
+  residentId  String     @map("resident_id")
+  resident    Resident   @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  name        String // p. ej. "Control de la hipertensión"
+  diagnosisId String?    @map("diagnosis_id")
+  diagnosis   Diagnosis? @relation(fields: [diagnosisId], references: [id], onDelete: SetNull)
+  startDate   DateTime   @default(now()) @map("start_date")
+  endDate     DateTime?  @map("end_date")
+  notes       String?
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  medications Medication[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@index([diagnosisId])
+  @@map("treatments")
 }
 
 /// Valoración mediante escala (Barthel, Tinetti...).
@@ -433,6 +461,9 @@ model Medication {
   // M-10: vínculo opcional de la prescripción a un diagnóstico del residente.
   diagnosisId    String?          @map("diagnosis_id")
   diagnosis      Diagnosis?       @relation(fields: [diagnosisId], references: [id], onDelete: SetNull)
+  // M-09: línea dentro de una cabecera de tratamiento (opcional).
+  treatmentId    String?          @map("treatment_id")
+  treatment      Treatment?       @relation(fields: [treatmentId], references: [id], onDelete: SetNull)
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
@@ -441,6 +472,7 @@ model Medication {
   @@index([tenantId])
   @@index([residentId])
   @@index([diagnosisId])
+  @@index([treatmentId])
   @@map("medications")
 }
 

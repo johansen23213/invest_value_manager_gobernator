@@ -275,6 +275,7 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'medications',
       'residents',
       'sync_conflicts',
+      'treatments',
       'units',
       'users',
     ].sort();
