@@ -554,7 +554,8 @@ medication_rbac_redesign:
     - { id: M-11b, titulo: "Editor UI de momentDoses en prescribir (dosis por hora, en blanco usa la base)" }
     - { id: M-10b, titulo: "Chip de diagnóstico clickable hacia el expediente (en prescripciones y tratamientos)" }
     - { id: AUTH-1, titulo: "Email transaccional UE provider-agnóstico (console dev / http UE) + reset de contraseña (AuthToken un-solo-uso, /recuperar + /restablecer, anti-enumeración) + invitación por enlace (users.sendAccessLink)", commit: "24ec344" }
-    - { id: R-360, titulo: "Visión 360 del residente: pantalla /residentes/[id]/resumen con pestañas (Hoy/Salud/Atención) y acciones rápidas in-situ (administrar dosis, registrar constantes/incidencia) sobre la cola offline; subnav 'Resumen' en ResidentChrome" }
+    - { id: R-360, titulo: "Visión 360 del residente: pantalla /residentes/[id]/resumen con pestañas (Hoy/Salud/Atención) y acciones rápidas in-situ (administrar dosis, registrar constantes/incidencia) sobre la cola offline; subnav 'Resumen' en ResidentChrome. i18n es/ca (r360.*). E2E e2e/resumen-360.spec.ts (4 casos)", commit: "fe0ce0e" }
+    - { id: R-CONF, titulo: "Revisión de conflictos de sync (UI): campos reviewedAt/reviewedById en SyncConflict+MedicationSyncConflict, router conflicts (list/pendingCount/acknowledge), permiso conflicts:review (DIR/SAN/SUPERADMIN), pantalla /conflictos + nav, test integración ciclo de revisión + RLS", commit: "fe0ce0e" }
   pendientes_menores_hechos:
     - "lastLoginAt -> 'último acceso' visible en /equipo (el tracking ya existía en auth.ts)."
     - "Alta de usuario del equipo desde /equipo (users.invite, contraseña provisional). Email transaccional YA NO diferido: AUTH-1 añade reset por enlace e invitación por email (users.sendAccessLink)."
