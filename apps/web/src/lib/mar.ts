@@ -60,6 +60,17 @@ export function shiftOf(scheduledAt: Date): Shift {
   return 'NOCHE';
 }
 
+/**
+ * Devuelve el turno activo para una fecha/hora dada (típicamente `new Date()`).
+ * Se usa para pre-seleccionar el chip de turno al abrir el MAR.
+ *
+ * Límites: Mañana 06:00–13:59 · Tarde 14:00–21:59 · Noche 22:00–05:59
+ * La función es pura para poder testarla exhaustivamente.
+ */
+export function currentShift(date: Date): Shift {
+  return shiftOf(date);
+}
+
 const SHIFT_ORDER: Shift[] = ['MANANA', 'TARDE', 'NOCHE'];
 
 export interface ShiftGroup {
