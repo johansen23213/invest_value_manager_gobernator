@@ -559,25 +559,63 @@ governance_cycles:
       titulo: "Blindar el aislamiento RLS en CI"
       owner: quim-qa
       apoyo: leo-devops
+      status: PARCIALMENTE_CERRADO  # estático verde aquí; gate dinámico PENDIENTE-BD (solo verde en CI de GitHub)
       porque: >-
         Protege el principio central (multitenant/RLS) y es VERIFICABLE en este entorno
         porque CI ya levanta Postgres de servicio (no requiere BD local). Es reversible,
         barato, y desbloquea toda épica que toque schema (DSAR, MAR offline) al darles red
         de seguridad de aislamiento. No toca producto: solo añade garantías a la pipeline.
       criterios_aceptacion:
-        - "CI ejecuta como paso dedicado la suite de aislamiento RLS de packages/db (falla si hay fuga cross-tenant)."
-        - "CI ejecuta Playwright E2E de flujos críticos contra la BD de servicio."
-        - "Test meta: enumera tablas con tenant_id y falla si alguna no tiene RLS+FORCE+política (garantía estructural, no puntual)."
-        - "pnpm lint && typecheck && build && test verde en pipeline."
-      primer_paso: >-
-        quim-qa inventaria la suite de aislamiento de packages/db y los E2E existentes;
-        propone cómo invocarlos como paso dedicado en .github/workflows/ci.yml y diseña el
-        test meta de cobertura de RLS por tabla. Confirma con el CIO el diseño del test meta
-        antes de escribir (es lo que convierte la garantía en estructural).
+        - "CI ejecuta como paso dedicado la suite de aislamiento RLS de packages/db (falla si hay fuga cross-tenant). [IMPLEMENTADO — paso '[INC-1] RLS isolation gate' en ci.yml]"
+        - "CI ejecuta Playwright E2E de flujos críticos contra la BD de servicio. [PENDIENTE — nota/instrucciones añadidas en ci.yml; requiere job dedicado con playwright install]"
+        - "Test meta: enumera tablas con tenant_id y falla si alguna no tiene RLS+FORCE+política (garantía estructural, no puntual). [VERDE AQUÍ — 56 tests estáticos, rls-coverage.test.ts]"
+        - "pnpm lint && typecheck && build && test verde en pipeline. [VERDE AQUÍ para lint+typecheck; test con BD solo verde en CI de GitHub]"
+      entregado_2026-06-11:
+        quim_qa: >-
+          Inventario completo de la suite packages/db (ver abajo). Bug detectado y corregido
+          en rls-coverage.test.ts: el parser de schema.prisma usaba [^}]+ que se cortaba en
+          comentarios con } literal (p.ej. el modelo Medication tenía '// array [{ ... }]'),
+          resultando en tabla "medication" en vez de "medications". Reemplazado por scanner
+          balanceado de llaves línea a línea. Tests estáticos: 56 verde (todos los modelos
+          con tenantId verificados). Gate dedicado añadido en ci.yml ANTES del step genérico.
+          E2E: instrucciones documentadas en ci.yml para leo-devops; no habilitado (requiere
+          playwright install + seed + app en :3000).
+        hallazgo_bug_parser: >-
+          HALLAZGO REAL: El parser original del test meta (rls-coverage.test.ts) usaba regex
+          [^}]+ para capturar el cuerpo de los bloques 'model X { ... }'. El campo 'momentDoses'
+          del modelo Medication tiene un comentario inline con '// array [{ "time": "HH:MM",
+          "dose": "2 comp" }]' — la '}' en ese comentario terminaba el regex prematuramente,
+          haciendo que @@map("medications") quedara fuera del bloque capturado. El fallback
+          retornaba modelName.toLowerCase() = "medication", que no coincide con ninguna
+          migración RLS, resultando en 3 fallos falsos-negativos (ENABLE+FORCE+política). Corregido
+          con scanner de profundidad de llaves que ignora el contenido tras '//'.
+      inventario_packages_db:
+        tests_estaticos:
+          - "rls-coverage.test.ts: test meta sin BD (56 tests). VERDE AQUÍ. Cubre las 18 tablas con tenantId: verifica ENABLE+FORCE+política en migraciones por tabla."
+          - "care-merge.test.ts: 5 tests de lógica pura de sync (LWW, idempotencia). VERDE AQUÍ."
+          - "enum.test.ts: 1 test de enumeración UserRole. VERDE AQUÍ."
+        tests_integracion_pendientes_bd:
+          - "rls.test.ts: 7 tests RLS reales (aislamiento lectura/escritura, WITH CHECK, fallo en cerrado, bypass). PENDIENTE-BD — verde solo en CI de GitHub."
+          - "audit.integration.test.ts: 3 tests AuditLog (escritura, RLS, inmutabilidad). PENDIENTE-BD."
+          - "care-sync.integration.test.ts: 3 tests sync con RLS (idempotencia, LWW, cross-tenant). PENDIENTE-BD."
+        nota: >-
+          Los tests de integración usan describe.skipIf(!hasDb) pero en el entorno local el
+          .env define DATABASE_URL (sin Postgres activo), por lo que los tests no se saltan sino
+          que fallan en beforeAll. Comportamiento correcto en CI donde Postgres SÍ está disponible.
+      inventario_e2e:
+        ficheros:
+          - "smoke.spec.ts: login visible"
+          - "medicacion-mar.spec.ts: MAR (M-01..M-04, M-07)"
+          - "prescripcion.spec.ts: prescripción (M-05..M-08)"
+          - "equipo-rbac.spec.ts: equipo/RBAC (R-01..R-04)"
+          - "auditoria.spec.ts: trazabilidad (cambio de rol)"
+          - "copiloto.spec.ts / copiloto-pia.spec.ts: flujos IA (copiloto, PIA)"
+        estado: NO_EN_CI  # requiere playwright install + seed + next start; instrucciones en ci.yml
       entorno_nota: >-
-        Escritura de tests/workflow verificable aquí (tipos/lint); ejecución verde con
-        Postgres la confirma la pipeline de GitHub, no este entorno local (PENDIENTE-BD,
-        resuelto por CI).
+        Escritura de tests/workflow verificada aquí (tipos/lint/tests estáticos VERDE).
+        Ejecución verde con Postgres (integración) la confirma la pipeline de GitHub
+        (PENDIENTE-BD, resuelto por CI). No firmo como "cerrado" hasta que el gate
+        dinámico esté verde en la pipeline real.
     escalado_a_angel:
       - "Q-003: política de retención/supresión RGPD (condiciona INC-2 / DSAR)."
       - "Q-004: credenciales OVHcloud + DPA (desbloquea INC-3 deploy UE e INC-4 copiloto/H5)."
