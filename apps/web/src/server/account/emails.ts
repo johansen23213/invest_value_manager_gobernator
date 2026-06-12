@@ -44,6 +44,55 @@ const REQUEST_STATUS_LABELS: Record<string, string> = {
   REABIERTA: 'Reabierta',
 };
 
+// ---------------------------------------------------------------------------
+// Comunicaciones — plantillas de email (COM-007)
+// ---------------------------------------------------------------------------
+
+/**
+ * Notificación al familiar cuando hay un nuevo mensaje del staff en su hilo.
+ * El email es no-throw en el router; un fallo no interrumpe la operación.
+ */
+export function newMessageEmail(opts: {
+  threadSubject: string;
+  threadId: string;
+  residentName: string;
+}) {
+  const url = `${baseUrl()}/portal/mensajes/${opts.threadId}`;
+  return {
+    subject: `Nuevo mensaje: ${opts.threadSubject}`,
+    text: [
+      `El centro ha respondido en el hilo "${opts.threadSubject}" (${opts.residentName}).`,
+      '',
+      'Puedes leer la respuesta y continuar la conversación en:',
+      url,
+      '',
+      'Si tienes dudas, contacta directamente con el centro.',
+    ].join('\n'),
+  };
+}
+
+/**
+ * Notificación interna cuando un familiar envía un mensaje al centro.
+ * Se usa opcionalmente para alertar al email genérico del centro (si está configurado).
+ */
+export function familyMessageEmail(opts: {
+  threadSubject: string;
+  threadId: string;
+  familyName: string;
+  residentName: string;
+}) {
+  const url = `${baseUrl()}/backoffice/mensajes/${opts.threadId}`;
+  return {
+    subject: `Mensaje de familiar — ${opts.threadSubject}`,
+    text: [
+      `${opts.familyName} ha enviado un mensaje en el hilo "${opts.threadSubject}" (${opts.residentName}).`,
+      '',
+      'Puedes leer y responder desde el backoffice en:',
+      url,
+    ].join('\n'),
+  };
+}
+
 export function requestStatusChangedEmail(opts: {
   requestTitle: string;
   requestId: string;

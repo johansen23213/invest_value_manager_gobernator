@@ -259,6 +259,8 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
     // Verifica que están las tablas conocidas del MVP (H0-H6).
     const expectedKnown = [
       'allergies',
+      'announcement_receipts',
+      'announcements',
       'assessments',
       'audit_logs',
       'beds',
@@ -276,6 +278,8 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'medication_administrations',
       'medication_sync_conflicts',
       'medications',
+      'message_threads',
+      'messages',
       'pressure_ulcers',
       'resident_devices',
       'residents',
