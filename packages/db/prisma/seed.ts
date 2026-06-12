@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import {
   AllergySeverity,
   AllergyType,
+  AnnouncementAudience,
+  AnnouncementCategory,
   AssessmentType,
   CenterType,
   ConsentType,
@@ -10,6 +12,7 @@ import {
   DeviceType,
   DietType,
   LiquidTexture,
+  MessageThreadCategory,
   MedicationRoute,
   MedicationType,
   PlaceRegime,
@@ -639,11 +642,127 @@ async function main() {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Seed de comunicaciones (COM-001..COM-011)
+  // ---------------------------------------------------------------------------
+
+  const director = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+
+  if (director && familiar && firstResident) {
+    // Limpiar comunicados y hilos previos para idempotencia
+    await db.announcement.deleteMany({ where: { tenantId: tenant.id } });
+    await db.messageThread.deleteMany({ where: { tenantId: tenant.id } });
+
+    // Obtener la primera unidad del tenant para el comunicado POR_UNIDAD
+    const firstUnit = await db.unit.findFirst({
+      where: { tenantId: tenant.id },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // 1) Comunicado TODO_EL_CENTRO con acuse de recibo obligatorio
+    await db.announcement.create({
+      data: {
+        tenantId:    tenant.id,
+        authorId:    director.id,
+        title:       'Bienvenidos al portal de familias de Vetlla',
+        body:        [
+          'Estimadas familias,',
+          '',
+          'Con mucho gusto os comunicamos que desde hoy podéis gestionar vuestras solicitudes, ',
+          'leer comunicados del centro y mantener conversaciones con nuestro equipo desde este portal.',
+          '',
+          'Por favor, confirmad la recepción de este mensaje pulsando el botón de acuse de recibo.',
+          '',
+          'El equipo de Residencias Demo.',
+        ].join('\n'),
+        category:    AnnouncementCategory.GENERAL,
+        audience:    AnnouncementAudience.TODO_EL_CENTRO,
+        requiresAck: true,
+      },
+    });
+
+    // 2) Comunicado POR_UNIDAD (Planta 1) sin acuse
+    if (firstUnit) {
+      await db.announcement.create({
+        data: {
+          tenantId:    tenant.id,
+          authorId:    director.id,
+          title:       `Cambio de horario de visitas — ${firstUnit.name}`,
+          body:        [
+            `Estimadas familias de la ${firstUnit.name},`,
+            '',
+            'Os informamos de que a partir del próximo lunes el horario de visitas ',
+            'pasará a ser de 10:00 a 13:00 y de 16:00 a 19:00.',
+            '',
+            'Disculpad las molestias.',
+            'Administración.',
+          ].join('\n'),
+          category:    AnnouncementCategory.VISITAS,
+          audience:    AnnouncementAudience.POR_UNIDAD,
+          unitId:      firstUnit.id,
+          requiresAck: false,
+        },
+      });
+    }
+
+    // 3) Hilo de mensajería con 2-3 mensajes entre familiar y centro
+    const thread = await db.messageThread.create({
+      data: {
+        tenantId:     tenant.id,
+        residentId:   firstResident.id,
+        subject:      'Consulta sobre medicación de la semana',
+        category:     MessageThreadCategory.BIENESTAR,
+        createdById:  familiar.id,
+        lastMessageAt: new Date(),
+      },
+    });
+
+    // Mensaje inicial del familiar
+    await db.message.create({
+      data: {
+        tenantId:  tenant.id,
+        threadId:  thread.id,
+        authorId:  familiar.id,
+        body:      'Buenos días. Quería saber si se ha revisado la pauta de medicación de mi madre esta semana. Gracias.',
+        readByFamilyAt: new Date(),
+      },
+    });
+
+    // Respuesta del staff
+    await db.message.create({
+      data: {
+        tenantId:      tenant.id,
+        threadId:      thread.id,
+        authorId:      director.id,
+        body:          'Buenos días. Sí, la enfermería revisó la pauta ayer. Todo está correcto. Si tiene alguna duda específica, no dude en escribirnos.',
+        readByStaffAt: new Date(),
+      },
+    });
+
+    // Segunda respuesta del familiar
+    await db.message.create({
+      data: {
+        tenantId:       tenant.id,
+        threadId:       thread.id,
+        authorId:       familiar.id,
+        body:           'Muchas gracias por la respuesta tan rápida. Hasta pronto.',
+        readByFamilyAt: new Date(),
+      },
+    });
+
+    // Actualizar lastMessageAt del hilo
+    await db.messageThread.update({
+      where: { id: thread.id },
+      data:  { lastMessageAt: new Date() },
+    });
+  }
+
   console.log(`Seed OK.`);
   console.log(`  Tenant: ${tenant.name}`);
   console.log(`  Usuarios: ${userCount} (password demo: ${DEMO_PASSWORD})`);
   console.log(`  Centros: Residencia Los Olivos (30 plazas) + Vivienda Tutelada El Roble (8 plazas)`);
   console.log(`  Residentes: 28 con expediente de ejemplo`);
+  console.log(`  Comunicaciones: 2 comunicados + 1 hilo con 3 mensajes`);
 }
 
 main()

@@ -71,6 +71,12 @@ model User {
   assignedRequests ServiceRequest[]        @relation("RequestAssignedTo")
   requestComments  ServiceRequestComment[]
 
+  // --- Comunicaciones ---
+  authoredAnnouncements Announcement[]        @relation("AnnouncementAuthor")
+  announcementReceipts  AnnouncementReceipt[] @relation("AnnouncementReceiptUser")
+  createdThreads        MessageThread[]       @relation("ThreadCreatedBy")
+  messages              Message[]             @relation("MessageAuthor")
+
   @@index([tenantId])
   @@map("users")
 }
@@ -291,7 +297,8 @@ model Unit {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  beds Bed[]
+  beds          Bed[]
+  announcements Announcement[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -393,6 +400,10 @@ model Resident {
 
   // --- Portal de familias: solicitudes ---
   serviceRequests ServiceRequest[]
+
+  // --- Comunicaciones ---
+  announcements  Announcement[]
+  messageThreads MessageThread[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -1077,4 +1088,134 @@ model ServiceRequestComment {
   @@index([tenantId])
   @@index([requestId])
   @@map("service_request_comments")
+}
+
+// ---------------------------------------------------------------------------
+// Comunicaciones — Comunicados + Mensajería bidireccional (COM-001..COM-011)
+// ---------------------------------------------------------------------------
+
+/// Segmentación del comunicado (COM-001).
+enum AnnouncementAudience {
+  TODO_EL_CENTRO // todos los familiares del tenant
+  POR_UNIDAD     // familiares de residentes con cama en la unidad indicada
+  RESIDENTE      // familiares vinculados al residente indicado
+}
+
+/// Categoría temática del comunicado.
+enum AnnouncementCategory {
+  ADMINISTRACION
+  VISITAS
+  BIENESTAR
+  DOCUMENTACION
+  EVENTOS
+  GENERAL
+}
+
+/// Categoría temática del hilo de mensajería (COM-003).
+enum MessageThreadCategory {
+  ADMINISTRACION
+  VISITAS
+  BIENESTAR
+  DOCUMENTACION
+  PAGOS
+  GENERAL
+}
+
+/// Estado del hilo de mensajería.
+enum MessageThreadStatus {
+  ABIERTO
+  CERRADO
+}
+
+/// Comunicado del centro a las familias. Puede segmentarse por centro completo,
+/// unidad o residente concreto. Opcionalmente requiere acuse de recibo (COM-010).
+///
+/// NOTA Q-004: envío masivo de email no se hace aquí por volumen; se delega
+/// a un job/queue. El router publica el comunicado y deja un TODO.
+model Announcement {
+  id          String                @id @default(cuid())
+  tenantId    String                @map("tenant_id")
+  authorId    String                @map("author_id")
+  author      User                  @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  title       String
+  body        String
+  category    AnnouncementCategory  @default(GENERAL)
+  audience    AnnouncementAudience  @default(TODO_EL_CENTRO)
+  unitId      String?               @map("unit_id")
+  unit        Unit?                 @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  residentId  String?               @map("resident_id")
+  resident    Resident?             @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  requiresAck Boolean               @default(false) @map("requires_ack")
+  publishedAt DateTime              @default(now()) @map("published_at")
+  createdAt   DateTime              @default(now()) @map("created_at")
+
+  receipts AnnouncementReceipt[]
+
+  @@index([tenantId])
+  @@index([authorId])
+  @@index([publishedAt])
+  @@map("announcements")
+}
+
+/// Registro de lectura y acuse de recibo de un comunicado (COM-006, COM-010).
+/// Único por (announcementId, userId).
+model AnnouncementReceipt {
+  id             String       @id @default(cuid())
+  tenantId       String       @map("tenant_id")
+  announcementId String       @map("announcement_id")
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  user           User         @relation("AnnouncementReceiptUser", fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime?    @map("read_at")
+  acknowledgedAt DateTime?    @map("acknowledged_at")
+
+  @@unique([announcementId, userId])
+  @@index([tenantId])
+  @@index([announcementId])
+  @@index([userId])
+  @@map("announcement_receipts")
+}
+
+/// Hilo de mensajería bidireccional entre un familiar y el centro (COM-002).
+/// Pertenece a un residente; el familiar vinculado y el staff del tenant participan.
+///
+/// NOTA Q-004: adjuntos de fichero en mensajes quedan fuera de alcance hasta
+/// que se resuelva el object storage (Q-004).
+model MessageThread {
+  id            String               @id @default(cuid())
+  tenantId      String               @map("tenant_id")
+  residentId    String               @map("resident_id")
+  resident      Resident             @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  subject       String
+  category      MessageThreadCategory @default(GENERAL)
+  status        MessageThreadStatus   @default(ABIERTO)
+  createdById   String               @map("created_by_id")
+  createdBy     User                 @relation("ThreadCreatedBy", fields: [createdById], references: [id])
+  lastMessageAt DateTime             @default(now()) @map("last_message_at")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  messages Message[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@index([lastMessageAt])
+  @@map("message_threads")
+}
+
+/// Mensaje dentro de un hilo. Registra si fue leído por el staff y por la familia.
+model Message {
+  id              String        @id @default(cuid())
+  tenantId        String        @map("tenant_id")
+  threadId        String        @map("thread_id")
+  thread          MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorId        String        @map("author_id")
+  author          User          @relation("MessageAuthor", fields: [authorId], references: [id])
+  body            String
+  readByStaffAt   DateTime?     @map("read_by_staff_at")
+  readByFamilyAt  DateTime?     @map("read_by_family_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([threadId])
+  @@map("messages")
 }
