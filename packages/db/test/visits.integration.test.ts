@@ -369,11 +369,16 @@ describe.skipIf(!hasDb)('Visitas — RLS + aislamiento + flujo completo', () => 
       },
     ];
 
-    // 2026-06-20 = sábado (dayOfWeek 6)
-    const date = new Date('2026-06-20T00:00:00Z');
+    // 2026-06-20 = sábado (dayOfWeek 6).
+    // Tras el fix H-1, slotsForDate trabaja en Europe/Madrid (UTC+2 verano).
+    // Para que la fecha de consulta caiga en sábado en Madrid, usamos 10:00Z
+    // (= 12:00 Madrid, sábado 20-jun).
+    // Para que las visitas tengan startTime '11:00' EN Madrid, usamos 09:00Z
+    // (11:00 Madrid = 11 - 2 = 09:00 UTC en verano).
+    const date = new Date('2026-06-20T10:00:00Z'); // 12:00 Madrid → sábado 20-jun
     const existingVisits: VisitForSlot[] = [
-      { scheduledAt: new Date('2026-06-20T11:00:00Z'), status: 'CONFIRMADA' },
-      { scheduledAt: new Date('2026-06-20T11:00:00Z'), status: 'SOLICITADA' },
+      { scheduledAt: new Date('2026-06-20T09:00:00Z'), status: 'CONFIRMADA' }, // 11:00 Madrid
+      { scheduledAt: new Date('2026-06-20T09:00:00Z'), status: 'SOLICITADA' }, // 11:00 Madrid
     ];
 
     const slots = slotsForDate(configs, date, existingVisits);
@@ -395,10 +400,11 @@ describe.skipIf(!hasDb)('Visitas — RLS + aislamiento + flujo completo', () => 
       },
     ];
 
-    const date = new Date('2026-06-20T00:00:00Z');
+    // Ver comentario del test anterior sobre las fechas en Madrid (H-1).
+    const date = new Date('2026-06-20T10:00:00Z'); // 12:00 Madrid → sábado 20-jun
     const existingVisits: VisitForSlot[] = [
-      { scheduledAt: new Date('2026-06-20T11:00:00Z'), status: 'CONFIRMADA' },
-      { scheduledAt: new Date('2026-06-20T11:00:00Z'), status: 'CONFIRMADA' },
+      { scheduledAt: new Date('2026-06-20T09:00:00Z'), status: 'CONFIRMADA' }, // 11:00 Madrid
+      { scheduledAt: new Date('2026-06-20T09:00:00Z'), status: 'CONFIRMADA' }, // 11:00 Madrid
     ];
 
     const slots = slotsForDate(configs, date, existingVisits);
