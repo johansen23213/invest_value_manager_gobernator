@@ -77,6 +77,9 @@ model User {
   createdThreads        MessageThread[]       @relation("ThreadCreatedBy")
   messages              Message[]             @relation("MessageAuthor")
 
+  // --- Visitas ---
+  requestedVisits Visit[] @relation("VisitRequestedBy")
+
   @@index([tenantId])
   @@map("users")
 }
@@ -279,8 +282,9 @@ model Center {
   createdAt  DateTime   @default(now()) @map("created_at")
   updatedAt  DateTime   @updatedAt @map("updated_at")
 
-  units     Unit[]
-  residents Resident[]
+  units          Unit[]
+  residents      Resident[]
+  visitSlotConfigs VisitSlotConfig[]
 
   @@index([tenantId])
   @@map("centers")
@@ -404,6 +408,9 @@ model Resident {
   // --- Comunicaciones ---
   announcements  Announcement[]
   messageThreads MessageThread[]
+
+  // --- Visitas ---
+  visits Visit[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -779,11 +786,18 @@ model CarePlanReview {
 // ---------------------------------------------------------------------------
 
 /// Registro de auditoría append-only: quién hizo qué, cuándo y sobre qué entidad.
-/// Inmutable: la aplicación no expone update/delete y un trigger bloquea UPDATE.
+/// Inmutable: la aplicación no expone update/delete y un trigger bloquea UPDATE y DELETE.
+///
+/// NOTA (ALTO-02, 2026-06-12): tenantId es un string libre, sin FK de BD.
+/// - Para eventos de tenant: contiene el UUID del tenant (como siempre).
+/// - Para eventos de plataforma (SUPERADMIN sin tenant): contiene 'PLATFORM'.
+/// La FK fue eliminada en migración 20260612140000 para poder registrar eventos
+/// de plataforma. El aislamiento entre tenants lo garantiza RLS (no la FK).
+/// La relación Prisma se mantiene como optional para queries de conveniencia.
 model AuditLog {
   id         String   @id @default(cuid())
   tenantId   String   @map("tenant_id")
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
   actorId    String?  @map("actor_id") // user.id que ejecuta la acción
   actorEmail String?  @map("actor_email") // desnormalizado para trazabilidad estable
   action     String // CREATE | UPDATE | DELETE | ADMINISTER | RECORD | LOGIN ...
@@ -966,6 +980,77 @@ model ConsentRecord {
   @@index([tenantId])
   @@index([residentId])
   @@map("consent_records")
+}
+
+// ---------------------------------------------------------------------------
+// Visitas (VIS-001..VIS-010)
+// ---------------------------------------------------------------------------
+
+/// Estado del ciclo de vida de una visita.
+enum VisitStatus {
+  SOLICITADA   // creada por el familiar, pendiente de aprobación
+  CONFIRMADA   // aprobada (auto o manual) — se genera qrCode
+  RECHAZADA    // rechazada por el staff
+  CANCELADA    // cancelada por familiar o staff antes de la visita
+  EN_CURSO     // familiar en el centro (check-in realizado)
+  COMPLETADA   // visita finalizada (check-out)
+  NO_SHOW      // no se presentó — franja pasada sin check-in
+}
+
+/// Configuración de franjas horarias de visita por centro.
+/// El staff (DIRECTOR con centers:write) gestiona el calendario de franjas.
+model VisitSlotConfig {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  centerId    String   @map("center_id")
+  center      Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int      @map("day_of_week")   // 0=domingo … 6=sábado
+  startTime   String   @map("start_time")    // "HH:MM" 24h
+  endTime     String   @map("end_time")      // "HH:MM" 24h
+  capacity    Int                            // visitas simultáneas admitidas
+  autoApprove Boolean  @default(true)  @map("auto_approve") // VIS-003: aprobar automáticamente
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, centerId])
+  @@map("visit_slot_configs")
+}
+
+/// Visita de un familiar a un residente.
+/// El qrCode se genera al confirmar; recepción lo valida en el check-in.
+///
+/// Diseño del código QR:
+///   - BASE32 de 8 caracteres (alfabeto sin 0/O/1/I): corto, legible en pantalla/papel.
+///   - Se guarda en claro (es un identificador de sesión de visita, no una credencial de cuenta).
+///   - Caducidad operativa: el endpoint checkInByCode rechaza códigos cuya scheduledAt
+///     no sea HOY, lo que equivale a caducidad de franja sin necesidad de TTL en BD.
+///   - Único por tenant (@@unique [tenantId, qrCode]) para evitar colisiones.
+model Visit {
+  id              String      @id @default(cuid())
+  tenantId        String      @map("tenant_id")
+  residentId      String      @map("resident_id")
+  resident        Resident    @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  requestedById   String      @map("requested_by_id")   // user.id del familiar
+  requestedBy     User        @relation("VisitRequestedBy", fields: [requestedById], references: [id])
+  scheduledAt     DateTime    @map("scheduled_at")      // inicio de la franja (UTC)
+  durationMin     Int         @default(60) @map("duration_min")
+  visitorNames    Json        @map("visitor_names")     // string[] — acompañantes
+  status          VisitStatus @default(SOLICITADA)
+  qrCode          String?     @map("qr_code")           // generado al confirmar
+  checkInAt       DateTime?   @map("check_in_at")
+  checkOutAt      DateTime?   @map("check_out_at")
+  cancelReason    String?     @map("cancel_reason")
+  notes           String?
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@unique([tenantId, qrCode])
+  @@index([tenantId])
+  @@index([tenantId, residentId])
+  @@index([tenantId, scheduledAt])
+  @@index([tenantId, status])
+  @@map("visits")
 }
 
 // ---------------------------------------------------------------------------

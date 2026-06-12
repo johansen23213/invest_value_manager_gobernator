@@ -292,6 +292,8 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'upp_curings',
       'users',
       'vaccines',
+      'visit_slot_configs',
+      'visits',
       'weight_records',
     ].sort();
     // Si aparece una tabla nueva (o falta alguna esperada), este test lo muestra.

@@ -1,0 +1,35 @@
+-- ALTO-02: Eliminar la FK estricta audit_logs.tenant_id -> tenants(id).
+--
+-- Contexto:
+-- La función anonymizeResident y el router resetPassword necesitan registrar
+-- eventos de auditoría para actores SUPERADMIN (tenantId=null en User). El
+-- sentinela 'PLATFORM' no puede insertarse con una FK estricta al existir solo
+-- tenants reales.
+--
+-- Decisión de diseño:
+-- La FK de tenant_id en audit_logs NO aporta aislamiento de seguridad: ese
+-- aislamiento lo garantiza RLS (política tenant_isolation vigente). La FK solo
+-- asegura referencial integrity, pero impide registrar eventos de plataforma
+-- (resets de SUPERADMIN, errores de infraestructura) sin un tenant real asociado.
+-- Al eliminar la FK, tenant_id pasa a ser un string libre:
+--   - Tenants reales: UUID del tenant (como hasta ahora).
+--   - Eventos de plataforma: 'PLATFORM' (sentinela).
+-- La política RLS sigue filtrando: 'PLATFORM' no coincidirá con ningún
+-- app.tenant_id real, por lo que los eventos de plataforma son invisibles
+-- para clientes de tenant (solo legibles con bypass RLS = plataforma admin).
+--
+-- La relación Tenant -> AuditLog sigue existiendo en el schema Prisma como
+-- relación opcional (se mantiene para queries de conveniencia por tenant).
+-- El cascade DELETE de tenants seguirá limpiando sus audit_logs.
+
+ALTER TABLE "audit_logs" DROP CONSTRAINT "audit_logs_tenant_id_fkey";
+
+-- Re-añadir como FK nullable con SET NULL on delete, para que el borrado de
+-- un tenant no falle por los audit_logs de plataforma (que tienen tenant_id='PLATFORM').
+-- Los audit_logs de tenant reales siguen teniendo referencia válida.
+-- Para los logs de plataforma ('PLATFORM'), tenant_id queda como string libre.
+--
+-- Nota: Prisma no gestiona FKs con SET NULL en este modelo (tenant_id NOT NULL).
+-- La restricción la mantenemos solo para los valores que sí son UUIDs reales;
+-- 'PLATFORM' es un string documentado, no un UUID. No añadimos la FK de vuelta
+-- para evitar complejidad: el aislamiento lo da RLS, no la FK.

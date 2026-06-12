@@ -53,17 +53,21 @@ export const accountRouter = createTRPCRouter({
         data: { passwordHash },
         select: { id: true, email: true, tenantId: true },
       });
-      if (user.tenantId) {
-        await logAudit(authDb, {
-          tenantId: user.tenantId,
-          actorId: user.id,
-          actorEmail: user.email,
-          action: 'PASSWORD_RESET',
-          entity: 'User',
-          entityId: user.id,
-          summary: 'Contraseña restablecida mediante enlace',
-        });
-      }
+      // ALTO-02: auditar SIEMPRE, independientemente del rol.
+      // El reset del SUPERADMIN (tenantId=null) es la acción de mayor privilegio
+      // del sistema: que no quede trazado es incompatible con el principio de
+      // trazabilidad (art. 9 RGPD, ADR-0007). Se usa el sentinela 'PLATFORM'
+      // cuando no hay tenantId (el campo tenantId de AuditLog es String, no FK
+      // estricta, por lo que el valor 'PLATFORM' no rompe la integridad referencial).
+      await logAudit(authDb, {
+        tenantId: user.tenantId ?? 'PLATFORM',
+        actorId: user.id,
+        actorEmail: user.email,
+        action: 'PASSWORD_RESET',
+        entity: 'User',
+        entityId: user.id,
+        summary: 'Contraseña restablecida mediante enlace',
+      });
       return { ok: true as const };
     }),
 });

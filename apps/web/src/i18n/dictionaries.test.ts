@@ -420,6 +420,102 @@ describe('paridad es/ca — Solicitudes del portal de familias (REQ-001..REQ-011
   });
 });
 
+describe('paridad es/ca — Visitas (VIS-001..VIS-010)', () => {
+  const visitsKeys = [
+    'nav.visits',
+    'visit.status.SOLICITADA',
+    'visit.status.CONFIRMADA',
+    'visit.status.RECHAZADA',
+    'visit.status.CANCELADA',
+    'visit.status.EN_CURSO',
+    'visit.status.COMPLETADA',
+    'visit.status.NO_SHOW',
+    'visit.weekday.0',
+    'visit.weekday.1',
+    'visit.weekday.2',
+    'visit.weekday.3',
+    'visit.weekday.4',
+    'visit.weekday.5',
+    'visit.weekday.6',
+    'visits.portal.title',
+    'visits.portal.intro',
+    'visits.portal.new',
+    'visits.portal.empty.title',
+    'visits.portal.empty.desc',
+    'visits.portal.upcoming',
+    'visits.portal.pending',
+    'visits.portal.history',
+    'visits.portal.pendingNote',
+    'visits.portal.presentNote',
+    'visits.portal.codeLabel',
+    'visits.portal.visitors',
+    'visits.portal.cancel',
+    'visits.portal.cancel.done',
+    'visits.portal.quicklink.label',
+    'visits.portal.quicklink.desc',
+    'visits.form.title',
+    'visits.form.back',
+    'visits.form.date',
+    'visits.form.slot',
+    'visits.form.slotEmpty',
+    'visits.form.visitors',
+    'visits.form.submit',
+    'visits.form.successConfirmed',
+    'visits.form.successPending',
+    'visits.staff.title',
+    'visits.staff.intro',
+    'visits.staff.checkin',
+    'visits.staff.checkin.submit',
+    'visits.staff.checkin.success',
+    'visits.staff.actions.approve',
+    'visits.staff.actions.approved',
+    'visits.staff.actions.reject',
+    'visits.staff.actions.rejected',
+    'visits.staff.actions.checkout',
+    'visits.staff.actions.checkedOut',
+    'visits.staff.actions.noshow',
+    'visits.staff.actions.noshowed',
+    'visits.staff.actions.cancel',
+    'visits.staff.actions.cancelled',
+    'visits.slots.title',
+    'visits.slots.form.day',
+    'visits.slots.form.start',
+    'visits.slots.form.end',
+    'visits.slots.form.capacity',
+    'visits.slots.form.autoApprove',
+    'visits.slots.form.saved',
+  ];
+
+  it('todas las claves de visitas existen en es', () => {
+    for (const key of visitsKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de visitas existen en ca', () => {
+    for (const key of visitsKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de visitas difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'visits.portal.title',
+      'visits.portal.intro',
+      'visits.portal.presentNote',
+      'visits.staff.intro',
+      'visit.weekday.1',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
 describe('paridad es/ca — Ola B (expediente sociosanitario Fase 1)', () => {
   const olaBKeys = [
     // Chrome safety chips
