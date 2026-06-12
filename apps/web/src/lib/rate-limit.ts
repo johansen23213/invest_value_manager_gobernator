@@ -40,7 +40,17 @@ export function checkRateLimit(
   // Descarta intentos más antiguos que la ventana.
   bucket.attempts = bucket.attempts.filter((t) => now - t < windowMs);
 
+  // H-5 — barrido perezoso: si tras la poda el bucket queda vacío, eliminamos
+  // la entrada del Map. Sin esto, cada key distinta (checkin:userId) acumula un
+  // Bucket vacío permanente en el Map y lo hace crecer de forma monótona en un
+  // proceso de vida larga. El delete ocurre tanto si estamos dentro del límite
+  // como si no: en ambos casos el intento actual se vuelve a insertar si aplica.
+  if (bucket.attempts.length === 0) {
+    store.delete(key);
+  }
+
   if (bucket.attempts.length >= maxAttempts) {
+    // Sigue bloqueado con intentos dentro de la ventana.
     store.set(key, bucket);
     return false; // límite superado
   }
