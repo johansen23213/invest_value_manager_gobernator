@@ -443,6 +443,7 @@ const es: Record<string, string> = {
   'dashboard.attention': 'Necesita atención ahora',
   'dashboard.attention.empty': 'Todo en orden — sin alertas urgentes.',
   'dashboard.medAlert': '{count, plural, one {# dosis sin administrar} other {# dosis sin administrar}} hoy',
+  'dashboard.alertMore': '+{count} más',
   'dashboard.medAlertNames': 'Afecta a: {names}',
   'dashboard.viewAll': 'Ver todas →',
 
@@ -1021,7 +1022,8 @@ const ca: Record<string, string> = {
   'dashboard.quickLinks': 'Accessos ràpids',
   'dashboard.attention': 'Necessita atenció ara',
   'dashboard.attention.empty': 'Tot en ordre — sense alertes urgents.',
-  'dashboard.medAlert': '{count} dosi{count, plural, one {} other {s}} sense administrar avui',
+  'dashboard.medAlert': '{count, plural, one {# dosi sense administrar} other {# dosis sense administrar}} avui',
+  'dashboard.alertMore': '+{count} més',
   'dashboard.medAlertNames': 'Afecta a: {names}',
   'dashboard.viewAll': 'Veure totes →',
 
@@ -1172,8 +1174,18 @@ export function translate(
   const dict = DICTIONARIES[locale];
   let value = dict[key] ?? DICTIONARIES.es[key] ?? key;
   if (vars) {
+    // 1) Pluralización ICU mínima: {name, plural, one {…} other {…}} con # = valor.
+    value = value.replace(
+      /\{(\w+),\s*plural,\s*one\s*\{([^{}]*)\}\s*other\s*\{([^{}]*)\}\}/g,
+      (_match, name: string, one: string, other: string) => {
+        const n = Number(vars[name]);
+        const chosen = n === 1 ? one : other;
+        return chosen.replace(/#/g, String(vars[name] ?? ''));
+      },
+    );
+    // 2) Interpolación simple de {name}.
     for (const [name, val] of Object.entries(vars)) {
-      value = value.replace(`{${name}}`, String(val));
+      value = value.replace(new RegExp(`\\{${name}\\}`, 'g'), String(val));
     }
   }
   return value;
