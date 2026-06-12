@@ -96,6 +96,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                         {hasPermission(user.role, 'requests:manage') && (
                           <NavLink href="/solicitudes" label={t('nav.requests')} pathname={pathname} />
                         )}
+                        {hasPermission(user.role, 'comms:read') && (
+                          <NavLink href="/comunicacion" label={t('nav.comms')} pathname={pathname} />
+                        )}
                         {hasPermission(user.role, 'users:read') && (
                           <NavLink href="/equipo" label={t('nav.team')} pathname={pathname} />
                         )}
