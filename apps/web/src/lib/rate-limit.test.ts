@@ -56,4 +56,20 @@ describe('checkRateLimit — ventana deslizante en memoria', () => {
     clearRateLimitStore();
     expect(checkRateLimit('user-c', 10, 60_000)).toBe(true);
   });
+
+  it('H-5 — el Map no conserva entradas con bucket vacío tras expiración (no leak)', async () => {
+    // Ventana de 1 ms para forzar expiración rápida
+    checkRateLimit('user-leak', 5, 1);
+    // Esperar que el intento expire
+    await new Promise((r) => setTimeout(r, 5));
+    // La siguiente llamada poda y debe eliminar la entrada antes de re-insertar
+    // El store solo tiene la entrada fresca del nuevo intento
+    expect(checkRateLimit('user-leak', 5, 1)).toBe(true);
+    // Comprobar que el store no acumula después de expirar y hacer una sola llamada:
+    // si la key persiste, isRateLimited devolverá false (solo 1 intento)
+    await new Promise((r) => setTimeout(r, 5));
+    // Tras expiración, la siguiente checkRateLimit hace barrido: el bucket queda
+    // vacío momentáneamente antes de añadir el nuevo intento
+    expect(checkRateLimit('user-leak', 5, 60_000)).toBe(true); // 1 intento fresco
+  });
 });

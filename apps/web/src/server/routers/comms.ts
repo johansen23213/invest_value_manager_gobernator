@@ -34,7 +34,6 @@ import {
   AnnouncementCategory,
   MessageThreadCategory,
   MessageThreadStatus,
-  type TenantPrisma,
 } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
@@ -45,9 +44,9 @@ import {
   type FamilyLinkMin,
   type ResidentMin,
 } from '@/lib/announcements';
-import { sendEmail } from '@/server/email/index';
 import { newMessageEmail } from '@/server/account/emails';
-import { logger } from '@/server/logger';
+import { assertFamilyAccess } from '@/server/family-access';
+import { sendEmailSafe } from '@/server/email/safe';
 
 // ---------------------------------------------------------------------------
 // Esquemas Zod reutilizables (exportados para validación en cliente)
@@ -92,27 +91,6 @@ export const ListThreadsInput = z.object({
 // ---------------------------------------------------------------------------
 // Helpers privados
 // ---------------------------------------------------------------------------
-
-/**
- * Verifica que el residente está vinculado al usuario vía FamilyLink.
- * Lanza FORBIDDEN si no. Patrón idéntico a family.ts y requests.ts.
- */
-async function assertFamilyLink(
-  db: TenantPrisma,
-  userId: string,
-  residentId: string,
-): Promise<void> {
-  const link = await db.familyLink.findFirst({
-    where: { userId, residentId },
-    select: { id: true },
-  });
-  if (!link) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'No estás vinculado a este residente.',
-    });
-  }
-}
 
 /** Devuelve true si el usuario es familiar (no tiene comms:broadcast). */
 function isFamiliarRole(role: string): boolean {
@@ -437,7 +415,7 @@ export const commsRouter = createTRPCRouter({
       const familiar = isFamiliarRole(role);
 
       if (familiar) {
-        await assertFamilyLink(ctx.db, userId, input.residentId);
+        await assertFamilyAccess(ctx.db, userId, input.residentId);
       } else {
         // Staff: verificar que el residente existe en el tenant
         const resident = await ctx.db.resident.findUnique({
@@ -580,7 +558,7 @@ export const commsRouter = createTRPCRouter({
 
       // Si es familiar, verificar vínculo con el residente del hilo
       if (familiar) {
-        await assertFamilyLink(ctx.db, userId, thread.residentId);
+        await assertFamilyAccess(ctx.db, userId, thread.residentId);
       }
 
       // Marcar como leídos los mensajes del otro lado
@@ -638,7 +616,7 @@ export const commsRouter = createTRPCRouter({
       }
 
       if (familiar) {
-        await assertFamilyLink(ctx.db, userId, thread.residentId);
+        await assertFamilyAccess(ctx.db, userId, thread.residentId);
       }
 
       const now = new Date();
@@ -673,35 +651,21 @@ export const commsRouter = createTRPCRouter({
       // Email no-throw a la otra parte
       // Si es familiar quien escribe → avisar al creador del hilo si es staff
       // Si es staff quien escribe → avisar al familiar que creó el hilo
-      try {
-        if (familiar) {
-          // Familiar → staff: email al email genérico del centro no disponible
-          // en este momento (no hay campo en el tenant). Omitimos o enviamos al
-          // creador del hilo si es staff.
-          const creator = thread.createdBy;
-          const creatorIsFamiliar = creator.id === userId;
-          if (!creatorIsFamiliar && creator.email) {
-            // No es el mismo familiar: posiblemente fue iniciado por el staff
-            // Criterio: si el creador no es el autor actual, es la otra parte
-          }
-          // TODO: cuando haya email genérico del centro en Tenant, enviarlo aquí.
-          // Por ahora se omite el email al staff (no hay email individual claro).
-        } else {
-          // Staff → familiar: avisar al creador del hilo (que debería ser el familiar)
-          if (thread.createdBy.email) {
-            const emailContent = newMessageEmail({
-              threadSubject: thread.subject,
-              threadId:      input.threadId,
-              residentName,
-            });
-            await sendEmail({ to: thread.createdBy.email, ...emailContent });
-          }
+      if (familiar) {
+        // Familiar → staff: no hay email de centro disponible todavía.
+        // TODO: cuando haya email genérico del centro en Tenant, enviarlo aquí.
+        // Por ahora se omite el email al staff (no hay email individual claro).
+      } else {
+        // Staff → familiar: avisar al creador del hilo
+        if (thread.createdBy.email) {
+          await sendEmailSafe(
+            {
+              to: thread.createdBy.email,
+              ...newMessageEmail({ threadSubject: thread.subject, threadId: input.threadId, residentName }),
+            },
+            { context: 'comms.postMessage', threadId: input.threadId },
+          );
         }
-      } catch (err) {
-        logger.warn('comms.postMessage.email_failed', {
-          threadId: input.threadId,
-          error: err instanceof Error ? err.message : String(err),
-        });
       }
 
       return message;
