@@ -81,7 +81,7 @@ export function familyMessageEmail(opts: {
   familyName: string;
   residentName: string;
 }) {
-  const url = `${baseUrl()}/backoffice/mensajes/${opts.threadId}`;
+  const url = `${baseUrl()}/comunicacion/mensajes/${opts.threadId}`;
   return {
     subject: `Mensaje de familiar — ${opts.threadSubject}`,
     text: [
