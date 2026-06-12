@@ -786,11 +786,18 @@ model CarePlanReview {
 // ---------------------------------------------------------------------------
 
 /// Registro de auditoría append-only: quién hizo qué, cuándo y sobre qué entidad.
-/// Inmutable: la aplicación no expone update/delete y un trigger bloquea UPDATE.
+/// Inmutable: la aplicación no expone update/delete y un trigger bloquea UPDATE y DELETE.
+///
+/// NOTA (ALTO-02, 2026-06-12): tenantId es un string libre, sin FK de BD.
+/// - Para eventos de tenant: contiene el UUID del tenant (como siempre).
+/// - Para eventos de plataforma (SUPERADMIN sin tenant): contiene 'PLATFORM'.
+/// La FK fue eliminada en migración 20260612140000 para poder registrar eventos
+/// de plataforma. El aislamiento entre tenants lo garantiza RLS (no la FK).
+/// La relación Prisma se mantiene como optional para queries de conveniencia.
 model AuditLog {
   id         String   @id @default(cuid())
   tenantId   String   @map("tenant_id")
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
   actorId    String?  @map("actor_id") // user.id que ejecuta la acción
   actorEmail String?  @map("actor_email") // desnormalizado para trazabilidad estable
   action     String // CREATE | UPDATE | DELETE | ADMINISTER | RECORD | LOGIN ...

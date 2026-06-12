@@ -28,9 +28,18 @@ const FROM = process.env.EMAIL_FROM ?? 'Vetlla <no-reply@vetlla.eu>';
 class ConsoleEmailProvider implements EmailProvider {
   readonly id = 'console';
   async send(message: EmailMessage): Promise<void> {
+    // ALTO-01: guardia explícita — ConsoleEmailProvider NO debe llegar a producción.
+    // Si llega (p. ej. por olvido de variable), falla de forma visible y auditada
+    // en lugar de filtrar el token a los logs de infraestructura.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'ConsoleEmailProvider no está permitido en producción. ' +
+          'Configura EMAIL_PROVIDER=http con EMAIL_API_URL y EMAIL_API_KEY.',
+      );
+    }
     // En dev queremos VER el enlace; por eso esto no pasa por redactFields.
     console.info(
-      `\n📧 [email:console] → ${message.to}\n   ${message.subject}\n   ${message.text}\n`,
+      `\n[email:console] → ${message.to}\n   ${message.subject}\n   ${message.text}\n`,
     );
   }
 }
@@ -75,6 +84,16 @@ export function getEmailProvider(): EmailProvider {
     const url = process.env.EMAIL_API_URL;
     const key = process.env.EMAIL_API_KEY;
     if (!url || !key) {
+      // ALTO-01: fallo rápido en producción — no hay fallback silencioso.
+      // En producción, un http mal configurado es un error de despliegue, no
+      // algo que deba degradarse silenciosamente imprimiendo tokens en logs.
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'EMAIL_PROVIDER=http requiere EMAIL_API_URL y EMAIL_API_KEY. ' +
+            'Configura ambas variables antes de arrancar en producción.',
+        );
+      }
+      // En dev/CI avisamos y usamos console (el token se ve en el log local).
       logger.warn('email.http_misconfigured', { fallback: 'console' });
       cached = new ConsoleEmailProvider();
     } else {

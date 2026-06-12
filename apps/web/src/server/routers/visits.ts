@@ -45,6 +45,7 @@ import {
   type SlotConfig,
   type VisitForSlot,
 } from '@/lib/visits';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { sendEmail } from '@/server/email/index';
 import {
   visitConfirmedEmail,
@@ -52,6 +53,22 @@ import {
   visitCancelledEmail,
 } from '@/server/account/emails';
 import { logger } from '@/server/logger';
+
+// ALTO-03: mensaje de error ÚNICO y genérico para checkInByCode.
+// No revela si el código no existe, está en estado incorrecto o es de otra fecha.
+// Esto elimina el oracle binario que permitía enumeración de códigos QR.
+const CHECK_IN_GENERIC_ERROR = 'Código no válido para hoy.';
+
+// ALTO-03: rate limit en memoria para checkInByCode.
+// Máximo 10 intentos fallidos por usuario por minuto (ventana deslizante).
+// Suficiente para una instancia. LIMITACIÓN: en multi-instancia cada réplica
+// tiene su propio contador; sustituir por Redis EU si se escala horizontalmente.
+// Con rate limit de 10/min y espacio BASE32-8 (~10^12 combinaciones), la
+// enumeración exhaustiva requeriría ~10^11 minutos = impráctica.
+// El código se mantiene en 8 chars (no se amplía a 10): no rompe el seed ni la
+// UX existente, y con rate limit el espacio es suficiente.
+const CHECKIN_RL_MAX = 10;
+const CHECKIN_RL_WINDOW_MS = 60_000; // 1 minuto
 
 // ---------------------------------------------------------------------------
 // Esquemas Zod reutilizables
@@ -727,6 +744,14 @@ export const visitsRouter = createTRPCRouter({
   checkInByCode: permissionProcedure('visits:manage')
     .input(z.object({ qrCode: z.string().min(1).max(20).toUpperCase() }))
     .mutation(async ({ ctx, input }) => {
+      // ALTO-03a: rate limit por actor (usuario que usa recepción).
+      // Si se supera: mismo error genérico (no revela el motivo).
+      const rlKey = `checkin:${ctx.session.user.id}`;
+      if (!checkRateLimit(rlKey, CHECKIN_RL_MAX, CHECKIN_RL_WINDOW_MS)) {
+        logger.warn('visits.checkInByCode.rate_limited', { actorId: ctx.session.user.id });
+        throw new TRPCError({ code: 'TOO_MANY_REQUESTS', message: CHECK_IN_GENERIC_ERROR });
+      }
+
       // Buscar visita por código dentro del tenant (la unicidad es por tenant+qrCode)
       const visit = await ctx.db.visit.findFirst({
         where:   { qrCode: input.qrCode },
@@ -735,28 +760,21 @@ export const visitsRouter = createTRPCRouter({
         },
       });
 
+      // ALTO-03b: mensaje de error ÚNICO y genérico para no-existe / estado-incorrecto /
+      // fecha-incorrecta. Elimina el oracle binario que permitía enumeración de códigos.
       if (!visit) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Código de visita no encontrado. Verifica el código e inténtalo de nuevo.',
-        });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: CHECK_IN_GENERIC_ERROR });
       }
 
       if (visit.status !== VisitStatus.CONFIRMADA) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `El código corresponde a una visita en estado ${visit.status}. Solo se puede hacer check-in de visitas CONFIRMADAS.`,
-        });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: CHECK_IN_GENERIC_ERROR });
       }
 
       // Verificar que la visita es de HOY (zona UTC; comparar solo la fecha)
       const todayISO = new Date().toISOString().slice(0, 10);
       const visitDateISO = visit.scheduledAt.toISOString().slice(0, 10);
       if (visitDateISO !== todayISO) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `Código caducado: la visita estaba programada para ${visitDateISO}, no para hoy (${todayISO}).`,
-        });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: CHECK_IN_GENERIC_ERROR });
       }
 
       const updated = await ctx.db.visit.update({
@@ -768,7 +786,7 @@ export const visitsRouter = createTRPCRouter({
         action:   'UPDATE',
         entity:   'Visit',
         entityId: visit.id,
-        summary:  `Check-in realizado (→ EN_CURSO)`,
+        summary:  'Check-in realizado (→ EN_CURSO)',
         metadata: { residentId: visit.residentId, qrCode: input.qrCode },
       });
 
