@@ -75,7 +75,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                   </Link>
                   <nav className="flex items-center gap-0.5 text-sm" aria-label="Principal">
                     {isFamily ? (
-                      <NavLink href="/portal" label={t('nav.portal')} pathname={pathname} />
+                      <>
+                        <NavLink href="/portal" label={t('nav.portal')} pathname={pathname} />
+                      </>
                     ) : (
                       <>
                         <NavLink href="/" label={t('nav.home')} pathname={pathname} />
@@ -90,6 +92,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                         )}
                         {hasPermission(user.role, 'care:read') && (
                           <NavLink href="/conflictos" label={t('nav.conflicts')} pathname={pathname} />
+                        )}
+                        {hasPermission(user.role, 'requests:manage') && (
+                          <NavLink href="/solicitudes" label={t('nav.requests')} pathname={pathname} />
                         )}
                         {hasPermission(user.role, 'users:read') && (
                           <NavLink href="/equipo" label={t('nav.team')} pathname={pathname} />

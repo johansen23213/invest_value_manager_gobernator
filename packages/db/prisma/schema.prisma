@@ -66,6 +66,11 @@ model User {
   familyLinks FamilyLink[]
   authTokens  AuthToken[]
 
+  // --- Portal de familias: solicitudes creadas/asignadas ---
+  createdRequests  ServiceRequest[]        @relation("RequestCreatedBy")
+  assignedRequests ServiceRequest[]        @relation("RequestAssignedTo")
+  requestComments  ServiceRequestComment[]
+
   @@index([tenantId])
   @@map("users")
 }
@@ -385,6 +390,9 @@ model Resident {
   restraints     Restraint[]
   consents       ConsentRecord[]
   lifeStory      LifeStory?
+
+  // --- Portal de familias: solicitudes ---
+  serviceRequests ServiceRequest[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -949,6 +957,45 @@ model ConsentRecord {
   @@map("consent_records")
 }
 
+// ---------------------------------------------------------------------------
+// Portal de familias — Solicitudes (REQ-001..REQ-011)
+// ---------------------------------------------------------------------------
+
+/// Categorías de solicitud.
+enum ServiceRequestCategory {
+  ADMINISTRACION
+  DOCUMENTACION
+  VISITAS
+  ACTIVIDADES
+  MANTENIMIENTO
+  ALIMENTACION
+  COMUNICACION
+  OBJETOS_PERSONALES
+  INCIDENCIA_APP
+  OTRA
+}
+
+/// Estado del ciclo de vida de una solicitud.
+enum ServiceRequestStatus {
+  RECIBIDA
+  ASIGNADA
+  EN_CURSO
+  PENDIENTE_INFO
+  RESUELTA
+  CERRADA
+  REABIERTA
+}
+
+/// Prioridad de la solicitud (determina el SLA).
+enum ServiceRequestPriority {
+  BAJA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+// ---------------------------------------------------------------------------
+
 /// Historia de vida del residente (atención centrada en la persona, UNE 158101).
 /// Un único registro por residente; se actualiza por upsert.
 model LifeStory {
@@ -968,4 +1015,66 @@ model LifeStory {
 
   @@index([tenantId])
   @@map("life_stories")
+}
+
+// ---------------------------------------------------------------------------
+// Portal de familias — Solicitudes e incidencias (REQ-001..REQ-011)
+// ---------------------------------------------------------------------------
+//
+// NOTA Q-004: los adjuntos de fichero (REQ-006) requieren object storage,
+// bloqueado hasta Q-004. Los comentarios de texto (ServiceRequestComment)
+// cubren la evidencia textual por ahora. Implementar adjuntos cuando
+// se resuelva Q-004 (añadir tabla ServiceRequestAttachment con URL firmada).
+
+/// Solicitud de servicio creada por un familiar para el centro.
+/// Incluye SLA, ciclo de vida completo (REQ-003), notificación (REQ-008)
+/// y valoración post-resolución CSAT (REQ-009).
+model ServiceRequest {
+  id              String                   @id @default(cuid())
+  tenantId        String                   @map("tenant_id")
+  residentId      String                   @map("resident_id")
+  resident        Resident                 @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  createdById     String                   @map("created_by_id")
+  createdBy       User                     @relation("RequestCreatedBy", fields: [createdById], references: [id])
+  assignedToId    String?                  @map("assigned_to_id")
+  assignedTo      User?                    @relation("RequestAssignedTo", fields: [assignedToId], references: [id])
+  category        ServiceRequestCategory
+  status          ServiceRequestStatus     @default(RECIBIDA)
+  priority        ServiceRequestPriority   @default(NORMAL)
+  title           String
+  description     String
+  slaDueAt        DateTime?                @map("sla_due_at")   // calculado al crear (REQ-007)
+  firstResponseAt DateTime?                @map("first_response_at") // 1ª respuesta del staff (REQ-005)
+  resolvedAt      DateTime?                @map("resolved_at")
+  closedAt        DateTime?                @map("closed_at")
+  satisfactionScore Int?                   @map("satisfaction_score") // CSAT 1-5 (REQ-009)
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  comments ServiceRequestComment[]
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@index([createdById])
+  @@index([status])
+  @@map("service_requests")
+}
+
+/// Comentario sobre una solicitud (texto). El staff puede añadir comentarios
+/// internos (internal=true) no visibles al familiar.
+/// Los adjuntos de fichero quedan bloqueados hasta Q-004 (véase nota arriba).
+model ServiceRequestComment {
+  id        String         @id @default(cuid())
+  tenantId  String         @map("tenant_id")
+  requestId String         @map("request_id")
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorId  String         @map("author_id")
+  author    User           @relation(fields: [authorId], references: [id])
+  body      String
+  internal  Boolean        @default(false) // si true: solo visible al staff, nunca al familiar
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([requestId])
+  @@map("service_request_comments")
 }

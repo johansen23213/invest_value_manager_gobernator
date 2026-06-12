@@ -280,6 +280,8 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'resident_devices',
       'residents',
       'restraints',
+      'service_request_comments',
+      'service_requests',
       'sync_conflicts',
       'treatments',
       'units',
