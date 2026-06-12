@@ -291,7 +291,7 @@ function AttentionPanel({
         </p>
         {alertNames.length > 0 && (
           <p className="mt-0.5 truncate text-sm text-warm-700">
-            {names}{hasMore ? ` +${alertNames.length - 4} más` : ''}
+            {names}{hasMore ? ` ${t('dashboard.alertMore', { count: alertNames.length - 4 })}` : ''}
           </p>
         )}
       </div>

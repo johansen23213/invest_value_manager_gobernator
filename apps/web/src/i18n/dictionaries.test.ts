@@ -16,6 +16,16 @@ describe('translate', () => {
     // Clave inexistente: devuelve la propia clave como último recurso.
     expect(translate('ca', 'clave.inexistente')).toBe('clave.inexistente');
   });
+
+  it('resuelve la pluralización ICU (one/other con #)', () => {
+    // Regresión: dashboard.medAlert mostraba el bloque ICU sin interpolar.
+    expect(translate('es', 'dashboard.medAlert', { count: 11 })).toBe('11 dosis sin administrar hoy');
+    expect(translate('es', 'dashboard.medAlert', { count: 1 })).toBe('1 dosis sin administrar hoy');
+    expect(translate('ca', 'dashboard.medAlert', { count: 11 })).toBe('11 dosis sense administrar avui');
+    expect(translate('ca', 'dashboard.medAlert', { count: 1 })).toBe('1 dosi sense administrar avui');
+    // No debe quedar ningún resto de sintaxis ICU sin resolver.
+    expect(translate('ca', 'dashboard.medAlert', { count: 5 })).not.toContain('plural');
+  });
 });
 
 describe('paridad es/ca — Sprint M (medicación)', () => {
