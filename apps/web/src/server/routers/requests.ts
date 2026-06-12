@@ -22,14 +22,13 @@ import {
   ServiceRequestCategory,
   ServiceRequestStatus,
   ServiceRequestPriority,
-  type TenantPrisma,
 } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
 import { slaDueAt, canTransition, type SRCategory, type SRPriority, type SRStatus } from '@/lib/service-requests';
-import { sendEmail } from '@/server/email/index';
 import { requestStatusChangedEmail } from '@/server/account/emails';
-import { logger } from '@/server/logger';
+import { assertFamilyAccess } from '@/server/family-access';
+import { sendEmailSafe } from '@/server/email/safe';
 
 // ---------------------------------------------------------------------------
 // Esquemas Zod reutilizables (reutilizables en el cliente para validación igual)
@@ -54,31 +53,6 @@ export const AddCommentInput = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Verifica que el residente está vinculado al usuario vía FamilyLink.
- * Lanza FORBIDDEN si no. Igual que el patrón de family.ts.
- */
-async function assertFamilyLink(
-  db: TenantPrisma,
-  userId: string,
-  residentId: string,
-) {
-  const link = await db.familyLink.findFirst({
-    where: { userId, residentId },
-    select: { id: true },
-  });
-  if (!link) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'No estás vinculado a este residente.',
-    });
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
@@ -92,7 +66,7 @@ export const requestsRouter = createTRPCRouter({
     .input(CreateRequestInput)
     .mutation(async ({ ctx, input }) => {
       // Verificar vínculo familiar (aislamiento por residente, crítico)
-      await assertFamilyLink(ctx.db, ctx.session.user.id, input.residentId);
+      await assertFamilyAccess(ctx.db, ctx.session.user.id, input.residentId);
 
       const now = new Date();
       const due = slaDueAt(now, input.category as SRCategory, input.priority as SRPriority);
@@ -225,7 +199,7 @@ export const requestsRouter = createTRPCRouter({
 
       // Si es familiar, verificar vínculo con el residente de la solicitud
       if (isFamiliar) {
-        await assertFamilyLink(ctx.db, ctx.session.user.id, req.residentId);
+        await assertFamilyAccess(ctx.db, ctx.session.user.id, req.residentId);
       }
 
       // Filtrar comentarios internos para el familiar
@@ -263,7 +237,7 @@ export const requestsRouter = createTRPCRouter({
 
       if (isFamiliar) {
         // El familiar solo puede comentar sus solicitudes
-        await assertFamilyLink(ctx.db, ctx.session.user.id, req.residentId);
+        await assertFamilyAccess(ctx.db, ctx.session.user.id, req.residentId);
       }
 
       // El familiar no puede crear comentarios internos
@@ -353,19 +327,10 @@ export const requestsRouter = createTRPCRouter({
       });
 
       // REQ-008: notificar al familiar por email (no-throw si falla)
-      try {
-        const emailContent = requestStatusChangedEmail({
-          requestTitle: req.title,
-          requestId:    req.id,
-          newStatus:    input.status,
-        });
-        await sendEmail({ to: req.createdBy.email, ...emailContent });
-      } catch (err) {
-        logger.warn('requests.updateStatus.email_failed', {
-          requestId: input.requestId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+      await sendEmailSafe(
+        { to: req.createdBy.email, ...requestStatusChangedEmail({ requestTitle: req.title, requestId: req.id, newStatus: input.status }) },
+        { context: 'requests.updateStatus', requestId: input.requestId },
+      );
 
       return updated;
     }),
@@ -438,7 +403,7 @@ export const requestsRouter = createTRPCRouter({
       if (!req) throw new TRPCError({ code: 'NOT_FOUND', message: 'Solicitud no encontrada.' });
 
       if (isFamiliar) {
-        await assertFamilyLink(ctx.db, ctx.session.user.id, req.residentId);
+        await assertFamilyAccess(ctx.db, ctx.session.user.id, req.residentId);
       }
 
       const fromStatus = req.status as SRStatus;
@@ -487,7 +452,7 @@ export const requestsRouter = createTRPCRouter({
       }
 
       // Verificar vínculo (aislamiento por residente)
-      await assertFamilyLink(ctx.db, ctx.session.user.id, req.residentId);
+      await assertFamilyAccess(ctx.db, ctx.session.user.id, req.residentId);
 
       // Solo si está RESUELTA o CERRADA
       if (!['RESUELTA', 'CERRADA'].includes(req.status)) {

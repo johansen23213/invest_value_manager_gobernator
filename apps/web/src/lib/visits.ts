@@ -2,6 +2,89 @@
 // Sin dependencias de BD: testeable de forma aislada.
 
 // ---------------------------------------------------------------------------
+// Zona horaria del centro.
+//
+// El MVP se dirige a centros en España; la TZ del centro es Europe/Madrid para
+// todos. Cuando Angel decida añadir campo `timezone` en Center (multi-país),
+// esta constante se sustituye por el valor del registro — cambio de una línea
+// por call-site. Escalado a marc-arquitecto / cio-vetlla según el informe de
+// revisión 2026-06-12 (H-1).
+// ---------------------------------------------------------------------------
+
+export const CENTER_TIMEZONE = 'Europe/Madrid';
+
+// ---------------------------------------------------------------------------
+// Helpers puros de zona horaria (sin dependencias externas).
+//
+// Toda la conversión usa Intl.DateTimeFormat con timeZone, que es isomórfica
+// (disponible en Node.js y en el navegador) y determinista: el resultado NO
+// depende de la TZ del proceso donde se ejecute.
+// ---------------------------------------------------------------------------
+
+export interface ZonedParts {
+  year:    number;
+  month:   number; // 1-12
+  day:     number; // 1-31
+  weekday: number; // 0=domingo … 6=sábado (convención del módulo)
+  hour:    number; // 0-23
+  minute:  number; // 0-59
+  /** Fecha como "YYYY-MM-DD" en la TZ indicada. */
+  dateISO: string;
+  /** Hora como "HH:MM" en la TZ indicada. */
+  timeHHMM: string;
+}
+
+/**
+ * Extrae las partes de una Date en la zona horaria `tz`.
+ * Resultado determinista: no depende de la TZ del entorno de ejecución.
+ */
+export function zonedParts(date: Date, tz: string): ZonedParts {
+  // Usamos un formateador con todas las partes que necesitamos.
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year:    'numeric',
+    month:   '2-digit',
+    day:     '2-digit',
+    hour:    '2-digit',
+    minute:  '2-digit',
+    hour12:  false,
+    weekday: 'short', // 'Mon', 'Tue'… o el equivalente en en-CA
+  });
+
+  const parts = fmt.formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '0';
+
+  // en-CA garantiza formato YYYY-MM-DD para date. Para evitar depender de eso,
+  // extraemos year/month/day individualmente.
+  const year    = parseInt(get('year'),  10);
+  const month   = parseInt(get('month'), 10); // 1-12
+  const day     = parseInt(get('day'),   10);
+  // hour12:false → '24' cuando es medianoche en algunos entornos; normalizamos.
+  let hour      = parseInt(get('hour'),  10);
+  if (hour === 24) hour = 0;
+  const minute  = parseInt(get('minute'), 10);
+
+  // día de la semana: Intl nos da un string como "Mon" en en-CA.
+  // Mapeamos a 0=Dom…6=Sab de forma explícita para no depender del locale.
+  const weekdayStr = get('weekday'); // 'Sun','Mon','Tue','Wed','Thu','Fri','Sat' en en-CA
+  const WEEKDAY_MAP: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  };
+  const weekday = WEEKDAY_MAP[weekdayStr] ?? new Date(date).getDay(); // fallback defensivo
+
+  const mm     = String(month).padStart(2, '0');
+  const dd     = String(day).padStart(2, '0');
+  const hh     = String(hour).padStart(2, '0');
+  const mn     = String(minute).padStart(2, '0');
+
+  return {
+    year, month, day, weekday, hour, minute,
+    dateISO:  `${year}-${mm}-${dd}`,
+    timeHHMM: `${hh}:${mn}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Tipos locales (espejo de los de Prisma; sin importar @vetlla/db aquí para
 // mantener las funciones puras sin dependencias pesadas en tests unitarios).
 // ---------------------------------------------------------------------------
@@ -54,13 +137,16 @@ export interface VisitForSlot {
  *
  * "Ocupada" = visita en estado SOLICITADA, CONFIRMADA o EN_CURSO que cae en
  * esa franja. CANCELADA, RECHAZADA, NO_SHOW y COMPLETADA no consumen capacidad.
+ *
+ * Toda la comparación de hora/día-de-semana se hace en CENTER_TIMEZONE
+ * (Europe/Madrid) para evitar errores a medianoche con servidor en UTC.
  */
 export function slotsForDate(
   configs: SlotConfig[],
   date: Date,
   existingVisits: VisitForSlot[],
 ): SlotAvailability[] {
-  const dayOfWeek = date.getDay(); // 0=domingo … 6=sábado
+  const { weekday: dayOfWeek } = zonedParts(date, CENTER_TIMEZONE);
 
   // Solo franjas activas del día de la semana correspondiente
   const activeSlots = configs.filter(
@@ -71,14 +157,11 @@ export function slotsForDate(
   const CONSUMING_STATUSES: VisitStatus[] = ['SOLICITADA', 'CONFIRMADA', 'EN_CURSO'];
 
   return activeSlots.map((slot) => {
-    // Contar visitas que empiezan en esa franja exacta (misma hora HH:MM del día)
+    // Contar visitas que empiezan en esa franja exacta (misma hora HH:MM en la TZ del centro)
     const occupied = existingVisits.filter((v) => {
       if (!CONSUMING_STATUSES.includes(v.status)) return false;
-      // Comparar la hora de la visita con startTime del slot
-      const visitHour = v.scheduledAt.getUTCHours().toString().padStart(2, '0');
-      const visitMin  = v.scheduledAt.getUTCMinutes().toString().padStart(2, '0');
-      const visitTime = `${visitHour}:${visitMin}`;
-      return visitTime === slot.startTime;
+      const { timeHHMM } = zonedParts(v.scheduledAt, CENTER_TIMEZONE);
+      return timeHHMM === slot.startTime;
     }).length;
 
     return {
@@ -178,13 +261,27 @@ export function canVisitTransition(from: VisitStatus, to: VisitStatus): boolean 
  * - date: la fecha a comprobar (scheduledAt propuesto por el familiar).
  * - slot: la franja candidata.
  * - Devuelve true si el día de la semana coincide y la hora HH:MM de la Date
- *   coincide con el startTime de la franja.
+ *   coincide con el startTime de la franja, ambos evaluados en CENTER_TIMEZONE
+ *   (Europe/Madrid).
  *   (La convención del módulo es que scheduledAt = inicio de la franja.)
  */
 export function isVisitInSlot(date: Date, slot: SlotConfig): boolean {
   if (!slot.active) return false;
-  if (date.getDay() !== slot.dayOfWeek) return false;
-  const hour = date.getUTCHours().toString().padStart(2, '0');
-  const min  = date.getUTCMinutes().toString().padStart(2, '0');
-  return `${hour}:${min}` === slot.startTime;
+  const { weekday, timeHHMM } = zonedParts(date, CENTER_TIMEZONE);
+  if (weekday !== slot.dayOfWeek) return false;
+  return timeHHMM === slot.startTime;
+}
+
+// ---------------------------------------------------------------------------
+// isSameLocalDate — helper para checkInByCode: ¿dos dates son el mismo día
+// en la TZ del centro? Evita el bug de medianoche donde la fecha UTC cambia
+// antes que la fecha local del centro.
+// ---------------------------------------------------------------------------
+
+/**
+ * Devuelve true si `a` y `b` caen en la misma fecha calendario
+ * en CENTER_TIMEZONE (Europe/Madrid).
+ */
+export function isSameLocalDate(a: Date, b: Date, tz: string = CENTER_TIMEZONE): boolean {
+  return zonedParts(a, tz).dateISO === zonedParts(b, tz).dateISO;
 }

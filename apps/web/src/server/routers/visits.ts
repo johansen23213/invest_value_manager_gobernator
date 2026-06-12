@@ -34,7 +34,7 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { VisitStatus, type TenantPrisma } from '@vetlla/db';
+import { VisitStatus } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
 import {
@@ -42,16 +42,20 @@ import {
   generateVisitCode,
   canCancel,
   canVisitTransition,
+  isSameLocalDate,
+  CENTER_TIMEZONE,
+  zonedParts,
   type SlotConfig,
   type VisitForSlot,
 } from '@/lib/visits';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { sendEmail } from '@/server/email/index';
 import {
   visitConfirmedEmail,
   visitRejectedEmail,
   visitCancelledEmail,
 } from '@/server/account/emails';
+import { assertFamilyAccess } from '@/server/family-access';
+import { sendEmailSafe } from '@/server/email/safe';
 import { logger } from '@/server/logger';
 
 // ALTO-03: mensaje de error ÚNICO y genérico para checkInByCode.
@@ -98,27 +102,6 @@ export const RequestVisitInput = z.object({
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Verifica que el residente está vinculado al usuario vía FamilyLink.
- * Lanza FORBIDDEN si no (igual que requests.ts y family.ts).
- */
-async function assertFamilyLink(
-  db: TenantPrisma,
-  userId: string,
-  residentId: string,
-): Promise<void> {
-  const link = await db.familyLink.findFirst({
-    where: { userId, residentId },
-    select: { id: true },
-  });
-  if (!link) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'No estás vinculado a este residente.',
-    });
-  }
-}
-
 /** Formatea una Date como string legible en es-ES para los emails. */
 function formatDate(d: Date): string {
   return d.toLocaleString('es-ES', {
@@ -132,33 +115,6 @@ function formatDate(d: Date): string {
   });
 }
 
-/** Envía email de confirmación al familiar de forma no-throw. */
-async function sendConfirmEmail(
-  userEmail: string,
-  opts: {
-    residentName: string;
-    scheduledAt:  Date;
-    visitorNames: string[];
-    qrCode:       string;
-    visitId:      string;
-  },
-): Promise<void> {
-  try {
-    const content = visitConfirmedEmail({
-      residentName: opts.residentName,
-      scheduledAt:  formatDate(opts.scheduledAt),
-      visitorNames: opts.visitorNames,
-      qrCode:       opts.qrCode,
-      visitId:      opts.visitId,
-    });
-    await sendEmail({ to: userEmail, ...content });
-  } catch (err) {
-    logger.warn('visits.email.confirm_failed', {
-      visitId: opts.visitId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Router
@@ -337,7 +293,7 @@ export const visitsRouter = createTRPCRouter({
     .input(RequestVisitInput)
     .mutation(async ({ ctx, input }) => {
       // 1. Verificar vínculo familiar (aislamiento crítico)
-      await assertFamilyLink(ctx.db, ctx.session.user.id, input.residentId);
+      await assertFamilyAccess(ctx.db, ctx.session.user.id, input.residentId);
 
       const scheduledAt = new Date(input.scheduledAt);
       if (isNaN(scheduledAt.getTime())) {
@@ -377,13 +333,13 @@ export const visitsRouter = createTRPCRouter({
       }));
 
       // 4. Validar que scheduledAt cae en una franja activa con capacidad
-      // La convención es: scheduledAt = hora de inicio de la franja
-      const hour = scheduledAt.getUTCHours().toString().padStart(2, '0');
-      const min  = scheduledAt.getUTCMinutes().toString().padStart(2, '0');
-      const timeHHMM = `${hour}:${min}`;
+      // La convención es: scheduledAt = hora de inicio de la franja.
+      // Usamos CENTER_TIMEZONE para weekday y HH:MM (Europe/Madrid) — jamás
+      // mezclar getDay() local con getUTCHours() UTC (bug H-1).
+      const { weekday: scheduledWeekday, timeHHMM } = zonedParts(scheduledAt, CENTER_TIMEZONE);
 
       const matchingSlot = slotConfigs.find(
-        (s) => s.dayOfWeek === scheduledAt.getDay() && s.startTime === timeHHMM,
+        (s) => s.dayOfWeek === scheduledWeekday && s.startTime === timeHHMM,
       );
       if (!matchingSlot) {
         throw new TRPCError({
@@ -392,41 +348,72 @@ export const visitsRouter = createTRPCRouter({
         });
       }
 
-      // 5. Verificar capacidad
-      const occupied = await ctx.db.visit.count({
-        where: {
-          resident:    { centerId: resident.centerId },
-          scheduledAt: { gte: dayStart, lte: dayEnd },
-          status:      { in: ['SOLICITADA', 'CONFIRMADA', 'EN_CURSO'] },
-        },
-      });
-      if (occupied >= matchingSlot.capacity) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'La franja seleccionada ya no tiene plazas disponibles.',
-        });
-      }
-
-      // 6. Crear la visita: auto-aprobar o dejar en SOLICITADA
+      // 5 + 6. Verificar capacidad y crear en transacción Serializable (H-3).
+      //
+      // Sin lock, dos familiares reservando la última plaza de forma concurrente
+      // leen occupied = capacity-1 ambos y ambos crean → sobreventa silenciosa.
+      // Con isolationLevel Serializable, Postgres detecta el conflicto de lectura
+      // y rechaza una de las dos transacciones con error 40001 (serialization failure).
+      // Hacemos un reintento simple (1 vez) antes de relanzar el error al cliente.
+      //
+      // El patrón es idéntico al que ya usa comms.ts en createThread/postMessage.
       const autoApprove = matchingSlot.autoApprove;
       const initialStatus = autoApprove ? VisitStatus.CONFIRMADA : VisitStatus.SOLICITADA;
       const qrCode = autoApprove ? generateVisitCode() : null;
 
-      const visit = await ctx.db.visit.create({
-        data: {
-          tenantId:       ctx.tenantId,
-          residentId:     input.residentId,
-          requestedById:  ctx.session.user.id,
-          scheduledAt,
-          visitorNames:   input.visitorNames,
-          status:         initialStatus,
-          qrCode,
-          notes:          input.notes ?? null,
-          durationMin:    matchingSlot
-            ? (parseInt(matchingSlot.endTime.split(':')[0]!) - parseInt(matchingSlot.startTime.split(':')[0]!)) * 60
-            : 60,
-        },
-      });
+      async function runCreateVisit() {
+        return ctx.db.$transaction(
+          async (tx) => {
+            const occupied = await tx.visit.count({
+              where: {
+                resident:    { centerId: resident!.centerId },
+                scheduledAt: { gte: dayStart, lte: dayEnd },
+                status:      { in: ['SOLICITADA', 'CONFIRMADA', 'EN_CURSO'] },
+              },
+            });
+            if (occupied >= matchingSlot!.capacity) {
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'La franja seleccionada ya no tiene plazas disponibles.',
+              });
+            }
+
+            return tx.visit.create({
+              data: {
+                tenantId:      ctx.tenantId,
+                residentId:    input.residentId,
+                requestedById: ctx.session.user.id,
+                scheduledAt,
+                visitorNames:  input.visitorNames,
+                status:        initialStatus,
+                qrCode,
+                notes:         input.notes ?? null,
+                durationMin:   (parseInt(matchingSlot!.endTime.split(':')[0]!) - parseInt(matchingSlot!.startTime.split(':')[0]!)) * 60,
+              },
+            });
+          },
+          { isolationLevel: 'Serializable' },
+        );
+      }
+
+      let visit: Awaited<ReturnType<typeof runCreateVisit>>;
+      try {
+        visit = await runCreateVisit();
+      } catch (err) {
+        // Reintento ante error de serialización de Postgres (código P2034 en Prisma
+        // o el código Postgres 40001 serialization_failure).
+        const isSerializationError =
+          err instanceof Error &&
+          (err.message.includes('P2034') ||
+            err.message.includes('40001') ||
+            err.message.includes('serializ'));
+        if (isSerializationError) {
+          // Un único reintento: si también falla, dejamos que suba al cliente.
+          visit = await runCreateVisit();
+        } else {
+          throw err;
+        }
+      }
 
       await ctx.audit({
         action:   'CREATE',
@@ -436,20 +423,26 @@ export const visitsRouter = createTRPCRouter({
         metadata: { residentId: input.residentId, status: initialStatus, autoApprove },
       });
 
-      // 7. Si auto-aprobada, enviar email de confirmación
+      // 7. Si auto-aprobada, enviar email de confirmación (no-throw)
       if (autoApprove && qrCode) {
         const user = await ctx.db.user.findUnique({
           where:  { id: ctx.session.user.id },
           select: { email: true },
         });
         if (user?.email) {
-          await sendConfirmEmail(user.email, {
-            residentName: `${resident.firstName} ${resident.lastName}`,
-            scheduledAt,
-            visitorNames: input.visitorNames as string[],
-            qrCode,
-            visitId: visit.id,
-          });
+          await sendEmailSafe(
+            {
+              to: user.email,
+              ...visitConfirmedEmail({
+                residentName: `${resident.firstName} ${resident.lastName}`,
+                scheduledAt:  formatDate(scheduledAt),
+                visitorNames: input.visitorNames as string[],
+                qrCode,
+                visitId: visit.id,
+              }),
+            },
+            { context: 'visits.request.autoApprove', visitId: visit.id },
+          );
         }
       }
 
@@ -559,22 +552,20 @@ export const visitsRouter = createTRPCRouter({
         metadata: { from: visit.status, to: 'CONFIRMADA' },
       });
 
-      // Email al familiar con el QR
-      try {
-        const content = visitConfirmedEmail({
-          residentName: `${visit.resident.firstName} ${visit.resident.lastName}`,
-          scheduledAt:  formatDate(visit.scheduledAt),
-          visitorNames: (visit.visitorNames as string[]) ?? [],
-          qrCode,
-          visitId:      visit.id,
-        });
-        await sendEmail({ to: visit.requestedBy.email, ...content });
-      } catch (err) {
-        logger.warn('visits.approve.email_failed', {
-          visitId: visit.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+      // Email al familiar con el QR (no-throw)
+      await sendEmailSafe(
+        {
+          to: visit.requestedBy.email,
+          ...visitConfirmedEmail({
+            residentName: `${visit.resident.firstName} ${visit.resident.lastName}`,
+            scheduledAt:  formatDate(visit.scheduledAt),
+            visitorNames: (visit.visitorNames as string[]) ?? [],
+            qrCode,
+            visitId:      visit.id,
+          }),
+        },
+        { context: 'visits.approve', visitId: visit.id },
+      );
 
       return updated;
     }),
@@ -614,21 +605,19 @@ export const visitsRouter = createTRPCRouter({
         metadata: { from: visit.status, to: 'RECHAZADA', reason: input.reason },
       });
 
-      // Email al familiar
-      try {
-        const content = visitRejectedEmail({
-          residentName: `${visit.resident.firstName} ${visit.resident.lastName}`,
-          scheduledAt:  formatDate(visit.scheduledAt),
-          reason:       input.reason,
-          visitId:      visit.id,
-        });
-        await sendEmail({ to: visit.requestedBy.email, ...content });
-      } catch (err) {
-        logger.warn('visits.reject.email_failed', {
-          visitId: visit.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+      // Email al familiar (no-throw)
+      await sendEmailSafe(
+        {
+          to: visit.requestedBy.email,
+          ...visitRejectedEmail({
+            residentName: `${visit.resident.firstName} ${visit.resident.lastName}`,
+            scheduledAt:  formatDate(visit.scheduledAt),
+            reason:       input.reason,
+            visitId:      visit.id,
+          }),
+        },
+        { context: 'visits.reject', visitId: visit.id },
+      );
 
       return updated;
     }),
@@ -700,21 +689,14 @@ export const visitsRouter = createTRPCRouter({
       const scheduledAtStr = formatDate(visit.scheduledAt);
 
       if (isStaff) {
-        // Notificar al familiar
-        try {
-          const content = visitCancelledEmail({
-            residentName,
-            scheduledAt: scheduledAtStr,
-            reason:      input.reason,
-            cancelledBy: 'staff',
-          });
-          await sendEmail({ to: visit.requestedBy.email, ...content });
-        } catch (err) {
-          logger.warn('visits.cancel.email_familiar_failed', {
-            visitId: visit.id,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
+        // Notificar al familiar (no-throw)
+        await sendEmailSafe(
+          {
+            to: visit.requestedBy.email,
+            ...visitCancelledEmail({ residentName, scheduledAt: scheduledAtStr, reason: input.reason, cancelledBy: 'staff' }),
+          },
+          { context: 'visits.cancel.staff', visitId: visit.id },
+        );
       } else {
         // El familiar canceló — se podría notificar al email del centro (si existiera)
         // Por ahora se deja como TODO (el centro puede ver la agenda actualizada)
@@ -770,10 +752,12 @@ export const visitsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'BAD_REQUEST', message: CHECK_IN_GENERIC_ERROR });
       }
 
-      // Verificar que la visita es de HOY (zona UTC; comparar solo la fecha)
-      const todayISO = new Date().toISOString().slice(0, 10);
-      const visitDateISO = visit.scheduledAt.toISOString().slice(0, 10);
-      if (visitDateISO !== todayISO) {
+      // Verificar que la visita es de HOY en la TZ del centro (Europe/Madrid).
+      // Antes se comparaba con toISOString().slice(0,10) que usa UTC: a las 22:30Z
+      // en verano (00:30 Madrid del día siguiente) el QR válido se rechazaba
+      // porque la "fecha UTC" ya era otro día. Se compara ahora en CENTER_TIMEZONE
+      // para que el check sea correcto en la franja nocturna (bug H-1).
+      if (!isSameLocalDate(visit.scheduledAt, new Date())) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: CHECK_IN_GENERIC_ERROR });
       }
 
