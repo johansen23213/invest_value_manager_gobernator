@@ -348,6 +348,78 @@ describe('paridad es/ca — Wave B Sprint M (equipo + RBAC R-01/R-03)', () => {
   });
 });
 
+describe('paridad es/ca — Solicitudes del portal de familias (REQ-001..REQ-011)', () => {
+  const requestKeys = [
+    'nav.requests',
+    'requests.portal.title',
+    'requests.portal.intro',
+    'requests.portal.new',
+    'requests.portal.empty.title',
+    'requests.portal.empty.desc',
+    'requests.portal.attention',
+    'requests.form.title',
+    'requests.form.resident',
+    'requests.form.category',
+    'requests.form.priority',
+    'requests.form.requestTitle',
+    'requests.form.description',
+    'requests.form.submit',
+    'requests.form.success',
+    'requests.detail.back',
+    'requests.detail.comments',
+    'requests.detail.noComments',
+    'requests.detail.addComment',
+    'requests.detail.commentSubmit',
+    'requests.detail.commentSent',
+    'requests.detail.rate',
+    'requests.detail.rateSent',
+    'requests.detail.reopen',
+    'requests.detail.reopened',
+    'requests.detail.you',
+    'requests.detail.staff',
+    'requests.staff.title',
+    'requests.staff.intro',
+    'requests.staff.filterStatus',
+    'requests.staff.filterCategory',
+    'requests.staff.empty.title',
+    'requests.staff.detail.back',
+    'requests.staff.detail.changeStatus',
+    'requests.staff.detail.assign',
+    'requests.staff.detail.statusUpdated',
+    'requests.staff.detail.assigned',
+    'requests.staff.detail.internalComment',
+    'requests.staff.detail.internalBadge',
+  ];
+
+  it('todas las claves de solicitudes existen en es', () => {
+    for (const key of requestKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de solicitudes existen en ca', () => {
+    for (const key of requestKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de solicitudes difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'requests.portal.title',
+      'requests.portal.intro',
+      'requests.staff.intro',
+      'requests.detail.noComments',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
 describe('paridad es/ca — Ola B (expediente sociosanitario Fase 1)', () => {
   const olaBKeys = [
     // Chrome safety chips
