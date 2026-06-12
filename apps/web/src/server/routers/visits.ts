@@ -1,0 +1,849 @@
+/**
+ * Router de visitas (VIS-001..VIS-010).
+ *
+ * Aislamiento doble (igual que family.ts / requests.ts):
+ *   1. RLS por tenant_id a nivel de BD.
+ *   2. Para endpoints del FAMILIAR: verificación explícita de FamilyLink.
+ *
+ * Permisos:
+ *   visits:request → FAMILIAR:
+ *     - availability: ver franjas con disponibilidad de su centro.
+ *     - request: solicitar visita para sus residentes vinculados.
+ *     - listMine: ver sus visitas pasadas y futuras.
+ *     - cancel: cancelar sus propias visitas (si canCancel).
+ *
+ *   visits:manage → DIRECTOR / AUXILIAR / SANITARIO (recepción):
+ *     - availability: ídem (también necesitan verlo).
+ *     - listForCenter: agenda del centro con filtros.
+ *     - approve: SOLICITADA → CONFIRMADA + genera QR + email.
+ *     - reject: SOLICITADA → RECHAZADA + motivo + email.
+ *     - cancel: cancelar cualquier visita del tenant.
+ *     - checkInByCode: recepción introduce/escanea código → EN_CURSO.
+ *     - checkOut: EN_CURSO → COMPLETADA.
+ *     - markNoShow: CONFIRMADA pasada → NO_SHOW.
+ *
+ *   centers:write → DIRECTOR (gestión de franjas):
+ *     - slotConfig.list / slotConfig.upsert / slotConfig.delete
+ *     (La configuración de franjas es configuración de centro; se reutiliza
+ *     el permiso centers:write para no proliferar permisos innecesarios.)
+ *
+ * FUERA DE ALCANCE (P2/bloqueado):
+ *   VIS-012: integración con control de accesos físico (IOT).
+ *   Cuestionario previo.
+ */
+
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { VisitStatus, type TenantPrisma } from '@vetlla/db';
+import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
+import { hasPermission } from '@/lib/rbac';
+import {
+  slotsForDate,
+  generateVisitCode,
+  canCancel,
+  canVisitTransition,
+  type SlotConfig,
+  type VisitForSlot,
+} from '@/lib/visits';
+import { sendEmail } from '@/server/email/index';
+import {
+  visitConfirmedEmail,
+  visitRejectedEmail,
+  visitCancelledEmail,
+} from '@/server/account/emails';
+import { logger } from '@/server/logger';
+
+// ---------------------------------------------------------------------------
+// Esquemas Zod reutilizables
+// ---------------------------------------------------------------------------
+
+export const VisitStatusSchema = z.nativeEnum(VisitStatus);
+
+export const SlotConfigUpsertInput = z.object({
+  id:          z.string().optional(), // si se pasa → update; si no → create
+  centerId:    z.string().min(1),
+  dayOfWeek:   z.number().int().min(0).max(6),
+  startTime:   z.string().regex(/^\d{2}:\d{2}$/, 'Formato HH:MM'),
+  endTime:     z.string().regex(/^\d{2}:\d{2}$/, 'Formato HH:MM'),
+  capacity:    z.number().int().min(1).max(100),
+  autoApprove: z.boolean().default(true),
+  active:      z.boolean().default(true),
+});
+
+export const RequestVisitInput = z.object({
+  residentId:   z.string().min(1),
+  scheduledAt:  z.string().datetime({ message: 'scheduledAt debe ser ISO 8601 UTC' }),
+  visitorNames: z.array(z.string().trim().min(1)).min(1).max(6),
+  notes:        z.string().trim().max(500).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Verifica que el residente está vinculado al usuario vía FamilyLink.
+ * Lanza FORBIDDEN si no (igual que requests.ts y family.ts).
+ */
+async function assertFamilyLink(
+  db: TenantPrisma,
+  userId: string,
+  residentId: string,
+): Promise<void> {
+  const link = await db.familyLink.findFirst({
+    where: { userId, residentId },
+    select: { id: true },
+  });
+  if (!link) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'No estás vinculado a este residente.',
+    });
+  }
+}
+
+/** Formatea una Date como string legible en es-ES para los emails. */
+function formatDate(d: Date): string {
+  return d.toLocaleString('es-ES', {
+    timeZone: 'Europe/Madrid',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** Envía email de confirmación al familiar de forma no-throw. */
+async function sendConfirmEmail(
+  userEmail: string,
+  opts: {
+    residentName: string;
+    scheduledAt:  Date;
+    visitorNames: string[];
+    qrCode:       string;
+    visitId:      string;
+  },
+): Promise<void> {
+  try {
+    const content = visitConfirmedEmail({
+      residentName: opts.residentName,
+      scheduledAt:  formatDate(opts.scheduledAt),
+      visitorNames: opts.visitorNames,
+      qrCode:       opts.qrCode,
+      visitId:      opts.visitId,
+    });
+    await sendEmail({ to: userEmail, ...content });
+  } catch (err) {
+    logger.warn('visits.email.confirm_failed', {
+      visitId: opts.visitId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Router
+// ---------------------------------------------------------------------------
+
+export const visitsRouter = createTRPCRouter({
+
+  // =========================================================================
+  // CONFIGURACIÓN DE FRANJAS (centers:write — solo DIRECTOR)
+  // =========================================================================
+
+  slotConfig: createTRPCRouter({
+
+    /** Lista todas las franjas de un centro (ordenadas por día y hora). */
+    list: permissionProcedure('centers:read')
+      .input(z.object({ centerId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        return ctx.db.visitSlotConfig.findMany({
+          where:   { centerId: input.centerId },
+          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        });
+      }),
+
+    /** Crea o actualiza una franja horaria (solo DIRECTOR vía centers:write). */
+    upsert: permissionProcedure('centers:write')
+      .input(SlotConfigUpsertInput)
+      .mutation(async ({ ctx, input }) => {
+        // Verificar que el centro pertenece al tenant (RLS garantiza que no se
+        // puede leer fuera del tenant, pero lo verificamos explícitamente).
+        const center = await ctx.db.center.findUnique({
+          where:  { id: input.centerId },
+          select: { id: true },
+        });
+        if (!center) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Centro no encontrado.' });
+        }
+
+        if (input.id) {
+          // Update
+          const updated = await ctx.db.visitSlotConfig.update({
+            where: { id: input.id },
+            data:  {
+              dayOfWeek:   input.dayOfWeek,
+              startTime:   input.startTime,
+              endTime:     input.endTime,
+              capacity:    input.capacity,
+              autoApprove: input.autoApprove,
+              active:      input.active,
+            },
+          });
+          await ctx.audit({
+            action:   'UPDATE',
+            entity:   'VisitSlotConfig',
+            entityId: input.id,
+            summary:  `Franja de visita actualizada (${input.startTime}-${input.endTime} día ${input.dayOfWeek})`,
+            metadata: { centerId: input.centerId },
+          });
+          return updated;
+        } else {
+          // Create
+          const created = await ctx.db.visitSlotConfig.create({
+            data: {
+              tenantId:    ctx.tenantId,
+              centerId:    input.centerId,
+              dayOfWeek:   input.dayOfWeek,
+              startTime:   input.startTime,
+              endTime:     input.endTime,
+              capacity:    input.capacity,
+              autoApprove: input.autoApprove,
+              active:      input.active,
+            },
+          });
+          await ctx.audit({
+            action:   'CREATE',
+            entity:   'VisitSlotConfig',
+            entityId: created.id,
+            summary:  `Franja de visita creada (${input.startTime}-${input.endTime} día ${input.dayOfWeek})`,
+            metadata: { centerId: input.centerId },
+          });
+          return created;
+        }
+      }),
+
+    /** Desactiva (baja lógica) una franja. No elimina físicamente para preservar historial. */
+    delete: permissionProcedure('centers:write')
+      .input(z.object({ id: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const slot = await ctx.db.visitSlotConfig.findUnique({
+          where:  { id: input.id },
+          select: { id: true },
+        });
+        if (!slot) throw new TRPCError({ code: 'NOT_FOUND', message: 'Franja no encontrada.' });
+
+        const updated = await ctx.db.visitSlotConfig.update({
+          where: { id: input.id },
+          data:  { active: false },
+        });
+        await ctx.audit({
+          action:   'UPDATE',
+          entity:   'VisitSlotConfig',
+          entityId: input.id,
+          summary:  'Franja de visita desactivada',
+        });
+        return updated;
+      }),
+  }),
+
+  // =========================================================================
+  // DISPONIBILIDAD (visits:request o visits:manage)
+  // =========================================================================
+
+  /**
+   * Franjas disponibles de un centro para una fecha dada.
+   * El frontend usa esto para el selector de franjas al solicitar una visita.
+   */
+  availability: tenantProcedure
+    .input(z.object({
+      centerId: z.string().min(1),
+      date:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
+    }))
+    .query(async ({ ctx, input }) => {
+      const role = ctx.session.user.role;
+      if (!hasPermission(role, 'visits:request') && !hasPermission(role, 'visits:manage')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso al módulo de visitas.' });
+      }
+
+      // Parsear la fecha (se interpreta como medianoche UTC del día solicitado)
+      const dateObj = new Date(`${input.date}T00:00:00Z`);
+      if (isNaN(dateObj.getTime())) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Fecha inválida.' });
+      }
+
+      // Rango UTC del día completo
+      const dayStart = new Date(`${input.date}T00:00:00Z`);
+      const dayEnd   = new Date(`${input.date}T23:59:59Z`);
+
+      // Franjas activas del centro
+      const configs = await ctx.db.visitSlotConfig.findMany({
+        where:   { centerId: input.centerId, active: true },
+        orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+      });
+
+      // Visitas no-canceladas del día (consumen capacidad)
+      const existingVisits = await ctx.db.visit.findMany({
+        where: {
+          resident: { centerId: input.centerId },
+          scheduledAt: { gte: dayStart, lte: dayEnd },
+          status: { notIn: ['CANCELADA', 'RECHAZADA', 'NO_SHOW', 'COMPLETADA'] },
+        },
+        select: { scheduledAt: true, status: true },
+      });
+
+      const slotConfigs: SlotConfig[] = configs.map((c) => ({
+        id:          c.id,
+        dayOfWeek:   c.dayOfWeek,
+        startTime:   c.startTime,
+        endTime:     c.endTime,
+        capacity:    c.capacity,
+        autoApprove: c.autoApprove,
+        active:      c.active,
+      }));
+
+      const visits: VisitForSlot[] = existingVisits.map((v) => ({
+        scheduledAt: v.scheduledAt,
+        status:      v.status as import('@/lib/visits').VisitStatus,
+      }));
+
+      return slotsForDate(slotConfigs, dateObj, visits);
+    }),
+
+  // =========================================================================
+  // SOLICITAR VISITA (visits:request — FAMILIAR)
+  // =========================================================================
+
+  request: permissionProcedure('visits:request')
+    .input(RequestVisitInput)
+    .mutation(async ({ ctx, input }) => {
+      // 1. Verificar vínculo familiar (aislamiento crítico)
+      await assertFamilyLink(ctx.db, ctx.session.user.id, input.residentId);
+
+      const scheduledAt = new Date(input.scheduledAt);
+      if (isNaN(scheduledAt.getTime())) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Fecha de visita inválida.' });
+      }
+      if (scheduledAt <= new Date()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'La visita debe programarse en el futuro.',
+        });
+      }
+
+      // 2. Verificar que el residente existe y obtener su centerId
+      const resident = await ctx.db.resident.findUnique({
+        where:  { id: input.residentId },
+        select: { id: true, centerId: true, firstName: true, lastName: true },
+      });
+      if (!resident) throw new TRPCError({ code: 'NOT_FOUND', message: 'Residente no encontrado.' });
+
+      // 3. Buscar franjas activas del centro para ese día
+      const dateISO = scheduledAt.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const dayStart = new Date(`${dateISO}T00:00:00Z`);
+      const dayEnd   = new Date(`${dateISO}T23:59:59Z`);
+
+      const configs = await ctx.db.visitSlotConfig.findMany({
+        where: { centerId: resident.centerId, active: true },
+      });
+
+      const slotConfigs: SlotConfig[] = configs.map((c) => ({
+        id:          c.id,
+        dayOfWeek:   c.dayOfWeek,
+        startTime:   c.startTime,
+        endTime:     c.endTime,
+        capacity:    c.capacity,
+        autoApprove: c.autoApprove,
+        active:      c.active,
+      }));
+
+      // 4. Validar que scheduledAt cae en una franja activa con capacidad
+      // La convención es: scheduledAt = hora de inicio de la franja
+      const hour = scheduledAt.getUTCHours().toString().padStart(2, '0');
+      const min  = scheduledAt.getUTCMinutes().toString().padStart(2, '0');
+      const timeHHMM = `${hour}:${min}`;
+
+      const matchingSlot = slotConfigs.find(
+        (s) => s.dayOfWeek === scheduledAt.getDay() && s.startTime === timeHHMM,
+      );
+      if (!matchingSlot) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'No existe una franja de visita activa para esa fecha y hora.',
+        });
+      }
+
+      // 5. Verificar capacidad
+      const occupied = await ctx.db.visit.count({
+        where: {
+          resident:    { centerId: resident.centerId },
+          scheduledAt: { gte: dayStart, lte: dayEnd },
+          status:      { in: ['SOLICITADA', 'CONFIRMADA', 'EN_CURSO'] },
+        },
+      });
+      if (occupied >= matchingSlot.capacity) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'La franja seleccionada ya no tiene plazas disponibles.',
+        });
+      }
+
+      // 6. Crear la visita: auto-aprobar o dejar en SOLICITADA
+      const autoApprove = matchingSlot.autoApprove;
+      const initialStatus = autoApprove ? VisitStatus.CONFIRMADA : VisitStatus.SOLICITADA;
+      const qrCode = autoApprove ? generateVisitCode() : null;
+
+      const visit = await ctx.db.visit.create({
+        data: {
+          tenantId:       ctx.tenantId,
+          residentId:     input.residentId,
+          requestedById:  ctx.session.user.id,
+          scheduledAt,
+          visitorNames:   input.visitorNames,
+          status:         initialStatus,
+          qrCode,
+          notes:          input.notes ?? null,
+          durationMin:    matchingSlot
+            ? (parseInt(matchingSlot.endTime.split(':')[0]!) - parseInt(matchingSlot.startTime.split(':')[0]!)) * 60
+            : 60,
+        },
+      });
+
+      await ctx.audit({
+        action:   'CREATE',
+        entity:   'Visit',
+        entityId: visit.id,
+        summary:  `Visita solicitada por familiar para ${resident.firstName} ${resident.lastName} (${scheduledAt.toISOString()})`,
+        metadata: { residentId: input.residentId, status: initialStatus, autoApprove },
+      });
+
+      // 7. Si auto-aprobada, enviar email de confirmación
+      if (autoApprove && qrCode) {
+        const user = await ctx.db.user.findUnique({
+          where:  { id: ctx.session.user.id },
+          select: { email: true },
+        });
+        if (user?.email) {
+          await sendConfirmEmail(user.email, {
+            residentName: `${resident.firstName} ${resident.lastName}`,
+            scheduledAt,
+            visitorNames: input.visitorNames as string[],
+            qrCode,
+            visitId: visit.id,
+          });
+        }
+      }
+
+      return visit;
+    }),
+
+  // =========================================================================
+  // LISTADO (visits:request — MIS VISITAS)
+  // =========================================================================
+
+  listMine: permissionProcedure('visits:request')
+    .input(z.object({
+      status: VisitStatusSchema.optional(),
+      limit:  z.number().int().min(1).max(100).default(50),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      // Obtener residentes vinculados al familiar
+      const links = await ctx.db.familyLink.findMany({
+        where:  { userId: ctx.session.user.id },
+        select: { residentId: true },
+      });
+      const residentIds = links.map((l) => l.residentId);
+      if (residentIds.length === 0) return [];
+
+      return ctx.db.visit.findMany({
+        where: {
+          residentId: { in: residentIds },
+          ...(input?.status ? { status: input.status } : {}),
+        },
+        orderBy: [{ scheduledAt: 'desc' }],
+        take:    input?.limit ?? 50,
+        include: {
+          resident: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+    }),
+
+  // =========================================================================
+  // AGENDA DEL CENTRO (visits:manage — STAFF)
+  // =========================================================================
+
+  listForCenter: permissionProcedure('visits:manage')
+    .input(z.object({
+      centerId: z.string().min(1),
+      date:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // si no se pasa, muestra hoy primero
+      status:   VisitStatusSchema.optional(),
+      limit:    z.number().int().min(1).max(200).default(50),
+    }))
+    .query(async ({ ctx, input }) => {
+      const dateFilter = input.date
+        ? {
+            gte: new Date(`${input.date}T00:00:00Z`),
+            lte: new Date(`${input.date}T23:59:59Z`),
+          }
+        : undefined;
+
+      return ctx.db.visit.findMany({
+        where: {
+          resident:    { centerId: input.centerId },
+          ...(dateFilter  ? { scheduledAt: dateFilter }   : {}),
+          ...(input.status ? { status: input.status }     : {}),
+        },
+        orderBy: [{ scheduledAt: 'asc' }],
+        take:    input.limit,
+        include: {
+          resident:    { select: { id: true, firstName: true, lastName: true } },
+          requestedBy: { select: { id: true, name: true, email: true } },
+        },
+      });
+    }),
+
+  // =========================================================================
+  // APROBACIÓN / RECHAZO (visits:manage — STAFF)
+  // =========================================================================
+
+  approve: permissionProcedure('visits:manage')
+    .input(z.object({ visitId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const visit = await ctx.db.visit.findUnique({
+        where:   { id: input.visitId },
+        include: {
+          resident:    { select: { id: true, firstName: true, lastName: true, centerId: true } },
+          requestedBy: { select: { id: true, email: true } },
+        },
+      });
+      if (!visit) throw new TRPCError({ code: 'NOT_FOUND', message: 'Visita no encontrada.' });
+
+      if (!canVisitTransition(visit.status as import('@/lib/visits').VisitStatus, 'CONFIRMADA')) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `No se puede confirmar una visita en estado ${visit.status}.`,
+        });
+      }
+
+      const qrCode = generateVisitCode();
+
+      const updated = await ctx.db.visit.update({
+        where: { id: input.visitId },
+        data:  { status: VisitStatus.CONFIRMADA, qrCode },
+      });
+
+      await ctx.audit({
+        action:   'UPDATE',
+        entity:   'Visit',
+        entityId: visit.id,
+        summary:  `Visita aprobada por staff (→ CONFIRMADA, QR generado)`,
+        metadata: { from: visit.status, to: 'CONFIRMADA' },
+      });
+
+      // Email al familiar con el QR
+      try {
+        const content = visitConfirmedEmail({
+          residentName: `${visit.resident.firstName} ${visit.resident.lastName}`,
+          scheduledAt:  formatDate(visit.scheduledAt),
+          visitorNames: (visit.visitorNames as string[]) ?? [],
+          qrCode,
+          visitId:      visit.id,
+        });
+        await sendEmail({ to: visit.requestedBy.email, ...content });
+      } catch (err) {
+        logger.warn('visits.approve.email_failed', {
+          visitId: visit.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      return updated;
+    }),
+
+  reject: permissionProcedure('visits:manage')
+    .input(z.object({
+      visitId: z.string().min(1),
+      reason:  z.string().trim().min(1).max(500),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const visit = await ctx.db.visit.findUnique({
+        where:   { id: input.visitId },
+        include: {
+          resident:    { select: { id: true, firstName: true, lastName: true } },
+          requestedBy: { select: { email: true } },
+        },
+      });
+      if (!visit) throw new TRPCError({ code: 'NOT_FOUND', message: 'Visita no encontrada.' });
+
+      if (!canVisitTransition(visit.status as import('@/lib/visits').VisitStatus, 'RECHAZADA')) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `No se puede rechazar una visita en estado ${visit.status}.`,
+        });
+      }
+
+      const updated = await ctx.db.visit.update({
+        where: { id: input.visitId },
+        data:  { status: VisitStatus.RECHAZADA, cancelReason: input.reason },
+      });
+
+      await ctx.audit({
+        action:   'UPDATE',
+        entity:   'Visit',
+        entityId: visit.id,
+        summary:  `Visita rechazada por staff`,
+        metadata: { from: visit.status, to: 'RECHAZADA', reason: input.reason },
+      });
+
+      // Email al familiar
+      try {
+        const content = visitRejectedEmail({
+          residentName: `${visit.resident.firstName} ${visit.resident.lastName}`,
+          scheduledAt:  formatDate(visit.scheduledAt),
+          reason:       input.reason,
+          visitId:      visit.id,
+        });
+        await sendEmail({ to: visit.requestedBy.email, ...content });
+      } catch (err) {
+        logger.warn('visits.reject.email_failed', {
+          visitId: visit.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      return updated;
+    }),
+
+  // =========================================================================
+  // CANCELACIÓN (familiar: solo las suyas con canCancel; staff: cualquiera)
+  // =========================================================================
+
+  cancel: tenantProcedure
+    .input(z.object({
+      visitId: z.string().min(1),
+      reason:  z.string().trim().min(1).max(500),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const role = ctx.session.user.role;
+      const isStaff = hasPermission(role, 'visits:manage');
+      const isFamiliar = hasPermission(role, 'visits:request');
+
+      if (!isStaff && !isFamiliar) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso al módulo de visitas.' });
+      }
+
+      const visit = await ctx.db.visit.findUnique({
+        where:   { id: input.visitId },
+        include: {
+          resident:    { select: { id: true, firstName: true, lastName: true } },
+          requestedBy: { select: { id: true, email: true } },
+        },
+      });
+      if (!visit) throw new TRPCError({ code: 'NOT_FOUND', message: 'Visita no encontrada.' });
+
+      if (isFamiliar && !isStaff) {
+        // El familiar solo puede cancelar sus propias visitas
+        if (visit.requestedById !== ctx.session.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo puedes cancelar tus propias visitas.' });
+        }
+        if (!canCancel({ status: visit.status as import('@/lib/visits').VisitStatus, scheduledAt: visit.scheduledAt }, new Date())) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Esta visita no puede cancelarse (estado o fecha no lo permiten).',
+          });
+        }
+      } else {
+        // Staff: puede cancelar cualquier visita con transición válida
+        if (!canVisitTransition(visit.status as import('@/lib/visits').VisitStatus, 'CANCELADA')) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `No se puede cancelar una visita en estado ${visit.status}.`,
+          });
+        }
+      }
+
+      const updated = await ctx.db.visit.update({
+        where: { id: input.visitId },
+        data:  { status: VisitStatus.CANCELADA, cancelReason: input.reason },
+      });
+
+      await ctx.audit({
+        action:   'UPDATE',
+        entity:   'Visit',
+        entityId: visit.id,
+        summary:  `Visita cancelada (por ${isStaff ? 'staff' : 'familiar'})`,
+        metadata: { from: visit.status, to: 'CANCELADA', reason: input.reason },
+      });
+
+      // Email a la otra parte
+      const cancelledBy = isStaff ? 'staff' : 'familiar';
+      const residentName = `${visit.resident.firstName} ${visit.resident.lastName}`;
+      const scheduledAtStr = formatDate(visit.scheduledAt);
+
+      if (isStaff) {
+        // Notificar al familiar
+        try {
+          const content = visitCancelledEmail({
+            residentName,
+            scheduledAt: scheduledAtStr,
+            reason:      input.reason,
+            cancelledBy: 'staff',
+          });
+          await sendEmail({ to: visit.requestedBy.email, ...content });
+        } catch (err) {
+          logger.warn('visits.cancel.email_familiar_failed', {
+            visitId: visit.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      } else {
+        // El familiar canceló — se podría notificar al email del centro (si existiera)
+        // Por ahora se deja como TODO (el centro puede ver la agenda actualizada)
+        logger.info('visits.cancel.by_familiar', {
+          visitId: visit.id,
+          cancelledBy,
+          residentName,
+          scheduledAt: scheduledAtStr,
+        });
+      }
+
+      return updated;
+    }),
+
+  // =========================================================================
+  // CHECK-IN POR CÓDIGO (visits:manage — RECEPCIÓN)
+  // =========================================================================
+
+  /**
+   * Recepción introduce o escanea el código QR del familiar.
+   * Busca la visita por qrCode dentro del tenant.
+   * Valida:
+   *   - Existe y pertenece al tenant (RLS garantiza el aislamiento).
+   *   - Estado CONFIRMADA.
+   *   - scheduledAt es HOY (rechaza códigos de días pasados/futuros — "QR caducado").
+   */
+  checkInByCode: permissionProcedure('visits:manage')
+    .input(z.object({ qrCode: z.string().min(1).max(20).toUpperCase() }))
+    .mutation(async ({ ctx, input }) => {
+      // Buscar visita por código dentro del tenant (la unicidad es por tenant+qrCode)
+      const visit = await ctx.db.visit.findFirst({
+        where:   { qrCode: input.qrCode },
+        include: {
+          resident: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+
+      if (!visit) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Código de visita no encontrado. Verifica el código e inténtalo de nuevo.',
+        });
+      }
+
+      if (visit.status !== VisitStatus.CONFIRMADA) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `El código corresponde a una visita en estado ${visit.status}. Solo se puede hacer check-in de visitas CONFIRMADAS.`,
+        });
+      }
+
+      // Verificar que la visita es de HOY (zona UTC; comparar solo la fecha)
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const visitDateISO = visit.scheduledAt.toISOString().slice(0, 10);
+      if (visitDateISO !== todayISO) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Código caducado: la visita estaba programada para ${visitDateISO}, no para hoy (${todayISO}).`,
+        });
+      }
+
+      const updated = await ctx.db.visit.update({
+        where: { id: visit.id },
+        data:  { status: VisitStatus.EN_CURSO, checkInAt: new Date() },
+      });
+
+      await ctx.audit({
+        action:   'UPDATE',
+        entity:   'Visit',
+        entityId: visit.id,
+        summary:  `Check-in realizado (→ EN_CURSO)`,
+        metadata: { residentId: visit.residentId, qrCode: input.qrCode },
+      });
+
+      return updated;
+    }),
+
+  // =========================================================================
+  // CHECK-OUT (visits:manage — RECEPCIÓN)
+  // =========================================================================
+
+  checkOut: permissionProcedure('visits:manage')
+    .input(z.object({ visitId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const visit = await ctx.db.visit.findUnique({
+        where:  { id: input.visitId },
+        select: { id: true, status: true, residentId: true },
+      });
+      if (!visit) throw new TRPCError({ code: 'NOT_FOUND', message: 'Visita no encontrada.' });
+
+      if (!canVisitTransition(visit.status as import('@/lib/visits').VisitStatus, 'COMPLETADA')) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `No se puede registrar el check-out de una visita en estado ${visit.status}. Solo visitas EN_CURSO.`,
+        });
+      }
+
+      const updated = await ctx.db.visit.update({
+        where: { id: input.visitId },
+        data:  { status: VisitStatus.COMPLETADA, checkOutAt: new Date() },
+      });
+
+      await ctx.audit({
+        action:   'UPDATE',
+        entity:   'Visit',
+        entityId: visit.id,
+        summary:  'Check-out registrado (→ COMPLETADA)',
+        metadata: { residentId: visit.residentId },
+      });
+
+      return updated;
+    }),
+
+  // =========================================================================
+  // MARCAR NO_SHOW (visits:manage — STAFF)
+  // =========================================================================
+
+  markNoShow: permissionProcedure('visits:manage')
+    .input(z.object({ visitId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const visit = await ctx.db.visit.findUnique({
+        where:  { id: input.visitId },
+        select: { id: true, status: true, scheduledAt: true, residentId: true },
+      });
+      if (!visit) throw new TRPCError({ code: 'NOT_FOUND', message: 'Visita no encontrada.' });
+
+      if (!canVisitTransition(visit.status as import('@/lib/visits').VisitStatus, 'NO_SHOW')) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `No se puede marcar no-show para una visita en estado ${visit.status}.`,
+        });
+      }
+
+      const updated = await ctx.db.visit.update({
+        where: { id: input.visitId },
+        data:  { status: VisitStatus.NO_SHOW },
+      });
+
+      await ctx.audit({
+        action:   'UPDATE',
+        entity:   'Visit',
+        entityId: visit.id,
+        summary:  'Visita marcada como NO_SHOW',
+        metadata: { residentId: visit.residentId, scheduledAt: visit.scheduledAt },
+      });
+
+      return updated;
+    }),
+});

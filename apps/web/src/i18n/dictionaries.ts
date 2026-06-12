@@ -353,6 +353,8 @@ const es: Record<string, string> = {
   'rbac.perm.requests:manage': 'Gestionar todas las solicitudes del centro (asignar, cambiar estado, responder)',
   'rbac.perm.comms:read': 'Leer comunicados y mensajes del portal de familias',
   'rbac.perm.comms:broadcast': 'Publicar comunicados al centro, unidad o residente',
+  'rbac.perm.visits:request': 'Solicitar y gestionar visitas para el residente vinculado (portal de familias)',
+  'rbac.perm.visits:manage': 'Gestionar la agenda de visitas del centro (aprobar, rechazar, check-in/out)',
 
   // Visión 360 del residente (R-360)
   'r360.title': 'Visión 360',
@@ -1138,6 +1140,8 @@ const ca: Record<string, string> = {
   'rbac.perm.requests:manage': 'Gestionar totes les sol·licituds del centre (assignar, canviar estat, respondre)',
   'rbac.perm.comms:read': 'Llegir comunicats i missatges del portal de famílies',
   'rbac.perm.comms:broadcast': 'Publicar comunicats al centre, unitat o resident',
+  'rbac.perm.visits:request': 'Sol·licitar i gestionar visites per al resident vinculat (portal de famílies)',
+  'rbac.perm.visits:manage': "Gestionar l'agenda de visites del centre (aprovar, rebutjar, check-in/out)",
 
   // Visió 360 del resident (R-360)
   'r360.title': 'Visió 360',

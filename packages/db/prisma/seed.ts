@@ -24,6 +24,7 @@ import {
   ServiceRequestStatus,
   Sex,
   UPPOrigin,
+  VisitStatus,
   asPlatformAdmin,
   prisma,
   UserRole,
@@ -755,6 +756,132 @@ async function main() {
       where: { id: thread.id },
       data:  { lastMessageAt: new Date() },
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed de visitas (VIS-001..VIS-010)
+  // ---------------------------------------------------------------------------
+
+  // Limpiar datos previos para idempotencia
+  await db.visit.deleteMany({ where: { tenantId: tenant.id } });
+  await db.visitSlotConfig.deleteMany({ where: { tenantId: tenant.id } });
+
+  // Obtener la residencia (primer centro del tenant)
+  const residenciaCenter = await db.center.findFirst({
+    where:   { tenantId: tenant.id, name: 'Residencia Los Olivos' },
+    select:  { id: true },
+  });
+
+  if (residenciaCenter && familiar && firstResident) {
+    const centerId = residenciaCenter.id;
+
+    // 1) Franja sábado 11:00-12:00, capacity 3, autoApprove true (VIS-003)
+    await db.visitSlotConfig.create({
+      data: {
+        tenantId:    tenant.id,
+        centerId,
+        dayOfWeek:   6, // sábado
+        startTime:   '11:00',
+        endTime:     '12:00',
+        capacity:    3,
+        autoApprove: true,
+        active:      true,
+      },
+    });
+
+    // 2) Franja domingo 11:00-12:00, capacity 3, autoApprove true
+    await db.visitSlotConfig.create({
+      data: {
+        tenantId:    tenant.id,
+        centerId,
+        dayOfWeek:   0, // domingo
+        startTime:   '11:00',
+        endTime:     '12:00',
+        capacity:    3,
+        autoApprove: true,
+        active:      true,
+      },
+    });
+
+    // 3) Franja sábado 17:00-18:00, capacity 3, autoApprove true
+    await db.visitSlotConfig.create({
+      data: {
+        tenantId:    tenant.id,
+        centerId,
+        dayOfWeek:   6, // sábado
+        startTime:   '17:00',
+        endTime:     '18:00',
+        capacity:    3,
+        autoApprove: true,
+        active:      true,
+      },
+    });
+
+    // 4) Franja domingo 17:00-18:00, capacity 2, autoApprove FALSE (aprobación manual)
+    await db.visitSlotConfig.create({
+      data: {
+        tenantId:    tenant.id,
+        centerId,
+        dayOfWeek:   0, // domingo
+        startTime:   '17:00',
+        endTime:     '18:00',
+        capacity:    2,
+        autoApprove: false,
+        active:      true,
+      },
+    });
+
+    // Próximo sábado (o siguiente): buscar la fecha del próximo sábado a partir de hoy
+    const now = new Date();
+    const daysUntilSat = (6 - now.getDay() + 7) % 7 || 7; // al menos 7 días si hoy es sábado
+    const nextSat = new Date(now);
+    nextSat.setDate(now.getDate() + daysUntilSat);
+
+    // 5) Visita CONFIRMADA futura (con QR visible para demo)
+    // qrCode de ejemplo legible para que la pantalla del portal tenga contenido
+    const demoQrCode = 'DEMOQR01';
+    const confirmedVisitDate = new Date(nextSat);
+    confirmedVisitDate.setUTCHours(11, 0, 0, 0);
+
+    await db.visit.create({
+      data: {
+        tenantId:       tenant.id,
+        residentId:     firstResident.id,
+        requestedById:  familiar.id,
+        scheduledAt:    confirmedVisitDate,
+        durationMin:    60,
+        visitorNames:   ['Ana García', 'Pedro García'],
+        status:         VisitStatus.CONFIRMADA,
+        qrCode:         demoQrCode,
+        notes:          'Visita de fin de semana con los hijos.',
+      },
+    });
+
+    // 6) Visita COMPLETADA en el pasado (para el historial del portal)
+    const pastSat = new Date(now);
+    pastSat.setDate(now.getDate() - 7); // sábado pasado
+    const pastVisitDate = new Date(pastSat);
+    pastVisitDate.setUTCHours(11, 0, 0, 0);
+    const pastCheckIn = new Date(pastVisitDate.getTime() + 2 * 60 * 1000); // +2 min
+    const pastCheckOut = new Date(pastVisitDate.getTime() + 62 * 60 * 1000); // +62 min
+
+    await db.visit.create({
+      data: {
+        tenantId:       tenant.id,
+        residentId:     firstResident.id,
+        requestedById:  familiar.id,
+        scheduledAt:    pastVisitDate,
+        durationMin:    60,
+        visitorNames:   ['Ana García'],
+        status:         VisitStatus.COMPLETADA,
+        qrCode:         'OLDQR001',
+        checkInAt:      pastCheckIn,
+        checkOutAt:     pastCheckOut,
+        notes:          'Visita sin incidencias.',
+      },
+    });
+
+    console.log(`  Visitas: 4 franjas configuradas + 1 visita confirmada futura (QR: ${demoQrCode}) + 1 visita completada pasada`);
   }
 
   console.log(`Seed OK.`);
