@@ -14,6 +14,7 @@ import {
   RESIDENT_STATUS_LABELS,
 } from '@/lib/labels';
 
+
 /** Aviso amable cuando el centro ha ocultado una sección a este acceso (UX-20). */
 function PrivacyNotice({ text }: { text: string }) {
   return <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">{text}</p>;
@@ -27,6 +28,19 @@ export default function PortalPage() {
   const pendingAttention = (solicitudes.data ?? []).filter(
     (r) => r.status === 'PENDIENTE_INFO',
   ).length;
+
+  // Comunicados: no leídos + pendientes de acuse
+  const announcements = api.comms.listAnnouncementsForMe.useQuery();
+  const annList = announcements.data ?? [];
+  const annUnread = annList.filter((a) => !a.receipts[0]?.readAt).length;
+  const annPendingAck = annList.filter(
+    (a) => a.requiresAck && !a.receipts[0]?.acknowledgedAt,
+  ).length;
+
+  // Mensajes: hilos con no leídos
+  const threads = api.comms.listThreads.useQuery();
+  const threadList = threads.data ?? [];
+  const msgUnread = threadList.reduce((sum, th) => sum + th.unreadCount, 0);
 
   if (portal.isLoading) return <p className="text-[#1A3A3F]/60">…</p>;
   const residents = portal.data ?? [];
@@ -46,30 +60,96 @@ export default function PortalPage() {
         <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('portal.intro')}</p>
       </div>
 
-      {/* Acceso rápido a solicitudes */}
-      <Link
-        href="/portal/solicitudes"
-        className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-        aria-label={t('requests.portal.title')}
-      >
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg" aria-hidden="true">
-            ✉
-          </span>
-          <div>
-            <p className="font-semibold text-[#1A3A3F]">{t('requests.portal.title')}</p>
-            <p className="text-sm text-[#1A3A3F]/60">{t('requests.portal.intro')}</p>
+      {/* Accesos rápidos — solicitudes, comunicados, mensajes */}
+      <div className="flex flex-col gap-3">
+        {/* Solicitudes */}
+        <Link
+          href="/portal/solicitudes"
+          className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          aria-label={t('requests.portal.title')}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg" aria-hidden="true">
+              ✉
+            </span>
+            <div>
+              <p className="font-semibold text-[#1A3A3F]">{t('requests.portal.title')}</p>
+              <p className="text-sm text-[#1A3A3F]/60">{t('requests.portal.intro')}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {pendingAttention > 0 && (
-            <Badge tone="amber" aria-label={t('requests.portal.counter.aria')}>
-              {pendingAttention}
-            </Badge>
-          )}
-          <span className="text-brand-700" aria-hidden="true">→</span>
-        </div>
-      </Link>
+          <div className="flex items-center gap-2">
+            {pendingAttention > 0 && (
+              <Badge tone="amber" aria-label={t('requests.portal.counter.aria')}>
+                {pendingAttention}
+              </Badge>
+            )}
+            <span className="text-brand-700" aria-hidden="true">→</span>
+          </div>
+        </Link>
+
+        {/* Comunicados */}
+        <Link
+          href="/portal/comunicados"
+          className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          aria-label={t('comms.portal.announcements.quicklink.label')}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg" aria-hidden="true">
+              📢
+            </span>
+            <div>
+              <p className="font-semibold text-[#1A3A3F]">
+                {t('comms.portal.announcements.quicklink.label')}
+              </p>
+              <p className="text-sm text-[#1A3A3F]/60">
+                {t('comms.portal.announcements.quicklink.desc')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {annUnread > 0 && (
+              <Badge tone="blue">
+                {t('comms.portal.announcements.unread', { count: annUnread })}
+              </Badge>
+            )}
+            {annPendingAck > 0 && (
+              <Badge tone="amber">
+                {t('comms.portal.announcements.pendingAck', { count: annPendingAck })}
+              </Badge>
+            )}
+            <span className="text-brand-700" aria-hidden="true">→</span>
+          </div>
+        </Link>
+
+        {/* Mensajes */}
+        <Link
+          href="/portal/mensajes"
+          className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          aria-label={t('comms.portal.messages.quicklink.label')}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg" aria-hidden="true">
+              💬
+            </span>
+            <div>
+              <p className="font-semibold text-[#1A3A3F]">
+                {t('comms.portal.messages.quicklink.label')}
+              </p>
+              <p className="text-sm text-[#1A3A3F]/60">
+                {t('comms.portal.messages.quicklink.desc')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {msgUnread > 0 && (
+              <Badge tone="blue">
+                {t('comms.portal.messages.unreadCount', { count: msgUnread })}
+              </Badge>
+            )}
+            <span className="text-brand-700" aria-hidden="true">→</span>
+          </div>
+        </Link>
+      </div>
 
       {residents.map((r) => (
         <Card key={r.id}>

@@ -25,6 +25,8 @@ export const PERMISSIONS = [
   'conflicts:review', // validar divergencias de sincronización offline (juicio clínico)
   'requests:create',  // el FAMILIAR crea solicitudes y comenta las suyas
   'requests:manage',  // el staff ve todas las solicitudes del tenant, asigna, gestiona estado
+  'comms:read',       // leer comunicados y mensajes que corresponden al usuario
+  'comms:broadcast',  // publicar comunicados al centro/unidad/residente
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -51,6 +53,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'dsar:manage',
     'conflicts:review',
     'requests:manage',
+    'comms:read',
+    'comms:broadcast',
   ],
   SANITARIO: [
     'tenant:read',
@@ -68,6 +72,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'careplan:write',
     'conflicts:review',
     'requests:manage',
+    'comms:read',
   ],
   // El auxiliar registra atención directa y administra medicación (MAR).
   AUXILIAR: [
@@ -80,8 +85,9 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'medication:administer',
     'careplan:read',
     'requests:manage',
+    'comms:read',
   ],
-  FAMILIAR: ['tenant:read', 'portal:read', 'requests:create'], // portal: lectura + solicitudes propias
+  FAMILIAR: ['tenant:read', 'portal:read', 'requests:create', 'comms:read'], // portal: lectura + solicitudes propias + comunicados
 };
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {
