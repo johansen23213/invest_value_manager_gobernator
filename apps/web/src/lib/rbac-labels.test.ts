@@ -39,11 +39,12 @@ describe('etiquetas i18n de permisos (R-02)', () => {
     expect(permissionsFor('AUXILIAR').includes('users:write')).toBe(false);
   });
 
-  it('FAMILIAR tiene los permisos del portal (portal:read + tenant:read + requests:create)', () => {
+  it('FAMILIAR tiene los permisos del portal (portal:read + tenant:read + requests:create + comms:read)', () => {
     const perms = permissionsFor('FAMILIAR');
-    expect(perms).toHaveLength(3);
+    expect(perms).toHaveLength(4);
     expect(perms.includes('tenant:read')).toBe(true);
     expect(perms.includes('portal:read')).toBe(true);
     expect(perms.includes('requests:create')).toBe(true);
+    expect(perms.includes('comms:read')).toBe(true);
   });
 });

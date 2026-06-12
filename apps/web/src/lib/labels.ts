@@ -210,3 +210,36 @@ export const SR_STATUS_LABELS: Record<string, string> = {
   CERRADA:        'Cerrada',
   REABIERTA:      'Reabierta',
 };
+
+// ---------------------------------------------------------------------------
+// Comunicados y mensajería (COM-001..COM-011)
+// ---------------------------------------------------------------------------
+
+export const ANNOUNCEMENT_CATEGORY_LABELS: Record<string, string> = {
+  GENERAL:           'General',
+  SALUD:             'Salud y bienestar',
+  ADMINISTRACION:    'Administración',
+  ACTIVIDADES:       'Actividades y ocio',
+  URGENTE:           'Urgente',
+  MENU:              'Menú',
+  MANTENIMIENTO:     'Mantenimiento',
+};
+
+export const ANNOUNCEMENT_AUDIENCE_LABELS: Record<string, string> = {
+  TODO_EL_CENTRO: 'Todo el centro',
+  POR_UNIDAD:     'Por unidad',
+  RESIDENTE:      'Residente concreto',
+};
+
+export const MESSAGE_THREAD_CATEGORY_LABELS: Record<string, string> = {
+  GENERAL:        'General',
+  SALUD:          'Salud y bienestar',
+  ADMINISTRACION: 'Administración',
+  ACTIVIDADES:    'Actividades y ocio',
+  URGENTE:        'Urgente',
+};
+
+export const MESSAGE_THREAD_STATUS_LABELS: Record<string, string> = {
+  ABIERTO: 'Abierto',
+  CERRADO: 'Cerrado',
+};
