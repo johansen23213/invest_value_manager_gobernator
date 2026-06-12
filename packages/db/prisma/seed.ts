@@ -16,6 +16,9 @@ import {
   Prisma,
   RestraintType,
   ResidentStatus,
+  ServiceRequestCategory,
+  ServiceRequestPriority,
+  ServiceRequestStatus,
   Sex,
   UPPOrigin,
   asPlatformAdmin,
@@ -554,6 +557,86 @@ async function main() {
         relationship: 'Hijo/a',
       },
     });
+
+    // Demo solicitudes para que el portal de familias tenga contenido
+    // (borramos primero para que el seed sea idempotente)
+    await db.serviceRequest.deleteMany({ where: { createdById: familiar.id } });
+
+    // Director demo para responder solicitudes
+    const director = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+
+    // 1) Solicitud RECIBIDA (nueva, sin respuesta)
+    await db.serviceRequest.create({
+      data: {
+        tenantId:    tenant.id,
+        residentId:  firstResident.id,
+        createdById: familiar.id,
+        category:    ServiceRequestCategory.MANTENIMIENTO,
+        priority:    ServiceRequestPriority.NORMAL,
+        status:      ServiceRequestStatus.RECIBIDA,
+        title:       'Grifo del lavabo con pequeña fuga',
+        description: 'El grifo del lavabo de la habitación tiene una pequeña fuga desde ayer. No es urgente pero me gustaría que lo revisaran cuando puedan.',
+        slaDueAt:    new Date(Date.now() + 72 * 60 * 60 * 1000),
+      },
+    });
+
+    // 2) Solicitud EN_CURSO con comentario público y respuesta del staff
+    const req2 = await db.serviceRequest.create({
+      data: {
+        tenantId:       tenant.id,
+        residentId:     firstResident.id,
+        createdById:    familiar.id,
+        category:       ServiceRequestCategory.ALIMENTACION,
+        priority:       ServiceRequestPriority.ALTA,
+        status:         ServiceRequestStatus.EN_CURSO,
+        title:          'Revisión de la dieta — preferencias nuevas',
+        description:    'Mi madre me ha comentado que le cuesta tragar los alimentos desde hace unos días. Me gustaría que la dietista la valorara.',
+        slaDueAt:       new Date(Date.now() + 24 * 60 * 60 * 1000),
+        firstResponseAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+        assignedToId:   director?.id ?? null,
+      },
+    });
+    if (director) {
+      await db.serviceRequestComment.create({
+        data: {
+          tenantId:  tenant.id,
+          requestId: req2.id,
+          authorId:  director.id,
+          body:      'Hola. Hemos trasladado su preocupación a la enfermería. La dietista la valorará esta tarde y le enviaremos una actualización. Gracias por avisarnos.',
+          internal:  false,
+        },
+      });
+    }
+
+    // 3) Solicitud RESUELTA con CSAT (4/5)
+    const req3 = await db.serviceRequest.create({
+      data: {
+        tenantId:         tenant.id,
+        residentId:       firstResident.id,
+        createdById:      familiar.id,
+        category:         ServiceRequestCategory.DOCUMENTACION,
+        priority:         ServiceRequestPriority.NORMAL,
+        status:           ServiceRequestStatus.RESUELTA,
+        title:            'Copia del contrato de ingreso',
+        description:      'Necesito una copia del contrato de ingreso para el trámite de dependencia de la Seguridad Social.',
+        slaDueAt:         new Date(Date.now() - 10 * 60 * 60 * 1000), // ya pasó el SLA
+        firstResponseAt:  new Date(Date.now() - 48 * 60 * 60 * 1000),
+        resolvedAt:       new Date(Date.now() - 12 * 60 * 60 * 1000),
+        satisfactionScore: 4,
+        assignedToId:     director?.id ?? null,
+      },
+    });
+    if (director) {
+      await db.serviceRequestComment.create({
+        data: {
+          tenantId:  tenant.id,
+          requestId: req3.id,
+          authorId:  director.id,
+          body:      'Le hemos enviado la copia del contrato al email que tiene registrado. Si necesita algo más, no dude en escribirnos.',
+          internal:  false,
+        },
+      });
+    }
   }
 
   console.log(`Seed OK.`);

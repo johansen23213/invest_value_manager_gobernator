@@ -32,3 +32,36 @@ export function invitationEmail(token: string, orgName: string) {
     ].join('\n'),
   };
 }
+
+// Etiquetas en español para los estados de solicitud (email transaccional).
+const REQUEST_STATUS_LABELS: Record<string, string> = {
+  RECIBIDA: 'Recibida',
+  ASIGNADA: 'Asignada al equipo',
+  EN_CURSO: 'En curso',
+  PENDIENTE_INFO: 'Pendiente de información',
+  RESUELTA: 'Resuelta',
+  CERRADA: 'Cerrada',
+  REABIERTA: 'Reabierta',
+};
+
+export function requestStatusChangedEmail(opts: {
+  requestTitle: string;
+  requestId: string;
+  newStatus: string;
+}) {
+  const statusLabel = REQUEST_STATUS_LABELS[opts.newStatus] ?? opts.newStatus;
+  const url = `${baseUrl()}/portal/solicitudes/${opts.requestId}`;
+  return {
+    subject: `Tu solicitud ha cambiado de estado: ${statusLabel}`,
+    text: [
+      `Tu solicitud "${opts.requestTitle}" ha sido actualizada.`,
+      '',
+      `Nuevo estado: ${statusLabel}`,
+      '',
+      'Puedes consultar el detalle y añadir comentarios en:',
+      url,
+      '',
+      'Si tienes dudas, contacta directamente con el centro.',
+    ].join('\n'),
+  };
+}
