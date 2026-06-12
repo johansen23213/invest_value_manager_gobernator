@@ -30,7 +30,7 @@ export const familyRouter = createTRPCRouter({
         firstName: true,
         lastName: true,
         status: true,
-        center: { select: { name: true } },
+        center: { select: { id: true, name: true } },
         bed: { select: { code: true, unit: { select: { name: true } } } },
         allergies: { select: { id: true, substance: true, severity: true } },
         careRecords: {

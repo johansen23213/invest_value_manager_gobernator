@@ -40,3 +40,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO vetlla_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO vetlla_app;
+
+-- 5) CRÍTICO-03 (auditoría DPO 2026-06-12): audit_logs es append-only.
+--    El GRANT general de arriba incluye DELETE, así que lo revocamos
+--    explícitamente justo después. Este bloque es IDEMPOTENTE: REVOKE es
+--    seguro aunque el privilegio ya no exista (Postgres no lanza error).
+--    El trigger BEFORE DELETE instalado en la migración 20260612130000
+--    añade una segunda capa de defensa.
+REVOKE DELETE ON public.audit_logs FROM vetlla_app;

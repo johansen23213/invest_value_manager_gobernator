@@ -243,3 +243,17 @@ export const MESSAGE_THREAD_STATUS_LABELS: Record<string, string> = {
   ABIERTO: 'Abierto',
   CERRADO: 'Cerrado',
 };
+
+// ---------------------------------------------------------------------------
+// Visitas (VIS-001..VIS-010)
+// ---------------------------------------------------------------------------
+
+export const VISIT_STATUS_LABELS: Record<string, string> = {
+  SOLICITADA:  'Solicitada',
+  CONFIRMADA:  'Confirmada',
+  RECHAZADA:   'Rechazada',
+  CANCELADA:   'Cancelada',
+  EN_CURSO:    'En curso',
+  COMPLETADA:  'Completada',
+  NO_SHOW:     'No presentado',
+};

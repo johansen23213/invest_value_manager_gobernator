@@ -81,7 +81,7 @@ export function familyMessageEmail(opts: {
   familyName: string;
   residentName: string;
 }) {
-  const url = `${baseUrl()}/backoffice/mensajes/${opts.threadId}`;
+  const url = `${baseUrl()}/comunicacion/mensajes/${opts.threadId}`;
   return {
     subject: `Mensaje de familiar — ${opts.threadSubject}`,
     text: [
@@ -89,6 +89,94 @@ export function familyMessageEmail(opts: {
       '',
       'Puedes leer y responder desde el backoffice en:',
       url,
+    ].join('\n'),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Visitas (VIS-001..VIS-010) — plantillas de email
+// ---------------------------------------------------------------------------
+
+/**
+ * Confirmación de visita al familiar — incluye el CÓDIGO QR de forma visible.
+ * Enviado al confirmar (auto-approve o aprobación manual).
+ */
+export function visitConfirmedEmail(opts: {
+  residentName: string;
+  scheduledAt:  string; // fecha y hora formateada en es-ES
+  visitorNames: string[];
+  qrCode:       string;
+  visitId:      string;
+}) {
+  const url = `${baseUrl()}/portal/visitas/${opts.visitId}`;
+  const visitorsLine = opts.visitorNames.length > 0
+    ? `Visitantes: ${opts.visitorNames.join(', ')}`
+    : 'Solo el solicitante.';
+  return {
+    subject: `Visita confirmada — ${opts.residentName}`,
+    text: [
+      `Tu visita a ${opts.residentName} ha sido confirmada.`,
+      '',
+      `Fecha y hora: ${opts.scheduledAt}`,
+      visitorsLine,
+      '',
+      '──────────────────────────────',
+      `  CÓDIGO DE VISITA: ${opts.qrCode}`,
+      '──────────────────────────────',
+      '',
+      'Presenta este código en recepción al llegar. El código es válido únicamente el día de la visita.',
+      '',
+      'Puedes consultar los detalles de tu visita en:',
+      url,
+      '',
+      'Si necesitas cancelarla, hazlo con antelación desde el portal.',
+    ].join('\n'),
+  };
+}
+
+/**
+ * Visita rechazada — notifica al familiar con el motivo.
+ */
+export function visitRejectedEmail(opts: {
+  residentName: string;
+  scheduledAt:  string;
+  reason?:      string;
+  visitId:      string;
+}) {
+  const url = `${baseUrl()}/portal/visitas`;
+  return {
+    subject: `Visita no aprobada — ${opts.residentName}`,
+    text: [
+      `Lamentamos informarte de que tu solicitud de visita a ${opts.residentName} (${opts.scheduledAt}) no ha podido ser aprobada.`,
+      '',
+      ...(opts.reason ? [`Motivo: ${opts.reason}`, ''] : []),
+      'Puedes solicitar una nueva visita en:',
+      url,
+      '',
+      'Si tienes dudas, contacta directamente con el centro.',
+    ].join('\n'),
+  };
+}
+
+/**
+ * Visita cancelada — notifica a la otra parte.
+ * Se envía al familiar cuando cancela el staff, y al staff (email del centro)
+ * cuando cancela el familiar (si el centro tiene email configurado).
+ */
+export function visitCancelledEmail(opts: {
+  residentName: string;
+  scheduledAt:  string;
+  reason?:      string;
+  cancelledBy:  'familiar' | 'staff';
+}) {
+  const who = opts.cancelledBy === 'staff' ? 'el equipo del centro' : 'el solicitante';
+  return {
+    subject: `Visita cancelada — ${opts.residentName}`,
+    text: [
+      `La visita a ${opts.residentName} del ${opts.scheduledAt} ha sido cancelada por ${who}.`,
+      '',
+      ...(opts.reason ? [`Motivo: ${opts.reason}`, ''] : []),
+      'Puedes solicitar una nueva visita desde el portal de familias.',
     ].join('\n'),
   };
 }
