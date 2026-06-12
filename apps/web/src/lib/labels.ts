@@ -176,3 +176,37 @@ export const ROLE_LABELS: Record<string, string> = {
   AUXILIAR: 'Auxiliar (atención directa)',
   FAMILIAR: 'Familiar',
 };
+
+// ---------------------------------------------------------------------------
+// Solicitudes del portal de familias (REQ-001..REQ-011)
+// ---------------------------------------------------------------------------
+
+export const SR_CATEGORY_LABELS: Record<string, string> = {
+  ADMINISTRACION:    'Administración y gestión',
+  DOCUMENTACION:     'Documentación y papeles',
+  VISITAS:           'Visitas y salidas',
+  ACTIVIDADES:       'Actividades y ocio',
+  MANTENIMIENTO:     'Mantenimiento e instalaciones',
+  ALIMENTACION:      'Alimentación y menús',
+  COMUNICACION:      'Comunicación con el equipo',
+  OBJETOS_PERSONALES: 'Objetos y ropa personal',
+  INCIDENCIA_APP:    'Incidencia en la aplicación',
+  OTRA:              'Otra consulta o solicitud',
+};
+
+export const SR_PRIORITY_LABELS: Record<string, string> = {
+  BAJA:    'Baja',
+  NORMAL:  'Normal',
+  ALTA:    'Alta',
+  URGENTE: 'Urgente',
+};
+
+export const SR_STATUS_LABELS: Record<string, string> = {
+  RECIBIDA:       'Recibida',
+  ASIGNADA:       'Asignada',
+  EN_CURSO:       'En curso',
+  PENDIENTE_INFO: 'Pendiente de información',
+  RESUELTA:       'Resuelta',
+  CERRADA:        'Cerrada',
+  REABIERTA:      'Reabierta',
+};

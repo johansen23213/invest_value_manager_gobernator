@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Badge, Card, CardContent, CardTitle } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
@@ -21,6 +22,11 @@ function PrivacyNotice({ text }: { text: string }) {
 export default function PortalPage() {
   const { t, locale } = useT();
   const portal = api.family.portal.useQuery();
+  // Contador de solicitudes que necesitan respuesta del familiar
+  const solicitudes = api.requests.listMine.useQuery();
+  const pendingAttention = (solicitudes.data ?? []).filter(
+    (r) => r.status === 'PENDIENTE_INFO',
+  ).length;
 
   if (portal.isLoading) return <p className="text-[#1A3A3F]/60">…</p>;
   const residents = portal.data ?? [];
@@ -39,6 +45,31 @@ export default function PortalPage() {
         <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('portal.title')}</h1>
         <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('portal.intro')}</p>
       </div>
+
+      {/* Acceso rápido a solicitudes */}
+      <Link
+        href="/portal/solicitudes"
+        className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+        aria-label={t('requests.portal.title')}
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg" aria-hidden="true">
+            ✉
+          </span>
+          <div>
+            <p className="font-semibold text-[#1A3A3F]">{t('requests.portal.title')}</p>
+            <p className="text-sm text-[#1A3A3F]/60">{t('requests.portal.intro')}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {pendingAttention > 0 && (
+            <Badge tone="amber" aria-label={t('requests.portal.counter.aria')}>
+              {pendingAttention}
+            </Badge>
+          )}
+          <span className="text-brand-700" aria-hidden="true">→</span>
+        </div>
+      </Link>
 
       {residents.map((r) => (
         <Card key={r.id}>
