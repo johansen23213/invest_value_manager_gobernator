@@ -151,6 +151,58 @@ business_analysis:
     A corto, Vetlla compite solo por arquitectura+UX, terreno más fácil de igualar.
 
 # --------------------------------------------------------------------------
+# Gap analysis SuperApp Residente/Familia (2026-06-12, Pau)
+# --------------------------------------------------------------------------
+superapp_gap_analysis:
+  date: 2026-06-12
+  author: pau-product
+  input_doc: >-
+    Requerimientos "Evolución de ResiPlus hacia una SuperApp de residente y familia" v0.1
+    (entregado por Angel 2026-06-12). Redactado para ResiPlus (capa sobre core legacy)
+    pero la visión se absorbe nativamente por Vetlla (Vetlla ES el core cloud-native).
+  output_doc: docs/producto/2026-06-12-superapp-residente-familia-gap.md
+  reencuadre_estrategico: >-
+    Vetlla puede ofrecer la SuperApp familia SIN capa de integración porque los datos
+    maestros (residentes, consentimientos, atención, medicación, PIA) ya viven en el mismo
+    Postgres con RLS. ResiPlus necesita construir una integración y mantener dos sistemas
+    consistentes; Vetlla construye módulos nativos. Este es el diferencial arquitectónico
+    real frente al líder del mercado, más duradero que "cloud" (que se puede comprar) o
+    "UX" (que se puede copiar). Riesgo: la SuperApp amplía el alcance de gestión a canal
+    digital familia, lo que es 5-8 módulos nuevos. No intentar todo a la vez.
+  quick_wins:
+    - "QW-1: Historia de vida legible en portal familiar (LifeStory ya existe en schema)"
+    - "QW-2: Consentimientos accionables desde portal (ConsentRecord ya existe; exponer al familiar + captura IP)"
+    - "QW-3: Email de notificación operativa reutilizando provider UE de AUTH-1"
+  epicas_must_have:
+    - "EPIC-1: Solicitudes/Incidencias del familiar con estado y SLA (mayor impacto reducción carga administrativa)"
+    - "EPIC-2: Centro Documental con acuse de lectura (bloqueado en binarios por Q-004/storage; modelo construible ya)"
+    - "EPIC-3: Comunicaciones/Anuncios + Web Push VAPID (infraestructura de atención del usuario para el resto)"
+    - "EPIC-4: Visitas digitales con QR (alto valor percibido, sin dependencias externas)"
+  orden_primer_incremento: >-
+    A (Quick Wins: 2-3 días) -> B (EPIC-3 Comunicaciones+Push: 1 semana) ->
+    C (EPIC-1 Solicitudes básico: 1.5 semanas) -> D (EPIC-2 Documental metadatos, binarios
+    cuando llega Q-004: 1 semana) -> E (EPIC-4 Visitas: 1.5 semanas).
+    Total sin dependencias externas: ~6 semanas. Todo sin código nativo, sin pasarela,
+    sin storage (salvo EPIC-2 binarios).
+  decisiones_para_angel: [Q-006, Q-007, Q-008, Q-009]
+  bloqueados_por_angel:
+    - "Módulo Pagos completo (Q-007: pasarela)"
+    - "Centro Documental binarios (Q-004: object storage OVHcloud)"
+    - "Firma electrónica (Q-008: proveedor y nivel)"
+    - "App nativa en tiendas (Q-006: PWA vs. nativa)"
+    - "Multicentro corporativo (Q-009: modelo de datos)"
+  modulos_roadmap_no_ahora:
+    - "Reservas de espacios/actividades"
+    - "Encuestas/NPS"
+    - "Analítica BI"
+    - "IoT/accesos"
+    - "Marketplace"
+    - "SSO corporativo"
+    - "SMS"
+    - "Videollamadas"
+    - "White-label avanzado"
+
+# --------------------------------------------------------------------------
 # Preguntas abiertas (decisiones pendientes de Angel)
 # --------------------------------------------------------------------------
 open_questions:
@@ -219,6 +271,62 @@ open_questions:
       Bloquea que el aislamiento RLS se enforce en el entorno UE de producción (invariante #1).
     status: open
     related: [INC-1, INC-3, ADR-0014, ADR-0002, A-003, Q-004]
+
+  # Preguntas nuevas — SuperApp Residente/Familia (2026-06-12, gap analysis)
+  - id: Q-006
+    date: 2026-06-12
+    question: >-
+      App nativa vs. PWA con distribución en tiendas: ¿publicamos la PWA actual en
+      App Store / Google Play como TWA (Trusted Web Activity — más rápido y barato,
+      cobertura de notificaciones push nativas parcial) o construimos app nativa con
+      React Native / Expo? Impacta directamente en la adopción del portal familiar
+      (APP-001 del documento SuperApp) y en el modelo de push notifications. La PWA
+      cubre el MVP operativo; la tienda mejora el descubrimiento y la UX en iOS.
+      Decisión de negocio con implicaciones de coste de desarrollo y mantenimiento.
+    status: open
+    related: [H6, docs/producto/2026-06-12-superapp-residente-familia-gap.md]
+
+  - id: Q-007
+    date: 2026-06-12
+    question: >-
+      Pasarela de pagos para el módulo PAY (Pagos/Recibos): ¿qué proveedor usar
+      (Stripe EU, Redsys, BBVA Merchant, otro) y qué modelo comercial (¿Vetlla cobra
+      comisión de la transacción, el centro la absorbe, o se repercute al familiar)?
+      El bloque de Pagos completo (PAY-001..PAY-011) está completamente bloqueado por
+      esta decisión. El modelo de datos (Invoice/Receipt) se puede diseñar ahora;
+      la pasarela real requiere contrato + credenciales + cumplimiento PCI-DSS delegado
+      al proveedor. Ver docs/producto/2026-06-12-superapp-residente-familia-gap.md.
+    status: open
+    related: [docs/producto/2026-06-12-superapp-residente-familia-gap.md]
+
+  - id: Q-008
+    date: 2026-06-12
+    question: >-
+      Firma electrónica para el Centro Documental: ¿qué nivel de firma requiere el
+      sector (simple/avanzada/cualificada según eIDAS)? ¿Qué proveedor UE? (Autofirma
+      del MPTFP, Signaturit, DocuSign UE, ValidatedID). La firma simple (hash +
+      confirmación del usuario autenticado) se puede implementar sin proveedor externo
+      para documentos informativos; contratos y autorizaciones con validez legal plena
+      requieren firma avanzada o cualificada con proveedor homologado. Afecta también
+      a si el modelo de datos de Document necesita campo `signatureProvider` y evidencias
+      externas de no-repudio. Ver docs/producto/2026-06-12-superapp-residente-familia-gap.md.
+    status: open
+    related: [docs/producto/2026-06-12-superapp-residente-familia-gap.md, Q-004]
+
+  - id: Q-009
+    date: 2026-06-12
+    question: >-
+      Modelo de multicentro corporativo: cuando un grupo corporativo opera varios
+      centros, ¿son tenants separados en Vetlla (aislamiento máximo, gestión
+      administrativa independiente, más simple de implementar con el modelo RLS actual)
+      o un único tenant con múltiples centros bajo una capa de "grupo" (análisis
+      agregado multi-centro, configuración corporativa compartida, más complejo)?
+      Esta decisión afecta al schema (¿añadir modelo Group?), al RBAC (¿rol corporativo
+      con visibilidad multi-centro?), y a la analítica (BI agregado). El beachhead
+      actual (centros pequeños/independientes) no lo necesita, pero los grupos
+      residenciales medianos sí. Ver docs/producto/2026-06-12-superapp-residente-familia-gap.md.
+    status: open
+    related: [docs/producto/2026-06-12-superapp-residente-familia-gap.md, D-003]
 
 # --------------------------------------------------------------------------
 # Hitos
