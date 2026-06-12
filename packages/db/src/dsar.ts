@@ -10,6 +10,24 @@
 //    Qué se conserva exactamente lo parametriza `AnonymizePolicy` — la política
 //    concreta de retención es decisión de negocio/legal (Q-003, pendiente de
 //    Angel); el mecanismo no espera a esa decisión.
+//
+// CHANGELOG:
+//  - v2 (2026-06-12, CRÍTICO-01): añadidas todas las tablas de Fase 1 y del
+//    portal (ResidentDevice, Vaccine, WeightRecord, PressureUlcer+UPPCuring,
+//    FallRecord, Restraint, ConsentRecord, LifeStory, ServiceRequest+comments,
+//    Visit, MessageThread+Message). Los comentarios internos de staff (internal=true)
+//    SE INCLUYEN en el export art.15: son datos personales del interesado (reflejan
+//    valoraciones del staff sobre él/ella) y el derecho de acceso del RGPD los cubre.
+//    Ref.: GT29 WP260 rev.01 §3.3 y AEPD "Guía para el cumplimiento del deber de
+//    informar" (2021). La versión del JSON sube de 1 a 2.
+//  - v2 (2026-06-12, CRÍTICO-02): anonymizeResident borra ahora todas las tablas
+//    nuevas en la rama keepClinicalRecords=false, y SIEMPRE (independientemente de
+//    la política) limpia los campos con PII de terceros:
+//      · ConsentRecord.grantedBy → null  (nombre del firmante; tercero)
+//      · LifeStory → DELETE completo     (100% datos personales/categoría especial
+//        art. 9: religion; datos de terceros: importantPeople. DELETE es más seguro
+//        que nullificar campo a campo porque evita fugas si se añaden campos nuevos)
+//      · Visit.visitorNames → []         (nombres de visitantes; terceros no usuarios)
 
 import type { TenantPrisma } from './rls';
 
@@ -44,7 +62,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 1;
+  version: 2;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -54,6 +72,18 @@ export interface ResidentExport {
   treatments: unknown[];
   carePlans: unknown[];
   auditTrail: unknown[];
+  // v2: tablas Fase 1 y portal
+  devices: unknown[];
+  vaccines: unknown[];
+  weights: unknown[];
+  pressureUlcers: unknown[];
+  falls: unknown[];
+  restraints: unknown[];
+  consents: unknown[];
+  lifeStory: unknown | null;
+  serviceRequests: unknown[];
+  visits: unknown[];
+  messageThreads: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -87,27 +117,70 @@ export async function exportResidentData(
     throw new Error(`Residente ${residentId} no encontrado en el tenant.`);
   }
 
-  const [careRecords, medications, administrations, treatments, carePlans, auditTrail] =
-    await Promise.all([
-      db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
-      db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
-      db.medicationAdministration.findMany({
-        where: { residentId },
-        orderBy: { scheduledAt: 'asc' },
-      }),
-      db.treatment.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
-      db.carePlan.findMany({
-        where: { residentId },
-        include: { goals: true, reviews: true },
-        orderBy: { createdAt: 'asc' },
-      }),
-      // Trazas de auditoría cuyo sujeto es el residente.
-      db.auditLog.findMany({ where: { entityId: residentId }, orderBy: { createdAt: 'asc' } }),
-    ]);
+  const [
+    careRecords,
+    medications,
+    administrations,
+    treatments,
+    carePlans,
+    auditTrail,
+    devices,
+    vaccines,
+    weights,
+    pressureUlcers,
+    falls,
+    restraints,
+    consents,
+    lifeStory,
+    serviceRequests,
+    visits,
+    messageThreads,
+  ] = await Promise.all([
+    db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
+    db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
+    db.medicationAdministration.findMany({
+      where: { residentId },
+      orderBy: { scheduledAt: 'asc' },
+    }),
+    db.treatment.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
+    db.carePlan.findMany({
+      where: { residentId },
+      include: { goals: true, reviews: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    // Trazas de auditoría cuyo sujeto es el residente.
+    db.auditLog.findMany({ where: { entityId: residentId }, orderBy: { createdAt: 'asc' } }),
+    // v2: Fase 1
+    db.residentDevice.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
+    db.vaccine.findMany({ where: { residentId }, orderBy: { date: 'asc' } }),
+    db.weightRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
+    db.pressureUlcer.findMany({
+      where: { residentId },
+      include: { curings: true },
+      orderBy: { onsetDate: 'asc' },
+    }),
+    db.fallRecord.findMany({ where: { residentId }, orderBy: { occurredAt: 'asc' } }),
+    db.restraint.findMany({ where: { residentId }, orderBy: { prescribedAt: 'asc' } }),
+    db.consentRecord.findMany({ where: { residentId }, orderBy: { date: 'asc' } }),
+    db.lifeStory.findUnique({ where: { residentId } }),
+    // v2: Portal — los comentarios internos SE INCLUYEN (art. 15: el interesado tiene
+    // derecho a acceder a todos sus datos, incluyendo valoraciones del staff sobre él).
+    db.serviceRequest.findMany({
+      where: { residentId },
+      include: { comments: { orderBy: { createdAt: 'asc' } } },
+      orderBy: { createdAt: 'asc' },
+    }),
+    db.visit.findMany({ where: { residentId }, orderBy: { scheduledAt: 'asc' } }),
+    db.messageThread.findMany({
+      where: { residentId },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -117,6 +190,17 @@ export async function exportResidentData(
     treatments,
     carePlans,
     auditTrail,
+    devices,
+    vaccines,
+    weights,
+    pressureUlcers,
+    falls,
+    restraints,
+    consents,
+    lifeStory,
+    serviceRequests,
+    visits,
+    messageThreads,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -169,7 +253,34 @@ export async function anonymizeResident(
   const contacts = await db.emergencyContact.deleteMany({ where: { residentId } });
   const links = await db.familyLink.deleteMany({ where: { residentId } });
 
-  // 3) Datos clínicos: según política (default conservar, ya disociados).
+  // 3) PII de terceros INDEPENDIENTE de la política de conservación clínica.
+  //    Estos datos afectan a personas físicas distintas del residente y no tienen
+  //    cobertura de retención sanitaria; se limpian siempre (art. 17 RGPD).
+  //
+  //    · ConsentRecord.grantedBy: nombre de quien firmó. Es PII de un tercero
+  //      (representante legal, familiar). Se pone a null para mantener la traza
+  //      del consentimiento (tipo, fecha, decisión) sin identificar al firmante.
+  //
+  //    · LifeStory: DELETE completo. Contiene datos de categoría especial (religion
+  //      — art. 9 RGPD) e identificación de terceros (importantPeople). Borrar la
+  //      fila es más seguro que nullificar campo a campo: garantiza limpieza aunque
+  //      se añadan campos nuevos en el futuro. La historia de vida NO tiene base de
+  //      retención sanitaria obligatoria.
+  //
+  //    · Visit.visitorNames: nombres de visitantes (terceros no usuarios del sistema).
+  //      Se sobrescriben con [] para conservar la traza de visita (fecha, estado)
+  //      sin los datos de identidad de los acompañantes.
+  await db.consentRecord.updateMany({
+    where: { residentId },
+    data: { grantedBy: null },
+  });
+  await db.lifeStory.deleteMany({ where: { residentId } });
+  await db.visit.updateMany({
+    where: { residentId },
+    data: { visitorNames: [] },
+  });
+
+  // 4) Datos clínicos: según política (default conservar, ya disociados).
   if (!policy.keepClinicalRecords) {
     // El orden respeta las FKs (hijos antes que padres).
     await db.medicationSyncConflict.deleteMany({
@@ -186,6 +297,26 @@ export async function anonymizeResident(
     await db.assessment.deleteMany({ where: { residentId } });
     await db.diagnosis.deleteMany({ where: { residentId } });
     await db.allergy.deleteMany({ where: { residentId } });
+    // Fase 1 — tablas nuevas (orden respeta FKs):
+    await db.uPPCuring.deleteMany({ where: { pressureUlcer: { residentId } } });
+    await db.pressureUlcer.deleteMany({ where: { residentId } });
+    await db.restraint.deleteMany({ where: { residentId } });
+    await db.fallRecord.deleteMany({ where: { residentId } });
+    await db.weightRecord.deleteMany({ where: { residentId } });
+    await db.vaccine.deleteMany({ where: { residentId } });
+    await db.residentDevice.deleteMany({ where: { residentId } });
+    // ConsentRecord: el grantedBy ya fue limpiado arriba; el delete completo
+    // aplica solo si !keepClinicalRecords (los consentimientos son historial clínico).
+    await db.consentRecord.deleteMany({ where: { residentId } });
+    // Portal:
+    await db.serviceRequestComment.deleteMany({
+      where: { request: { residentId } },
+    });
+    await db.serviceRequest.deleteMany({ where: { residentId } });
+    await db.message.deleteMany({ where: { thread: { residentId } } });
+    await db.messageThread.deleteMany({ where: { residentId } });
+    // Visit: la traza de visita (sin visitorNames ya limpiado) se borra también.
+    await db.visit.deleteMany({ where: { residentId } });
   }
 
   return {

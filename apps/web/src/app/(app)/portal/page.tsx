@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Badge, Card, CardContent, CardTitle } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatDate } from '@/lib/format';
 import { humanizeCareRecord } from '@/lib/care-humanize';
 import { interpretScale, SCALE_RANGES, type ScaleType } from '@/lib/scales';
 import {
@@ -28,6 +28,14 @@ export default function PortalPage() {
   const pendingAttention = (solicitudes.data ?? []).filter(
     (r) => r.status === 'PENDIENTE_INFO',
   ).length;
+
+  // Visitas: próxima visita confirmada
+  const visits = api.visits.listMine.useQuery();
+  const visitList = visits.data ?? [];
+  const now = new Date();
+  const nextConfirmedVisit = visitList
+    .filter((v) => v.status === 'CONFIRMADA' && new Date(v.scheduledAt) > now)
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0];
 
   // Comunicados: no leídos + pendientes de acuse
   const announcements = api.comms.listAnnouncementsForMe.useQuery();
@@ -60,8 +68,34 @@ export default function PortalPage() {
         <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('portal.intro')}</p>
       </div>
 
-      {/* Accesos rápidos — solicitudes, comunicados, mensajes */}
+      {/* Accesos rápidos — visitas, solicitudes, comunicados, mensajes */}
       <div className="flex flex-col gap-3">
+        {/* Visitas */}
+        <Link
+          href="/portal/visitas"
+          className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          aria-label={t('visits.portal.quicklink.label')}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg" aria-hidden="true">
+              🗓
+            </span>
+            <div>
+              <p className="font-semibold text-[#1A3A3F]">{t('visits.portal.quicklink.label')}</p>
+              <p className="text-sm text-[#1A3A3F]/60">{t('visits.portal.quicklink.desc')}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {nextConfirmedVisit && (
+              <Badge tone="green">
+                {t('visits.portal.nextVisit', {
+                  date: formatDate(locale, new Date(nextConfirmedVisit.scheduledAt)),
+                })}
+              </Badge>
+            )}
+            <span className="text-brand-700" aria-hidden="true">→</span>
+          </div>
+        </Link>
         {/* Solicitudes */}
         <Link
           href="/portal/solicitudes"
