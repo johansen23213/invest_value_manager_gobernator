@@ -10,6 +10,11 @@ import { cn } from './cn';
 
 // Dialog accesible sobre Radix (UX-08): focus-trap, scroll-lock, retorno de
 // foco, cierre con Escape y aria-modal correctos sin esfuerzo manual.
+// v2: overlay navy cálido (en vez de slate-900), sombra shadow-dialog profunda,
+// animate-scale-in en apertura (respeta prefers-reduced-motion via CSS global),
+// DialogTitle usa navy cálido, DialogDescription usa navy/60.
+// API pública sin cambios — mismos exports que v1.
+
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
@@ -21,7 +26,8 @@ export const DialogOverlay = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn('fixed inset-0 z-50 bg-slate-900/40', className)}
+    // navy cálido en vez de slate-900 — coherencia con la paleta
+    className={cn('fixed inset-0 z-50 bg-[#1A3A3F]/50', className)}
     {...props}
   />
 ));
@@ -36,7 +42,16 @@ export const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl focus:outline-none',
+        // Posición centrada
+        'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2',
+        // Superficie y forma Lifecare
+        'rounded-2xl bg-white p-6',
+        // Sombra profunda dialog v2 (shadow-dialog)
+        'shadow-[0_24px_64px_0_rgb(15_82_87_/_0.20),0_8px_24px_-4px_rgb(15_82_87_/_0.10)]',
+        // Entrada animada — la clase animate-scale-in está en globals.css con
+        // guard prefers-reduced-motion, por lo que es segura aquí.
+        'animate-scale-in',
+        'focus:outline-none',
         className,
       )}
       {...props}
@@ -53,7 +68,8 @@ export const DialogTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-lg font-semibold text-slate-900', className)}
+    // navy cálido en vez de slate-900
+    className={cn('text-lg font-semibold text-[#1A3A3F]', className)}
     {...props}
   />
 ));
@@ -65,7 +81,8 @@ export const DialogDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn('mt-2 text-sm text-slate-600', className)}
+    // navy/60 en vez de slate-600
+    className={cn('mt-2 text-sm text-[#1A3A3F]/60', className)}
     {...props}
   />
 ));
@@ -75,5 +92,10 @@ export function DialogFooter({
   className,
   ...props
 }: ComponentPropsWithoutRef<'div'>) {
-  return <div className={cn('mt-6 flex justify-end gap-2', className)} {...props} />;
+  return (
+    <div
+      className={cn('mt-6 flex justify-end gap-2', className)}
+      {...props}
+    />
+  );
 }

@@ -25,7 +25,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang={locale}>
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+      {/*
+        bg-surface (crema #FAF7F2) en vez de bg-slate-50 (blanco frío).
+        font-sans aplica el stack sistema (Inter → system-ui).
+        El foco visible global viene de globals.css :focus-visible.
+      */}
+      <body className="min-h-screen bg-surface font-sans text-base antialiased">
         <a
           href="#contenido"
           className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-slate-900 focus:px-3 focus:py-2 focus:text-white"
