@@ -9,8 +9,10 @@ import {
 import { cn } from './cn';
 
 // Tabs accesible sobre Radix (UX-08): navegación por teclado (flechas),
-// roles tab/tablist/tabpanel y gestión de foco. Base para el expediente
-// en pestañas (UX-12).
+// roles tab/tablist/tabpanel y gestión de foco.
+// v2: border-brand-100 en vez de border-slate-200; colores de texto navy cálido.
+// API pública sin cambios.
+
 export const Tabs = TabsPrimitive.Root;
 
 export const TabsList = forwardRef<
@@ -19,7 +21,8 @@ export const TabsList = forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn('flex flex-wrap gap-1 border-b border-slate-200', className)}
+    // brand-100 en vez de slate-200 — coherencia cromática Lifecare
+    className={cn('flex flex-wrap gap-1 border-b border-brand-100', className)}
     {...props}
   />
 ));
@@ -32,7 +35,16 @@ export const TabsTrigger = forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'min-h-touch -mb-px rounded-t-md border-b-2 border-transparent px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 data-[state=active]:border-brand-700 data-[state=active]:text-brand-800',
+      // Base: min-h-touch para accesibilidad táctil (WCAG 2.5.5)
+      'min-h-touch -mb-px rounded-t-md border-b-2 border-transparent px-4 py-2 text-sm font-medium',
+      // Colores navy cálido en vez de slate-600/slate-900
+      'text-[#1A3A3F]/60 transition-smooth hover:text-[#1A3A3F]',
+      // Hover: borde brand suave
+      'hover:border-brand-200',
+      // Foco accesible
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+      // Estado activo: borde brand-700 + texto brand-800
+      'data-[state=active]:border-brand-700 data-[state=active]:text-brand-800 data-[state=active]:font-semibold',
       className,
     )}
     {...props}
