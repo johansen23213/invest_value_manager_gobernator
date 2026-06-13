@@ -12,6 +12,7 @@ import {
   FieldError,
   Input,
   Label,
+  PageHeader,
   Select,
   Skeleton,
   Table,
@@ -59,7 +60,7 @@ export default function CentersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">{t('centers.title')}</h1>
+      <PageHeader title={t('centers.title')} accent />
 
       {canWrite && (
         <Card>
@@ -124,17 +125,17 @@ export default function CentersPage() {
             </div>
           ) : filtered.length > 0 ? (
             <Table>
-              <thead>
+              <thead className="bg-brand-50">
                 <tr>
-                  <Th>{t('centers.table.name')}</Th>
-                  <Th>{t('centers.table.type')}</Th>
-                  <Th>{t('centers.table.units')}</Th>
-                  <Th>{t('centers.table.residents')}</Th>
+                  <Th className="text-brand-700">{t('centers.table.name')}</Th>
+                  <Th className="text-brand-700">{t('centers.table.type')}</Th>
+                  <Th className="text-brand-700">{t('centers.table.units')}</Th>
+                  <Th className="text-brand-700">{t('centers.table.residents')}</Th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id}>
+                  <tr key={c.id} className="transition-lift hover:bg-brand-50">
                     <Td>
                       <Link href={`/centros/${c.id}`} className="font-medium text-brand-700 hover:underline">
                         {c.name}
@@ -150,7 +151,7 @@ export default function CentersPage() {
               </tbody>
             </Table>
           ) : centers.data && centers.data.length > 0 ? (
-            <EmptyState title={t('centers.empty.noResults')} description={t('centers.empty.noResultsDesc')} />
+            <EmptyState variant="search" title={t('centers.empty.noResults')} description={t('centers.empty.noResultsDesc')} />
           ) : (
             <EmptyState
               title={t('centers.empty.none')}
