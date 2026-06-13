@@ -353,3 +353,29 @@ export const REVIEW_STATUS_LABELS: Record<string, string> = {
   OK:       'Al día',
   NOT_SET:  'Sin fecha',
 };
+
+// ---------------------------------------------------------------------------
+// Épica D — Cuadrante/Turnos del personal (RF-PRO-003/004/008/009/010/013)
+// ---------------------------------------------------------------------------
+
+/** Estado de una asignación al cuadrante (AssignmentStatus). */
+export const ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
+  PLANIFICADO: 'Planificado',
+  CONFIRMADO:  'Confirmado',
+  AUSENTE:     'Ausente',
+  SUSTITUIDO:  'Sustituido',
+};
+
+/**
+ * Tono de color semántico para cada AssignmentStatus.
+ * El color nunca es el único canal (WCAG 1.4.1): el texto también varía.
+ */
+export const ASSIGNMENT_STATUS_TONE: Record<
+  string,
+  'neutral' | 'green' | 'amber' | 'red'
+> = {
+  PLANIFICADO: 'neutral',
+  CONFIRMADO:  'green',
+  AUSENTE:     'red',
+  SUSTITUIDO:  'amber',
+};
