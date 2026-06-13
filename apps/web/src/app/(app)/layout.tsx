@@ -110,6 +110,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           { href: '/conflictos', label: t('nav.conflicts'), active: isItemActive(pathname, '/conflictos') },
         ]
       : []),
+    ...(hasPermission(user.role, 'residents:read')
+      ? [{ href: '/acp', label: t('nav.acp'), active: isItemActive(pathname, '/acp') }]
+      : []),
   ];
 
   // ── Grupo Familias ─────────────────────────────────────────────────────────

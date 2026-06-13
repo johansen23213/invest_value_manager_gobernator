@@ -28,6 +28,12 @@
 //        art. 9: religion; datos de terceros: importantPeople. DELETE es más seguro
 //        que nullificar campo a campo porque evita fugas si se añaden campos nuevos)
 //      · Visit.visitorNames → []         (nombres de visitantes; terceros no usuarios)
+//  - v4 (2026-06-13, Épica B): añadidas DischargeRecord, SocialReport, WellbeingProfile.
+//    · DischargeRecord: export:true, anonymize:'scrub' (ver dsar-registry.ts).
+//      En keepClinicalRecords=false: scrub de campos PII + DELETE de la fila.
+//    · SocialReport: export:true, anonymize:'delete'.
+//    · WellbeingProfile: export:true, anonymize:'delete'.
+//    La versión del JSON sube de 3 a 4.
 
 import type { TenantPrisma } from './rls';
 
@@ -62,7 +68,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 3;
+  version: 4;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -87,6 +93,10 @@ export interface ResidentExport {
   // v3: documentación clínica (Épica A)
   nursingNotes: unknown[];
   medicalNotes: unknown[];
+  // v4: Épica B — exitus/baja, informe social, perfil de bienestar ACP
+  dischargeRecords: unknown[];
+  socialReports: unknown[];
+  wellbeingProfile: unknown | null;
 }
 
 export interface ResidentExportResult {
@@ -140,6 +150,9 @@ export async function exportResidentData(
     messageThreads,
     nursingNotes,
     medicalNotes,
+    dischargeRecords,
+    socialReports,
+    wellbeingProfile,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -193,11 +206,24 @@ export async function exportResidentData(
       include: { author: { select: { id: true, name: true } } },
       orderBy: { noteDate: 'asc' },
     }),
+    // v4: Épica B — exitus/baja, informe social, perfil de bienestar ACP.
+    // DischargeRecord: export art.15 (el interesado tiene derecho a conocer su
+    // historial de bajas). SocialReport y WellbeingProfile: datos personales del
+    // interesado — derecho de acceso art.15 RGPD.
+    db.dischargeRecord.findMany({
+      where:   { residentId },
+      orderBy: { dischargedAt: 'asc' },
+    }),
+    db.socialReport.findMany({
+      where:   { residentId },
+      orderBy: { reportDate: 'asc' },
+    }),
+    db.wellbeingProfile.findUnique({ where: { residentId } }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 3,
+    version: 4,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -220,6 +246,9 @@ export async function exportResidentData(
     messageThreads,
     nursingNotes,
     medicalNotes,
+    dischargeRecords,
+    socialReports,
+    wellbeingProfile,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -339,6 +368,12 @@ export async function anonymizeResident(
     // Épica A — documentación clínica (v3):
     await db.nursingNote.deleteMany({ where: { residentId } });
     await db.medicalNote.deleteMany({ where: { residentId } });
+    // Épica B — exitus/baja, informe social, perfil de bienestar ACP (v4):
+    // DischargeRecord: política 'scrub' → borramos la fila completa en este caso
+    // porque !keepClinicalRecords implica limpieza total.
+    await db.dischargeRecord.deleteMany({ where: { residentId } });
+    await db.socialReport.deleteMany({ where: { residentId } });
+    await db.wellbeingProfile.deleteMany({ where: { residentId } });
   }
 
   return {

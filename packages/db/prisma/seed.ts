@@ -11,6 +11,7 @@ import {
   DependencyGrade,
   DeviceType,
   DietType,
+  DischargeType,
   LiquidTexture,
   MedicalNoteType,
   MessageThreadCategory,
@@ -967,6 +968,111 @@ async function main() {
 
     console.log(`  Documentación clínica (Épica A): 3 notas de enfermería + 1 evolutivo médico para residente ${seedResident.firstName} ${seedResident.lastName}`);
   }
+
+  // ---------------------------------------------------------------------------
+  // Seed de Épica B — Exitus/Baja, Informe Social, Perfil de Bienestar ACP
+  // ---------------------------------------------------------------------------
+
+  // Limpieza idempotente
+  await db.dischargeRecord.deleteMany({ where: { tenantId: tenant.id } });
+  await db.socialReport.deleteMany({ where: { tenantId: tenant.id } });
+  await db.wellbeingProfile.deleteMany({ where: { tenantId: tenant.id } });
+
+  // Necesitamos un residente para los datos demo; usamos los dos primeros
+  const [firstDemoResident, secondDemoResident] = await Promise.all([
+    db.resident.findFirst({
+      where:   { tenantId: tenant.id },
+      orderBy: { lastName: 'asc' },
+    }),
+    db.resident.findFirst({
+      where:   { tenantId: tenant.id, status: ResidentStatus.ACTIVO },
+      orderBy: { lastName: 'desc' },
+    }),
+  ]);
+
+  if (sanitario && firstDemoResident) {
+    // 1) Baja histórica: traslado a hospital (el residente puede haber reingresado)
+    //    Se asocia al primer residente demo con status ACTIVO actual, pero se
+    //    registra la baja como historial (sin cambiar su status en seed, para no
+    //    romper los datos demo de atención directa).
+    await db.dischargeRecord.create({
+      data: {
+        tenantId:          tenant.id,
+        residentId:        firstDemoResident.id,
+        type:              DischargeType.TRASLADO_HOSPITAL,
+        dischargedAt:      new Date('2025-03-15T10:30:00.000Z'),
+        reason:            'Agudización de insuficiencia cardíaca. Ingreso hospitalario urgente.',
+        certifiedBy:       null,
+        destination:       'Hospital Universitario La Fe, Valencia',
+        familyNotifiedAt:  new Date('2025-03-15T11:00:00.000Z'),
+        belongingsReturned: false,
+        notes:             'Residente reingresó el 2025-04-02 tras alta hospitalaria. Baja temporal.',
+        recordedById:      sanitario.id,
+      },
+    });
+
+    // 2) Informe social del primer residente demo
+    await db.socialReport.create({
+      data: {
+        tenantId:          tenant.id,
+        residentId:        firstDemoResident.id,
+        authorId:          sanitario.id,
+        reportDate:        new Date('2026-01-20'),
+        familySituation:   'Vive con el cónyuge hasta el ingreso. Hijos en Valencia. Familia muy implicada en el seguimiento.',
+        supportNetwork:    'Red familiar sólida. Hija visita cada día. Participación en actividades grupales del centro.',
+        economicSituation: 'Pensión de jubilación de 1.200€/mes. Copago de Dependencia aprobado (Grado III). Plaza concertada.',
+        benefits:          'Prestación Vinculada al Servicio (PVS) aprobada. Solicitud de ampliación de prestación en trámite.',
+        workHistory:       'Funcionaria de Correos durante 30 años. Jubilada a los 65.',
+        socialAssessment:  'Buena adaptación al centro. Red de apoyo familiar estable. Sin conflictos relacionales. Se recomienda mantener participación en actividades de estimulación cognitiva.',
+        agreements:        'Acuerdo con la familia: residente no desea información sobre cambios de medicación sin presencia del médico. Visitas abiertas en horario de tarde.',
+        nextReviewDate:    new Date('2026-07-20'),
+      },
+    });
+
+    // 3) Perfil de bienestar ACP del primer residente demo
+    await db.wellbeingProfile.upsert({
+      where:  { residentId: firstDemoResident.id },
+      update: {},
+      create: {
+        tenantId:               tenant.id,
+        residentId:             firstDemoResident.id,
+        updatedById:            sanitario.id,
+        // 8 dimensiones ACP (UNE 158101)
+        emotionalWellbeing:     'Estado emocional generalmente positivo. Algo de tristeza los domingos cuando los hijos no pueden visitar. Responde bien a la música de zarzuela.',
+        physicalWellbeing:      'Control del dolor adecuado con pauta actual. Disfagia nivel 2 (néctar). Movilidad reducida; usa andador. Sin dolor crónico significativo.',
+        materialWellbeing:      'Habitación individual adaptada. Efectos personales propios (fotos familiares, colcha de casa). Pensión cubre gastos del centro con holgura.',
+        personalDevelopment:    'Participa en taller de lectura los martes. Interés por las actividades manuales (punto de cruz). Mantiene capacidad de aprendizaje social.',
+        selfDetermination:      'Expresa claramente sus preferencias. Decide sobre su higiene y rutinas. Firme en sus convicciones religiosas. Quiere participar en decisiones de su cuidado.',
+        interpersonalRelations:  'Buena relación con compañeros de planta. Amistad estrecha con la Sra. González (hab. 202). Familia muy presente.',
+        socialInclusion:        'Participa en actividades del centro. Sale al jardín a diario cuando el tiempo lo permite. Comparte mesa en el comedor.',
+        rights:                 'Documentos de voluntades anticipadas firmados y depositados en notaría. Representación legal por hija Ana. Consentimiento informado de ingreso firmado.',
+        // RF-SOC-005
+        importantToThePerson:   'La familia es lo más importante. La misa dominical (se organiza visita a la parroquia mensualmente). Su gato (fotos en la mesita). Estar informada de su salud.',
+        importantForThePerson:  'Evitar la textura de líquidos claros (riesgo de aspiración). No hablar de la muerte del marido sin ella sacar el tema. Mantener la rutina matutina (desayuno a las 8h exactas).',
+        nextReviewDate:         new Date('2026-12-20'),
+      },
+    });
+  }
+
+  // 4) Perfil ACP del segundo residente demo (sin nextReviewDate → pendiente de planificar)
+  if (sanitario && secondDemoResident && secondDemoResident.id !== firstDemoResident?.id) {
+    await db.wellbeingProfile.upsert({
+      where:  { residentId: secondDemoResident.id },
+      update: {},
+      create: {
+        tenantId:               tenant.id,
+        residentId:             secondDemoResident.id,
+        updatedById:            sanitario.id,
+        emotionalWellbeing:     'Pendiente de evaluación completa. Primera entrevista ACP realizada.',
+        selfDetermination:      'Muy autónomo en sus decisiones. Prefiere no recibir ayuda si puede hacerlo solo.',
+        importantToThePerson:   'La lectura del periódico cada mañana. El ajedrez. La independencia.',
+        importantForThePerson:  'Respetar su ritmo. No anticiparse a sus necesidades sin que las exprese.',
+        // Sin nextReviewDate: pendiente de planificar (aparecerá en panel "sin fecha")
+      },
+    });
+  }
+
+  console.log(`  Épica B: 1 baja histórica (traslado) + 1 informe social + 2 perfiles de bienestar ACP`);
 
   console.log(`Seed OK.`);
   console.log(`  Tenant: ${tenant.name}`);
