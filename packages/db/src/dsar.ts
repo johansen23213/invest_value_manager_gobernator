@@ -62,7 +62,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 2;
+  version: 3;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -84,6 +84,9 @@ export interface ResidentExport {
   serviceRequests: unknown[];
   visits: unknown[];
   messageThreads: unknown[];
+  // v3: documentación clínica (Épica A)
+  nursingNotes: unknown[];
+  medicalNotes: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -135,6 +138,8 @@ export async function exportResidentData(
     serviceRequests,
     visits,
     messageThreads,
+    nursingNotes,
+    medicalNotes,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -176,11 +181,23 @@ export async function exportResidentData(
       include: { messages: { orderBy: { createdAt: 'asc' } } },
       orderBy: { createdAt: 'asc' },
     }),
+    // v3: Épica A — documentación clínica (RF-CLI-010: staff-only, pero el
+    // interesado tiene derecho de acceso art. 15 a su propia historia clínica).
+    db.nursingNote.findMany({
+      where: { residentId },
+      include: { author: { select: { id: true, name: true } } },
+      orderBy: { noteDate: 'asc' },
+    }),
+    db.medicalNote.findMany({
+      where: { residentId },
+      include: { author: { select: { id: true, name: true } } },
+      orderBy: { noteDate: 'asc' },
+    }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 2,
+    version: 3,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -201,6 +218,8 @@ export async function exportResidentData(
     serviceRequests,
     visits,
     messageThreads,
+    nursingNotes,
+    medicalNotes,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -317,6 +336,9 @@ export async function anonymizeResident(
     await db.messageThread.deleteMany({ where: { residentId } });
     // Visit: la traza de visita (sin visitorNames ya limpiado) se borra también.
     await db.visit.deleteMany({ where: { residentId } });
+    // Épica A — documentación clínica (v3):
+    await db.nursingNote.deleteMany({ where: { residentId } });
+    await db.medicalNote.deleteMany({ where: { residentId } });
   }
 
   return {

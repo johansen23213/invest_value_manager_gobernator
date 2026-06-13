@@ -197,6 +197,20 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
     anonymize: 'keep',
     reason:    'Comunicado de centro: residentId opcional (audiencia específica). El comunicado es del centro, no del residente. No se exporta individualmente (el center lo retiene). Exclusión explícita.',
   },
+
+  // Épica A — Documentación clínica estructurada
+  {
+    model:     'NursingNote',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Nota de enfermería por turno: dato de salud (art. 9 RGPD). Contiene observaciones del residente firmadas por enfermería. Se exporta en DSAR art.15 y se borra en anonimización si !keepClinicalRecords.',
+  },
+  {
+    model:     'MedicalNote',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Evolutivo médico: dato de salud de categoría especial (art. 9 RGPD). Staff-only por diseño (RF-CLI-010). Se exporta en DSAR art.15 (el interesado tiene derecho a acceder a su historia clínica) y se borra si !keepClinicalRecords.',
+  },
 ];
 
 /** Lookup rápido por nombre de modelo. */
