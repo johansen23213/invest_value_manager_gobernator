@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Badge, Card, CardContent, EmptyState, Select, Skeleton } from '@vetlla/ui';
+import { Badge, Card, CardContent, EmptyState, PageHeader, Select, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
@@ -32,26 +32,27 @@ export default function SolicitudesStaffPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-            {t('requests.staff.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('requests.staff.intro')}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {pendingCount > 0 && (
-              <Badge tone="blue">
-                {t('requests.staff.pendingBadge', { count: pendingCount })}
-              </Badge>
-            )}
-            {overdueCount > 0 && (
-              <Badge tone="red">
-                {t('requests.staff.overdueBadgeCount', { count: overdueCount })}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title={t('requests.staff.title')}
+        subtitle={t('requests.staff.intro')}
+        accent
+        action={
+          (pendingCount > 0 || overdueCount > 0) ? (
+            <div className="flex flex-wrap gap-2">
+              {pendingCount > 0 && (
+                <Badge tone="blue">
+                  {t('requests.staff.pendingBadge', { count: pendingCount })}
+                </Badge>
+              )}
+              {overdueCount > 0 && (
+                <Badge tone="red">
+                  {t('requests.staff.overdueBadgeCount', { count: overdueCount })}
+                </Badge>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3">

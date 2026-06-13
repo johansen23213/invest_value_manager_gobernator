@@ -6,7 +6,7 @@
 // usuario vuelve a registrarlo en su pantalla (MAR / atención).
 
 import Link from 'next/link';
-import { Badge, Button, Card, CardContent, CardTitle, EmptyState } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, CardTitle, EmptyState, PageHeader } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
@@ -58,20 +58,21 @@ export default function ConflictsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('conf.title')}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[#1A3A3F]/70">{t('conf.intro')}</p>
-        {total > 0 && (
-          <p className="mt-2">
+      <PageHeader
+        title={t('conf.title')}
+        subtitle={t('conf.intro')}
+        accent
+        action={
+          total > 0 ? (
             <Badge tone="amber">{t('conf.pending', { count: total })}</Badge>
-          </p>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
 
       {conflicts.isLoading ? (
         <p className="text-[#1A3A3F]/60">…</p>
       ) : total === 0 ? (
-        <EmptyState title={t('conf.empty')} description={t('conf.emptyDesc')} />
+        <EmptyState variant="check" title={t('conf.empty')} description={t('conf.emptyDesc')} />
       ) : (
         <div className="flex flex-col gap-6">
           {/* Medicación */}

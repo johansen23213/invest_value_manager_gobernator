@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Badge, Card, CardContent, EmptyState, Skeleton } from '@vetlla/ui';
+import { Badge, Card, CardContent, EmptyState, PageHeader, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -52,28 +52,26 @@ export default function PortalComunicadosPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-          {t('comms.portal.announcements.title')}
-        </h1>
-        <p className="mt-1 text-sm text-[#1A3A3F]/60">
-          {t('comms.portal.announcements.intro')}
-        </p>
-        {(unreadCount > 0 || pendingAckCount > 0) && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {unreadCount > 0 && (
-              <Badge tone="blue">
-                {t('comms.portal.announcements.unread', { count: unreadCount })}
-              </Badge>
-            )}
-            {pendingAckCount > 0 && (
-              <Badge tone="amber">
-                {t('comms.portal.announcements.pendingAck', { count: pendingAckCount })}
-              </Badge>
-            )}
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title={t('comms.portal.announcements.title')}
+        subtitle={t('comms.portal.announcements.intro')}
+        action={
+          (unreadCount > 0 || pendingAckCount > 0) ? (
+            <div className="flex flex-wrap gap-2">
+              {unreadCount > 0 && (
+                <Badge tone="blue">
+                  {t('comms.portal.announcements.unread', { count: unreadCount })}
+                </Badge>
+              )}
+              {pendingAckCount > 0 && (
+                <Badge tone="amber">
+                  {t('comms.portal.announcements.pendingAck', { count: pendingAckCount })}
+                </Badge>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* Lista */}
       {announcements.isLoading ? (

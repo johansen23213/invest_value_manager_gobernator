@@ -2,7 +2,7 @@
 
 import { use, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, Skeleton } from '@vetlla/ui';
+import { Card, CardContent, PageHeader, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
@@ -73,26 +73,20 @@ export default function PortalMensajeDetailPage({
       <div>
         <Link
           href="/portal/mensajes"
-          className="text-sm text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          className="mb-1 block text-sm text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
         >
           {t('comms.portal.messages.back')}
         </Link>
-        <div className="mt-2 flex flex-wrap items-start gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <MessageThreadCategoryBadge category={data.category} />
-              <MessageThreadStatusBadge status={data.status} />
-            </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-              {data.subject}
-            </h1>
-            <p className="text-sm text-[#1A3A3F]/60">
-              {t('comms.portal.messages.resident', {
-                name: `${data.resident.firstName} ${data.resident.lastName}`,
-              })}
-            </p>
-          </div>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <MessageThreadCategoryBadge category={data.category} />
+          <MessageThreadStatusBadge status={data.status} />
         </div>
+        <PageHeader
+          title={data.subject}
+          subtitle={t('comms.portal.messages.resident', {
+            name: `${data.resident.firstName} ${data.resident.lastName}`,
+          })}
+        />
       </div>
 
       {/* Burbuja de conversación */}

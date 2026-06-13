@@ -17,9 +17,9 @@ import {
   Button,
   Card,
   CardContent,
-  CardTitle,
   Input,
   Label,
+  SectionCard,
 } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
@@ -276,48 +276,42 @@ export function WellbeingTab({ residentId, canWrite }: WellbeingTabProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Cabecera */}
-      <Card>
-        <CardContent>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle className="text-base">{t('exp.wellbeing.title')}</CardTitle>
-              <p className="text-xs text-[#1A3A3F]/50">{t('exp.wellbeing.subtitle')}</p>
+      <SectionCard
+        title={t('exp.wellbeing.title')}
+        aside={canWrite ? (
+          <Button size="sm" onClick={openEdit}>
+            {t('exp.wellbeing.edit')}
+          </Button>
+        ) : undefined}
+      >
+        <p className="mb-2 text-xs text-[#1A3A3F]/50">{t('exp.wellbeing.subtitle')}</p>
+        {profileQ.isLoading ? (
+          <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+        ) : !profile ? (
+          <p className="text-sm text-[#1A3A3F]/60">{t('exp.wellbeing.empty')}</p>
+        ) : (
+          <div className="flex flex-col gap-2 text-sm">
+            {/* Metadatos + estado de revisión */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#1A3A3F]/50">
+              {profile.updatedBy && (
+                <span>
+                  {t('exp.wellbeing.lastUpdate', {
+                    name: profile.updatedBy.name ?? profile.updatedBy.id,
+                  })}
+                </span>
+              )}
+              <span aria-hidden="true">·</span>
+              <span>{t('exp.wellbeing.nextReviewDate')}:</span>
+              {profile.nextReviewDate ? (
+                <span>{fmtDate(profile.nextReviewDate)}</span>
+              ) : (
+                <span>{t('exp.wellbeing.review.NOT_SET')}</span>
+              )}
+              <ReviewStatusChip nextReviewDate={profile.nextReviewDate} t={t} />
             </div>
-            {canWrite && (
-              <Button size="sm" onClick={openEdit}>
-                {t('exp.wellbeing.edit')}
-              </Button>
-            )}
           </div>
-
-          {profileQ.isLoading ? (
-            <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
-          ) : !profile ? (
-            <p className="text-sm text-[#1A3A3F]/60">{t('exp.wellbeing.empty')}</p>
-          ) : (
-            <div className="flex flex-col gap-2 text-sm">
-              {/* Metadatos + estado de revisión */}
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[#1A3A3F]/50">
-                {profile.updatedBy && (
-                  <span>
-                    {t('exp.wellbeing.lastUpdate', {
-                      name: profile.updatedBy.name ?? profile.updatedBy.id,
-                    })}
-                  </span>
-                )}
-                <span aria-hidden="true">·</span>
-                <span>{t('exp.wellbeing.nextReviewDate')}:</span>
-                {profile.nextReviewDate ? (
-                  <span>{fmtDate(profile.nextReviewDate)}</span>
-                ) : (
-                  <span>{t('exp.wellbeing.review.NOT_SET')}</span>
-                )}
-                <ReviewStatusChip nextReviewDate={profile.nextReviewDate} t={t} />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </SectionCard>
 
       {/* Vista de las dimensiones (modo lectura) */}
       {profile && !editing && (
@@ -382,9 +376,7 @@ export function WellbeingTab({ residentId, canWrite }: WellbeingTabProps) {
 
       {/* Formulario de edición */}
       {editing && (
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-4 text-base">{t('exp.wellbeing.edit')}</CardTitle>
+        <SectionCard title={t('exp.wellbeing.edit')}>
             <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit}>
               {/* Narrativos primero (lo más importante de ACP) */}
               <div>
@@ -446,8 +438,7 @@ export function WellbeingTab({ residentId, canWrite }: WellbeingTabProps) {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+        </SectionCard>
       )}
     </div>
   );

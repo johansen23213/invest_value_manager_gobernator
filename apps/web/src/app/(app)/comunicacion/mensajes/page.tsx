@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Badge, Card, CardContent, EmptyState, Select, Skeleton } from '@vetlla/ui';
+import { Badge, Card, CardContent, EmptyState, PageHeader, Select, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
@@ -32,23 +32,18 @@ export default function MensajesStaffPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-            {t('comms.staff.messages.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[#1A3A3F]/60">
-            {t('comms.staff.messages.intro')}
-          </p>
-          {totalUnread > 0 && (
-            <p className="mt-2">
-              <Badge tone="blue">
-                {t('comms.staff.messages.unreadCount', { count: totalUnread })}
-              </Badge>
-            </p>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title={t('comms.staff.messages.title')}
+        subtitle={t('comms.staff.messages.intro')}
+        accent
+        action={
+          totalUnread > 0 ? (
+            <Badge tone="blue">
+              {t('comms.staff.messages.unreadCount', { count: totalUnread })}
+            </Badge>
+          ) : undefined
+        }
+      />
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3">

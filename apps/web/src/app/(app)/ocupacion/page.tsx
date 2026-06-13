@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge, Card, CardContent, EmptyState, Skeleton } from '@vetlla/ui';
+import { Badge, Card, CardContent, EmptyState, PageHeader, Skeleton, StatCard } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { CENTER_TYPE_LABELS } from '@/lib/labels';
@@ -17,23 +17,6 @@ function occupancyTone(rate: number): 'green' | 'amber' | 'red' {
   return 'green';
 }
 
-function Kpi({ label, value, sub, loading }: { label: string; value: string; sub?: string; loading: boolean }) {
-  return (
-    <Card>
-      <CardContent>
-        <p className="text-sm text-[#1A3A3F]/60">{label}</p>
-        {loading ? (
-          <Skeleton className="mt-1 h-9 w-16" />
-        ) : (
-          <p className="text-3xl font-bold">
-            {value}
-            {sub && <span className="text-base font-normal text-[#1A3A3F]/40"> {sub}</span>}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 /** Plano de la unidad: cuadritos proporcionales (ocupada / libre / fuera de servicio). */
 function BedMap({ counts }: { counts: BedCounts }) {
@@ -79,16 +62,17 @@ export default function OccupancyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('occupancy.title')}</h1>
-        <p className="text-sm text-[#1A3A3F]/60">Plazas, ocupación y plano por centro y unidad.</p>
-      </div>
+      <PageHeader
+        title={t('occupancy.title')}
+        subtitle="Plazas, ocupación y plano por centro y unidad."
+        accent
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Plazas" value={data ? String(data.capacity) : '0'} sub={data ? `de ${data.total}` : undefined} loading={occupancy.isLoading} />
-        <Kpi label="Ocupadas" value={data ? String(data.occupied) : '0'} loading={occupancy.isLoading} />
-        <Kpi label="Libres" value={data ? String(data.free) : '0'} loading={occupancy.isLoading} />
-        <Kpi label="Ocupación" value={data ? pct(data.occupancyRate) : '0%'} loading={occupancy.isLoading} />
+        <StatCard label="Plazas" value={data ? String(data.capacity) : '0'} sub={data ? `de ${data.total}` : undefined} loading={occupancy.isLoading} />
+        <StatCard label="Ocupadas" value={data ? String(data.occupied) : '0'} loading={occupancy.isLoading} />
+        <StatCard label="Libres" value={data ? String(data.free) : '0'} loading={occupancy.isLoading} />
+        <StatCard label="Ocupación" value={data ? pct(data.occupancyRate) : '0%'} loading={occupancy.isLoading} />
       </div>
 
       {data && data.outOfService > 0 && (

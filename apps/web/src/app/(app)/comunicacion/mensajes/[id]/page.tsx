@@ -2,7 +2,7 @@
 
 import { use, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, Skeleton } from '@vetlla/ui';
+import { Card, CardContent, PageHeader, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
@@ -104,56 +104,41 @@ export default function MensajesStaffDetailPage({
       <div>
         <Link
           href="/comunicacion/mensajes"
-          className="text-sm text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          className="mb-1 block text-sm text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
         >
           {t('comms.staff.messages.back')}
         </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <MessageThreadCategoryBadge category={data.category} />
-              <MessageThreadStatusBadge status={data.status} />
-            </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-              {data.subject}
-            </h1>
-            <p className="text-sm text-[#1A3A3F]/60">
-              {t('comms.staff.messages.resident', {
-                name: `${data.resident.firstName} ${data.resident.lastName}`,
-              })}
-              {data.createdBy && (
-                <span className="text-[#1A3A3F]/40">
-                  {' · '}
-                  {t('comms.staff.messages.createdBy', {
-                    name: data.createdBy.name ?? '—',
-                  })}
-                </span>
-              )}
-            </p>
-          </div>
-          {/* Acciones de cierre/apertura */}
-          <div className="flex shrink-0 flex-wrap gap-2">
-            {isClosed ? (
-              <button
-                type="button"
-                onClick={() => void handleReopen()}
-                disabled={reopenThread.isPending}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 disabled:opacity-60"
-              >
-                {t('comms.staff.messages.reopen')}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void handleClose()}
-                disabled={closeThread.isPending}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-[#1A3A3F]/60 transition hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 disabled:opacity-60"
-              >
-                {t('comms.staff.messages.close')}
-              </button>
-            )}
-          </div>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <MessageThreadCategoryBadge category={data.category} />
+          <MessageThreadStatusBadge status={data.status} />
         </div>
+        <PageHeader
+          title={data.subject}
+          subtitle={`${t('comms.staff.messages.resident', { name: `${data.resident.firstName} ${data.resident.lastName}` })}${data.createdBy ? ` · ${t('comms.staff.messages.createdBy', { name: data.createdBy.name ?? '—' })}` : ''}`}
+          action={
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {isClosed ? (
+                <button
+                  type="button"
+                  onClick={() => void handleReopen()}
+                  disabled={reopenThread.isPending}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 disabled:opacity-60"
+                >
+                  {t('comms.staff.messages.reopen')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleClose()}
+                  disabled={closeThread.isPending}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-[#1A3A3F]/60 transition hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 disabled:opacity-60"
+                >
+                  {t('comms.staff.messages.close')}
+                </button>
+              )}
+            </div>
+          }
+        />
       </div>
 
       {/* Burbujas de conversación */}

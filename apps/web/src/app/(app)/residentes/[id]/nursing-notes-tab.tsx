@@ -13,11 +13,9 @@ import { useState } from 'react';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardTitle,
   FieldError,
   Label,
+  SectionCard,
   Select,
 } from '@vetlla/ui';
 import { NursingNoteShift, NursingNoteCategory } from '@vetlla/db';
@@ -132,42 +130,41 @@ export function NursingNotesTab({ residentId, canWrite }: NursingNotesTabProps) 
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardContent>
-          {/* Cabecera con título + filtro + botón nueva nota */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">Notas de enfermería</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Filtro por turno */}
-              <div>
-                <Label htmlFor="nursing-shift-filter" className="sr-only">
-                  Filtrar por turno
-                </Label>
-                <Select
-                  id="nursing-shift-filter"
-                  aria-label="Filtrar por turno"
-                  value={filterShift}
-                  onChange={(e) => setFilterShift(e.target.value as NursingNoteShift | '')}
-                  className="min-w-[140px]"
-                >
-                  <option value="">Todos los turnos</option>
-                  {Object.entries(NURSING_NOTE_SHIFT_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </Select>
-              </div>
-              {canWrite && (
-                <Button
-                  size="sm"
-                  onClick={() => setFormOpen((o) => !o)}
-                  aria-expanded={formOpen}
-                  aria-controls="nursing-note-form"
-                >
-                  {formOpen ? 'Cancelar' : 'Nueva nota'}
-                </Button>
-              )}
+      <SectionCard
+        title="Notas de enfermería"
+        aside={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtro por turno */}
+            <div>
+              <Label htmlFor="nursing-shift-filter" className="sr-only">
+                Filtrar por turno
+              </Label>
+              <Select
+                id="nursing-shift-filter"
+                aria-label="Filtrar por turno"
+                value={filterShift}
+                onChange={(e) => setFilterShift(e.target.value as NursingNoteShift | '')}
+                className="min-w-[140px]"
+              >
+                <option value="">Todos los turnos</option>
+                {Object.entries(NURSING_NOTE_SHIFT_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </Select>
             </div>
+            {canWrite && (
+              <Button
+                size="sm"
+                onClick={() => setFormOpen((o) => !o)}
+                aria-expanded={formOpen}
+                aria-controls="nursing-note-form"
+              >
+                {formOpen ? 'Cancelar' : 'Nueva nota'}
+              </Button>
+            )}
           </div>
+        }
+      >
 
           {/* Formulario de alta */}
           {canWrite && formOpen && (
@@ -300,8 +297,7 @@ export function NursingNotesTab({ residentId, canWrite }: NursingNotesTabProps) 
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
     </div>
   );
 }

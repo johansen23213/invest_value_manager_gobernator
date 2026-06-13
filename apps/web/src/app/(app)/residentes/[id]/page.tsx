@@ -6,9 +6,6 @@ import { z } from 'zod';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardTitle,
   Dialog,
   DialogClose,
   DialogContent,
@@ -18,6 +15,7 @@ import {
   Input,
   Label,
   Select,
+  SectionCard,
   Tabs,
   TabsContent,
   TabsList,
@@ -610,9 +608,7 @@ export default function ResidentDetailPage() {
 
       {/* ── DATOS PERSONALES ─────────────────────────────────────────────── */}
       <TabsContent value="datos">
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-3 text-base">Datos personales</CardTitle>
+        <SectionCard title="Datos personales">
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
                 <dt className="text-[#1A3A3F]/60">Nacimiento</dt>
@@ -647,15 +643,12 @@ export default function ResidentDetailPage() {
                 </div>
               )}
             </dl>
-          </CardContent>
-        </Card>
+        </SectionCard>
       </TabsContent>
 
       {/* ── ESCALAS ──────────────────────────────────────────────────────── */}
       <TabsContent value="escalas">
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-3 text-base">Escalas de valoración</CardTitle>
+        <SectionCard title="Escalas de valoración">
             {r.assessments.length === 0 ? (
               <p className="text-sm text-[#1A3A3F]/60">Sin valoraciones.</p>
             ) : (
@@ -729,15 +722,12 @@ export default function ResidentDetailPage() {
                 </div>
               </form>
             )}
-          </CardContent>
-        </Card>
+        </SectionCard>
       </TabsContent>
 
       {/* ── CONTACTOS ────────────────────────────────────────────────────── */}
       <TabsContent value="contactos">
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-3 text-base">Contactos</CardTitle>
+        <SectionCard title="Contactos">
             {r.contacts.length === 0 ? (
               <p className="text-sm text-[#1A3A3F]/60">Sin contactos.</p>
             ) : (
@@ -803,15 +793,12 @@ export default function ResidentDetailPage() {
                 </Button>
               </form>
             )}
-          </CardContent>
-        </Card>
+        </SectionCard>
       </TabsContent>
 
       {/* ── ALERGIAS ─────────────────────────────────────────────────────── */}
       <TabsContent value="alergias">
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-3 text-base">Alergias</CardTitle>
+        <SectionCard title="Alergias">
             {r.allergies.length === 0 ? (
               <p className="text-sm text-[#1A3A3F]/60">Sin alergias registradas.</p>
             ) : (
@@ -865,15 +852,12 @@ export default function ResidentDetailPage() {
                 </Button>
               </form>
             )}
-          </CardContent>
-        </Card>
+        </SectionCard>
       </TabsContent>
 
       {/* ── DIAGNÓSTICOS ─────────────────────────────────────────────────── */}
       <TabsContent value="diagnosticos">
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-3 text-base">Diagnósticos</CardTitle>
+        <SectionCard title="Diagnósticos">
             {r.diagnoses.length === 0 ? (
               <p className="text-sm text-[#1A3A3F]/60">Sin diagnósticos.</p>
             ) : (
@@ -919,17 +903,14 @@ export default function ResidentDetailPage() {
                 </Button>
               </form>
             )}
-          </CardContent>
-        </Card>
+        </SectionCard>
       </TabsContent>
 
       {/* ── CUIDADOS ─────────────────────────────────────────────────────── */}
       <TabsContent value="cuidados">
         <div className="flex flex-col gap-4">
           {/* Dieta y nutrición */}
-          <Card>
-            <CardContent>
-              <CardTitle className="mb-3 text-base">{t('exp.care.diet')}</CardTitle>
+          <SectionCard title={t('exp.care.diet')}>
               <div className="grid gap-4 text-sm sm:grid-cols-2">
                 <div>
                   <Label htmlFor="dietType">{t('exp.care.dietType')}</Label>
@@ -970,13 +951,10 @@ export default function ResidentDetailPage() {
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Continencia */}
-          <Card>
-            <CardContent>
-              <CardTitle className="mb-3 text-base">{t('exp.care.continence')}</CardTitle>
+          <SectionCard title={t('exp.care.continence')}>
               <div className="grid gap-4 text-sm sm:grid-cols-2">
                 <div>
                   <Label htmlFor="continenceType">{t('exp.care.continenceType')}</Label>
@@ -999,13 +977,10 @@ export default function ResidentDetailPage() {
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Riesgos */}
-          <Card>
-            <CardContent>
-              <CardTitle className="mb-3 text-base">{t('exp.care.risks')}</CardTitle>
+          <SectionCard title={t('exp.care.risks')}>
               <div className="flex flex-wrap gap-6 text-sm">
                 <label className="flex min-h-[48px] cursor-pointer items-center gap-3">
                   <input
@@ -1034,8 +1009,7 @@ export default function ResidentDetailPage() {
                   )}
                 </label>
               </div>
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {(canWrite || canClinical) && (
             <Button
@@ -1065,16 +1039,14 @@ export default function ResidentDetailPage() {
         <div className="flex flex-col gap-4">
 
           {/* Dispositivos */}
-          <Card>
-            <CardContent>
-              <div className="mb-3 flex items-center justify-between">
-                <CardTitle className="text-base">{t('exp.clinical.devices')}</CardTitle>
-                {canClinical && (
-                  <Button size="sm" onClick={() => setDeviceDialogOpen(true)}>
-                    {t('exp.clinical.devices.add')}
-                  </Button>
-                )}
-              </div>
+          <SectionCard
+            title={t('exp.clinical.devices')}
+            aside={canClinical ? (
+              <Button size="sm" onClick={() => setDeviceDialogOpen(true)}>
+                {t('exp.clinical.devices.add')}
+              </Button>
+            ) : undefined}
+          >
               {devices.isLoading ? (
                 <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
               ) : (devices.data ?? []).length === 0 ? (
@@ -1111,20 +1083,17 @@ export default function ResidentDetailPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Vacunas */}
-          <Card>
-            <CardContent>
-              <div className="mb-3 flex items-center justify-between">
-                <CardTitle className="text-base">{t('exp.clinical.vaccines')}</CardTitle>
-                {canClinical && (
-                  <Button size="sm" onClick={() => setVaccineDialogOpen(true)}>
-                    {t('exp.clinical.vaccines.add')}
-                  </Button>
-                )}
-              </div>
+          <SectionCard
+            title={t('exp.clinical.vaccines')}
+            aside={canClinical ? (
+              <Button size="sm" onClick={() => setVaccineDialogOpen(true)}>
+                {t('exp.clinical.vaccines.add')}
+              </Button>
+            ) : undefined}
+          >
               {vaccines.isLoading ? (
                 <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
               ) : (vaccines.data ?? []).length === 0 ? (
@@ -1140,20 +1109,17 @@ export default function ResidentDetailPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Registro de peso */}
-          <Card>
-            <CardContent>
-              <div className="mb-3 flex items-center justify-between">
-                <CardTitle className="text-base">{t('exp.clinical.weight')}</CardTitle>
-                {canClinical && (
-                  <Button size="sm" onClick={() => setWeightDialogOpen(true)}>
-                    {t('exp.clinical.weight.add')}
-                  </Button>
-                )}
-              </div>
+          <SectionCard
+            title={t('exp.clinical.weight')}
+            aside={canClinical ? (
+              <Button size="sm" onClick={() => setWeightDialogOpen(true)}>
+                {t('exp.clinical.weight.add')}
+              </Button>
+            ) : undefined}
+          >
               {weights.isLoading ? (
                 <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
               ) : (weights.data ?? []).length === 0 ? (
@@ -1169,20 +1135,17 @@ export default function ResidentDetailPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* UPP */}
-          <Card>
-            <CardContent>
-              <div className="mb-3 flex items-center justify-between">
-                <CardTitle className="text-base">{t('exp.clinical.upp')}</CardTitle>
-                {canClinical && (
-                  <Button size="sm" onClick={() => setUppDialogOpen(true)}>
-                    {t('exp.clinical.upp.add')}
-                  </Button>
-                )}
-              </div>
+          <SectionCard
+            title={t('exp.clinical.upp')}
+            aside={canClinical ? (
+              <Button size="sm" onClick={() => setUppDialogOpen(true)}>
+                {t('exp.clinical.upp.add')}
+              </Button>
+            ) : undefined}
+          >
               {ulcers.isLoading ? (
                 <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
               ) : (ulcers.data ?? []).length === 0 ? (
@@ -1253,20 +1216,17 @@ export default function ResidentDetailPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Caídas */}
-          <Card>
-            <CardContent>
-              <div className="mb-3 flex items-center justify-between">
-                <CardTitle className="text-base">{t('exp.clinical.falls')}</CardTitle>
-                {canClinical && (
-                  <Button size="sm" onClick={() => setFallDialogOpen(true)}>
-                    {t('exp.clinical.falls.add')}
-                  </Button>
-                )}
-              </div>
+          <SectionCard
+            title={t('exp.clinical.falls')}
+            aside={canClinical ? (
+              <Button size="sm" onClick={() => setFallDialogOpen(true)}>
+                {t('exp.clinical.falls.add')}
+              </Button>
+            ) : undefined}
+          >
               {falls.isLoading ? (
                 <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
               ) : (falls.data ?? []).length === 0 ? (
@@ -1290,20 +1250,17 @@ export default function ResidentDetailPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Sujeciones mecánicas — REGULADO */}
-          <Card>
-            <CardContent>
-              <div className="mb-2 flex items-center justify-between">
-                <CardTitle className="text-base">{t('exp.clinical.restraints')}</CardTitle>
-                {canClinical && (
-                  <Button size="sm" onClick={() => setRestraintDialogOpen(true)}>
-                    {t('exp.clinical.restraints.add')}
-                  </Button>
-                )}
-              </div>
+          <SectionCard
+            title={t('exp.clinical.restraints')}
+            aside={canClinical ? (
+              <Button size="sm" onClick={() => setRestraintDialogOpen(true)}>
+                {t('exp.clinical.restraints.add')}
+              </Button>
+            ) : undefined}
+          >
               <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="note">
                 {t('exp.clinical.restraints.legalNote')}
               </p>
@@ -1365,20 +1322,17 @@ export default function ResidentDetailPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Consentimientos */}
-          <Card>
-            <CardContent>
-              <div className="mb-3 flex items-center justify-between">
-                <CardTitle className="text-base">{t('exp.clinical.consents')}</CardTitle>
-                {canClinical && (
-                  <Button size="sm" onClick={() => setConsentDialogOpen(true)}>
-                    {t('exp.clinical.consents.add')}
-                  </Button>
-                )}
-              </div>
+          <SectionCard
+            title={t('exp.clinical.consents')}
+            aside={canClinical ? (
+              <Button size="sm" onClick={() => setConsentDialogOpen(true)}>
+                {t('exp.clinical.consents.add')}
+              </Button>
+            ) : undefined}
+          >
               {consents.isLoading ? (
                 <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
               ) : (consents.data ?? []).length === 0 ? (
@@ -1399,13 +1353,10 @@ export default function ResidentDetailPage() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
 
           {/* Historia de vida */}
-          <Card>
-            <CardContent>
-              <CardTitle className="mb-3 text-base">{t('exp.clinical.lifeStory')}</CardTitle>
+          <SectionCard title={t('exp.clinical.lifeStory')}>
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 {(
                   [
@@ -1442,8 +1393,7 @@ export default function ResidentDetailPage() {
                   {upsertLifeStory.isPending ? 'Guardando…' : t('exp.clinical.lifeStory.save')}
                 </Button>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
         </div>
       </TabsContent>
 
@@ -1467,9 +1417,7 @@ export default function ResidentDetailPage() {
 
       {/* ── ADMINISTRATIVO ───────────────────────────────────────────────── */}
       <TabsContent value="administrativo">
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-3 text-base">{t('exp.admin.title')}</CardTitle>
+        <SectionCard title={t('exp.admin.title')}>
             <div className="grid gap-4 text-sm sm:grid-cols-2">
               <div>
                 <Label htmlFor="adm-cip">{t('exp.admin.cip')}</Label>
@@ -1612,19 +1560,14 @@ export default function ResidentDetailPage() {
                 {updateResident.isPending ? 'Guardando…' : 'Guardar datos administrativos'}
               </Button>
             )}
-          </CardContent>
-        </Card>
+        </SectionCard>
       </TabsContent>
 
       {/* ── RGPD ─────────────────────────────────────────────────────────── */}
       {canDsar && (
         <TabsContent value="rgpd">
           <div className="flex flex-col gap-4">
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-2 text-base">
-                  Derecho de acceso y portabilidad (art. 15 y 20)
-                </CardTitle>
+            <SectionCard title="Derecho de acceso y portabilidad (art. 15 y 20)">
                 <p className="mb-3 text-sm text-[#1A3A3F]/70">
                   Genera un fichero JSON con todos los datos que Vetlla guarda de este residente
                   (expediente, atención directa, medicación, PIA y trazas de auditoría), con hash
@@ -1637,14 +1580,9 @@ export default function ResidentDetailPage() {
                 >
                   {exportDsar.isPending ? 'Generando…' : 'Exportar datos del residente'}
                 </Button>
-              </CardContent>
-            </Card>
+            </SectionCard>
 
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-2 text-base text-red-700">
-                  Derecho de supresión (art. 17)
-                </CardTitle>
+            <SectionCard title="Derecho de supresión (art. 17)">
                 <p className="mb-3 text-sm text-[#1A3A3F]/70">
                   Anonimización irreversible: elimina nombre, DNI y fecha de nacimiento, borra
                   contactos y vínculos familiares, y libera la plaza. Los registros clínicos se
@@ -1688,8 +1626,7 @@ export default function ResidentDetailPage() {
                     {anonymize.isPending ? 'Anonimizando…' : 'Anonimizar residente (irreversible)'}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+            </SectionCard>
           </div>
         </TabsContent>
       )}

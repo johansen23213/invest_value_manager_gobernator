@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Badge, Card, CardContent, EmptyState, Skeleton } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, EmptyState, PageHeader, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
@@ -17,29 +17,22 @@ export default function PortalMensajesPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-            {t('comms.portal.messages.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[#1A3A3F]/60">
-            {t('comms.portal.messages.intro')}
-          </p>
-          {totalUnread > 0 && (
-            <p className="mt-2">
+      <PageHeader
+        title={t('comms.portal.messages.title')}
+        subtitle={t('comms.portal.messages.intro')}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {totalUnread > 0 && (
               <Badge tone="blue">
                 {t('comms.portal.messages.unreadCount', { count: totalUnread })}
               </Badge>
-            </p>
-          )}
-        </div>
-        <Link
-          href="/portal/mensajes/nueva"
-          className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-brand-700 px-5 py-2 text-base font-semibold text-white transition hover:bg-brand-800 active:bg-brand-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
-        >
-          {t('comms.portal.messages.new')}
-        </Link>
-      </div>
+            )}
+            <Link href="/portal/mensajes/nueva">
+              <Button>{t('comms.portal.messages.new')}</Button>
+            </Link>
+          </div>
+        }
+      />
 
       {/* Lista de hilos */}
       {threads.isLoading ? (

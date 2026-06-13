@@ -10,6 +10,7 @@ import {
   EmptyState,
   Input,
   Label,
+  PageHeader,
   Pagination,
   Select,
   Skeleton,
@@ -84,7 +85,7 @@ export default function ResidentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('residents.title')}</h1>
+      <PageHeader title={t('residents.title')} accent />
 
       {canWrite && (
         <Card>
@@ -186,7 +187,7 @@ export default function ResidentsPage() {
                 </thead>
                 <tbody>
                   {paginated.map((r) => (
-                    <tr key={r.id} className="hover:bg-brand-50 transition-colors">
+                    <tr key={r.id} className="hover:bg-brand-50 transition-lift">
                       <Td>
                         <Link href={`/residentes/${r.id}`} className="font-medium text-brand-700 hover:underline">
                           {r.lastName}, {r.firstName}
@@ -213,7 +214,7 @@ export default function ResidentsPage() {
               />
             </>
           ) : residents.data && residents.data.length > 0 ? (
-            <EmptyState title="Sin resultados" description="Prueba a cambiar la búsqueda o los filtros." />
+            <EmptyState variant="search" title="Sin resultados" description="Prueba a cambiar la búsqueda o los filtros." />
           ) : (
             <EmptyState title="No hay residentes todavía" description={canWrite ? 'Da de alta el primero con el formulario de arriba.' : undefined} />
           )}
