@@ -271,6 +271,7 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'centers',
       'consent_records',
       'diagnoses',
+      'discharge_records',
       'emergency_contacts',
       'fall_records',
       'family_links',
@@ -288,6 +289,7 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'restraints',
       'service_request_comments',
       'service_requests',
+      'social_reports',
       'sync_conflicts',
       'treatments',
       'units',
@@ -297,6 +299,7 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'visit_slot_configs',
       'visits',
       'weight_records',
+      'wellbeing_profiles',
     ].sort();
     // Si aparece una tabla nueva (o falta alguna esperada), este test lo muestra.
     expect(tableNames).toEqual(expectedKnown);

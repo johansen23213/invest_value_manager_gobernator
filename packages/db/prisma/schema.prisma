@@ -84,6 +84,11 @@ model User {
   nursingNotes NursingNote[] @relation("NursingNoteAuthor")
   medicalNotes MedicalNote[] @relation("MedicalNoteAuthor")
 
+  // --- Épica B ---
+  dischargeRecords   DischargeRecord[]
+  socialReports      SocialReport[]
+  wellbeingProfiles  WellbeingProfile[]
+
   @@index([tenantId])
   @@map("users")
 }
@@ -419,6 +424,11 @@ model Resident {
   // --- Documentación clínica (staff-only) ---
   nursingNotes NursingNote[]
   medicalNotes MedicalNote[]
+
+  // --- Épica B (staff-only) ---
+  dischargeRecords  DischargeRecord[]
+  socialReports     SocialReport[]
+  wellbeingProfile  WellbeingProfile?
 
   @@index([tenantId])
   @@index([centerId])
@@ -1332,6 +1342,20 @@ model NursingNote {
   @@map("nursing_notes")
 }
 
+// ---------------------------------------------------------------------------
+// Épica B — Exitus/Baja, Informe Social y Perfil de Bienestar ACP
+// ---------------------------------------------------------------------------
+
+/// Tipo de baja del residente (RF-ADM-011).
+enum DischargeType {
+  DEFUNCION
+  VOLUNTARIA
+  TRASLADO_CENTRO
+  TRASLADO_HOSPITAL
+  FIN_ESTANCIA
+  OTRO
+}
+
 /// Tipo de anotación del evolutivo médico (RF-CLI-001/002).
 enum MedicalNoteType {
   EVOLUTIVO    // seguimiento periódico del estado del residente
@@ -1361,6 +1385,147 @@ model MedicalNote {
   @@index([tenantId, residentId])
   @@index([tenantId, noteDate])
   @@map("medical_notes")
+}
+
+// ---------------------------------------------------------------------------
+// Épica B — Exitus/Baja (RF-ADM-011/012/013)
+// ---------------------------------------------------------------------------
+
+/// Registro de baja del residente (exitus, alta voluntaria, traslado…).
+///
+/// Permite histórico: un residente puede reingresar tras una baja, por eso
+/// residentId NO es @unique. La transacción del router hace siempre:
+///   1. Crea DischargeRecord.
+///   2. Actualiza Resident.status=BAJA + dischargeDate + dischargeReason.
+///   3. Libera la cama (bedId=null).
+///
+/// Permisos: residents:write para registrar; residents:read para ver.
+/// FAMILIAR: sin acceso (staff-only como NursingNote/MedicalNote).
+///
+/// AuditLog: SIEMPRE. Action=DISCHARGE, summary incluye el tipo pero NO la
+/// causa clínica de muerte (dato sensible; va en notes/certifiedBy).
+model DischargeRecord {
+  id                 String        @id @default(cuid())
+  tenantId           String        @map("tenant_id")
+  residentId         String        @map("resident_id")
+  resident           Resident      @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type               DischargeType
+  dischargedAt       DateTime      @map("discharged_at")
+  reason             String?       // motivo de la baja (texto libre)
+  /// Solo para DEFUNCION: nombre del médico certificante. NO es la causa clínica.
+  certifiedBy        String?       @map("certified_by")
+  /// Para TRASLADO_*: nombre del centro/hospital de destino.
+  destination        String?
+  familyNotifiedAt   DateTime?     @map("family_notified_at")
+  belongingsReturned Boolean       @default(false) @map("belongings_returned")
+  /// Checklist extendida (protocol del centro). JSON flexible para evitar
+  /// proliferación de columnas booleanas. Campos core están en columnas tipadas.
+  checklist          Json?
+  notes              String?
+  recordedById       String        @map("recorded_by_id")
+  recordedBy         User          @relation(fields: [recordedById], references: [id])
+  createdAt          DateTime      @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, residentId])
+  @@index([tenantId, dischargedAt])
+  @@map("discharge_records")
+}
+
+// ---------------------------------------------------------------------------
+// Épica B — Informe Social (RF-SOC-001..008)
+// ---------------------------------------------------------------------------
+
+/// Informe social estructurado del residente.
+///
+/// Documento vivo: admite update (el trabajador social lo actualiza periódicamente).
+/// Staff-only: NO se expone en el portal de familias.
+///
+/// Permisos: residents:write para crear/editar; residents:read para consultar.
+/// Decisión: residents:write ya lo tienen DIRECTOR y SANITARIO — que es donde
+/// encaja el trabajo social en el RBAC actual. No se crea un permiso nuevo
+/// para evitar proliferación (AUXILIAR no puede editar, sí puede leer con residents:read).
+model SocialReport {
+  id                String    @id @default(cuid())
+  tenantId          String    @map("tenant_id")
+  residentId        String    @map("resident_id")
+  resident          Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  authorId          String    @map("author_id")
+  author            User      @relation(fields: [authorId], references: [id])
+  reportDate        DateTime  @map("report_date")
+  /// RF-SOC-001: situación familiar
+  familySituation   String?   @map("family_situation")
+  /// RF-SOC-002: red de apoyo social
+  supportNetwork    String?   @map("support_network")
+  /// RF-SOC-003: situación económica
+  economicSituation String?   @map("economic_situation")
+  /// RF-SOC-004: prestaciones y subsidios (Dependencia, PVS, etc.)
+  benefits          String?
+  /// historial laboral / ocupacional
+  workHistory       String?   @map("work_history")
+  /// RF-SOC-006: valoración social global del trabajador social
+  socialAssessment  String?   @map("social_assessment")
+  /// RF-SOC-007: acuerdos con residente y/o familia
+  agreements        String?
+  /// RF-SOC-008: fecha de próxima revisión del informe
+  nextReviewDate    DateTime? @map("next_review_date")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, residentId])
+  @@map("social_reports")
+}
+
+// ---------------------------------------------------------------------------
+// Épica B — Perfil de Bienestar ACP / UNE 158101 (RF-SOC-003..006)
+// ---------------------------------------------------------------------------
+
+/// Perfil de bienestar de la Atención Centrada en la Persona (ACP).
+///
+/// Un único perfil por residente (residentId @unique). Se actualiza por upsert.
+///
+/// Las 8 dimensiones de bienestar según UNE 158101 / modelo Schalock & Verdugo:
+///   1. Bienestar emocional (emotionalWellbeing)
+///   2. Bienestar físico (physicalWellbeing)
+///   3. Bienestar material (materialWellbeing)
+///   4. Desarrollo personal (personalDevelopment)
+///   5. Autodeterminación (selfDetermination)
+///   6. Relaciones interpersonales (interpersonalRelations)
+///   7. Inclusión social (socialInclusion)
+///   8. Derechos (rights)
+///
+/// Permisos: residents:write para crear/editar; residents:read para consultar.
+/// FAMILIAR: sin acceso (staff-only).
+/// La alerta de revisión vencida se computa con isReviewOverdue() en lib/wellbeing.ts.
+model WellbeingProfile {
+  id                      String    @id @default(cuid())
+  tenantId                String    @map("tenant_id")
+  residentId              String    @unique @map("resident_id")
+  resident                Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  // 8 dimensiones ACP (UNE 158101)
+  emotionalWellbeing      String?   @map("emotional_wellbeing")
+  physicalWellbeing       String?   @map("physical_wellbeing")
+  materialWellbeing       String?   @map("material_wellbeing")
+  personalDevelopment     String?   @map("personal_development")
+  selfDetermination       String?   @map("self_determination")
+  interpersonalRelations  String?   @map("interpersonal_relations")
+  socialInclusion         String?   @map("social_inclusion")
+  rights                  String?
+  /// RF-SOC-005: qué es importante PARA la persona (sus deseos y preferencias)
+  importantToThePerson    String?   @map("important_to_the_person")
+  /// RF-SOC-005: qué es importante PARA su bienestar (necesidades; lo que debe evitarse)
+  importantForThePerson   String?   @map("important_for_the_person")
+  /// Fecha de próxima revisión periódica (RF-SOC-007). La alerta la computa isReviewOverdue().
+  nextReviewDate          DateTime? @map("next_review_date")
+  updatedById             String?   @map("updated_by_id")
+  updatedBy               User?     @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, nextReviewDate])
+  @@map("wellbeing_profiles")
 }
 
 /// Hilo de mensajería bidireccional entre un familiar y el centro (COM-002).
