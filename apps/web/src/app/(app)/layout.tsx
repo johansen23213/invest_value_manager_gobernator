@@ -131,6 +131,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // ── Grupo Centro ───────────────────────────────────────────────────────────
   const centroItems: NavDropdownItem[] = [
     { href: '/centros',   label: t('nav.centers'),  active: isItemActive(pathname, '/centros') },
+    ...(hasPermission(user.role, 'care:read')
+      ? [{ href: '/menus', label: t('nav.menus'), active: isItemActive(pathname, '/menus') }]
+      : []),
     ...(hasPermission(user.role, 'centers:read')
       ? [{ href: '/ocupacion', label: t('nav.occupancy'), active: isItemActive(pathname, '/ocupacion') }]
       : []),

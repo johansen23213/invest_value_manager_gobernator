@@ -5,6 +5,7 @@ import { Badge, Card, CardContent, EmptyState, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import type { AlertItem, AlertSeverity } from '@/lib/alerts';
+import { IntakeAlertsSection } from './intake-alerts-section';
 
 const SEVERITY_TONE: Record<AlertSeverity, 'red' | 'amber'> = { high: 'red', medium: 'amber' };
 const SEVERITY_LABEL: Record<AlertSeverity, string> = { high: 'Alta', medium: 'Media' };
@@ -54,6 +55,10 @@ export default function AlertsPage() {
   const high = data.filter((a) => a.severity === 'high').length;
   const medium = data.length - high;
 
+  // Centro para alertas de ingesta: primer centro accesible
+  const centers = api.centers.list.useQuery();
+  const firstCenterId = (centers.data ?? [])[0]?.id ?? '';
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -69,6 +74,7 @@ export default function AlertsPage() {
         )}
       </div>
 
+      {/* Alertas de medicación e incidencias */}
       <Card>
         <CardContent>
           {alerts.isLoading ? (
@@ -88,6 +94,9 @@ export default function AlertsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Panel de alertas de baja ingesta (RF-NUT-007) */}
+      {firstCenterId && <IntakeAlertsSection centerId={firstCenterId} />}
     </div>
   );
 }

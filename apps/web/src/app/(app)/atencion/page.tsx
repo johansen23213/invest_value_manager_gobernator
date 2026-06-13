@@ -10,6 +10,7 @@ import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
 import { useToast } from '@/components/toast';
 import { CopilotCard } from './copilot-card';
+import { IntakeStructured } from './intake-structured';
 
 function cleanPayload(raw: Record<string, string>): CarePayload {
   const out: CarePayload = {};
@@ -311,6 +312,9 @@ export default function CarePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Ingesta estructurada (IntakeRecord — RF-NUT-006) */}
+      <IntakeStructured residentId={resident.id} online={online} />
 
       {pendingPanel}
 

@@ -89,6 +89,10 @@ model User {
   socialReports      SocialReport[]
   wellbeingProfiles  WellbeingProfile[]
 
+  // --- Épica C ---
+  menuItemsCreated   MenuItem[]        @relation("MenuItemCreatedBy")
+  intakeRecorded     IntakeRecord[]    @relation("IntakeRecordedBy")
+
   @@index([tenantId])
   @@map("users")
 }
@@ -294,6 +298,7 @@ model Center {
   units          Unit[]
   residents      Resident[]
   visitSlotConfigs VisitSlotConfig[]
+  menuItems      MenuItem[]
 
   @@index([tenantId])
   @@map("centers")
@@ -429,6 +434,9 @@ model Resident {
   dischargeRecords  DischargeRecord[]
   socialReports     SocialReport[]
   wellbeingProfile  WellbeingProfile?
+
+  // --- Épica C ---
+  intakeRecords     IntakeRecord[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -1526,6 +1534,104 @@ model WellbeingProfile {
   @@index([tenantId])
   @@index([tenantId, nextReviewDate])
   @@map("wellbeing_profiles")
+}
+
+// ---------------------------------------------------------------------------
+// Épica C — Nutrición, Menús y Comedor (RF-NUT-001..009)
+// ---------------------------------------------------------------------------
+
+/// Franja del día para los menús e ingestas.
+enum MealType {
+  DESAYUNO
+  COMIDA
+  MERIENDA
+  CENA
+}
+
+/// 14 alérgenos de declaración obligatoria (Reglamento UE 1169/2011).
+/// Distinto de AllergyType (categoría de alergia del residente).
+enum Allergen {
+  GLUTEN
+  CRUSTACEOS
+  HUEVOS
+  PESCADO
+  CACAHUETES
+  SOJA
+  LACTEOS
+  FRUTOS_CASCARA
+  APIO
+  MOSTAZA
+  SESAMO
+  SULFITOS
+  ALTRAMUCES
+  MOLUSCOS
+}
+
+/// Plato/ítem del menú diario de un centro (RF-NUT-003/004).
+///
+/// Datos del CENTRO, no del residente: sin residentId → no entra en dsar-registry.
+/// Sí tiene tenantId → RLS ENABLE+FORCE+policy (ver migración 20260613210000).
+///
+/// allergens: JSON array de valores Allergen (Reglamento UE 1169/2011).
+/// isAlternative: true para platos de dieta especial (no el estándar del día).
+///
+/// Permisos:
+///   crear/editar: centers:write (dirección — ya existe).
+///   leer (staff): care:read.
+///   leer (familiar, RF-NUT-005): portal:read — endpoint separado menu.forFamily
+///   que verifica el FamilyLink antes de exponer el menú del centro.
+model MenuItem {
+  id            String   @id @default(cuid())
+  tenantId      String   @map("tenant_id")
+  centerId      String   @map("center_id")
+  center        Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  date          DateTime // día del menú (se ignora la parte horaria)
+  meal          MealType
+  dishName      String   @map("dish_name")
+  description   String?
+  allergens     Json     @default("[]") // Allergen[] serializado
+  isAlternative Boolean  @default(false) @map("is_alternative")
+  createdById   String   @map("created_by_id")
+  createdBy     User     @relation("MenuItemCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, centerId, date])
+  @@map("menu_items")
+}
+
+/// Registro de ingesta estructurado por comida y residente (RF-NUT-006/007).
+///
+/// RELACIÓN CON CareRecord(type=INGESTA):
+///   CareRecord/INGESTA es el flujo offline-first genérico de atención directa
+///   (JSON libre en payload, funciona sin conectividad).
+///   IntakeRecord es el registro ESTRUCTURADO con porcentaje y franja horaria,
+///   destinado al panel de nutrición y las alertas de baja ingesta (RF-NUT-007).
+///   Son complementarios: el auxiliar puede usar CareRecord offline a pie de cama
+///   e IntakeRecord desde el comedor con conectividad. No se rompe ni duplica ninguno.
+///
+/// foodPct: porcentaje consumido (0-100). Validado en Zod + CHECK en BD.
+///
+/// DSAR: tiene residentId → declarado en dsar-registry (export:true, anonymize:'delete').
+///
+/// Permisos: care:write para registrar / care:read para consultar.
+model IntakeRecord {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  residentId   String   @map("resident_id")
+  resident     Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  date         DateTime // día + hora del registro
+  meal         MealType
+  foodPct      Int      @map("food_pct") // 0-100: % del plato consumido
+  hydrationMl  Int?     @map("hydration_ml") // ml de líquido ingeridos (opcional)
+  notes        String?
+  recordedById String   @map("recorded_by_id")
+  recordedBy   User     @relation("IntakeRecordedBy", fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, residentId, date])
+  @@map("intake_records")
 }
 
 /// Hilo de mensajería bidireccional entre un familiar y el centro (COM-002).
