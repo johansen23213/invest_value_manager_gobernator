@@ -855,6 +855,9 @@ core_epica_b_done:
 core_epica_c_done:
   - "ÉPICA C del core (ADR-0016) COMPLETA backend+UI: nutrición/menús/comedor. MenuItem (menú del centro por comida con 14 alérgenos UE 1169/2011, dato de centro), IntakeRecord (ingesta estructurada por comida foodPct 0-100 + hidratación, DSAR v5), lógica isLowIntakeRisk (media/racha). Router nutrition (menu.* centers:write/care:read, menu.forFamily portal:read, intake.* care:*, kitchen.dietListing/mealListing). UI: /menus (menú+cocina), ingesta estructurada en /atencion, panel de baja ingesta en /alertas, menú en el portal del familiar. RLS forzada, 357 db + 439 web tests. Cubre RF-NUT-001..009. Siguiente: Épica D (cuadrantes/turnos)."
 
+core_epica_d_done:
+  - "ÉPICA D del core (ADR-0016) COMPLETA backend+UI: cuadrantes/turnos del personal + cierre de turno firmado. ShiftTemplate (minStaff), ShiftAssignment (cuadrante, ausencias/sustituciones, @@unique, auditado), ShiftHandover (cierre firmado closedById+closedAt). Lógica coverageFor (alerta infra-cobertura, 35 tests). Dominio permisos shifts:read/manage. Las 3 tablas son datos del personal (sin residentId): RLS sí, DSAR no. UI: /cuadrante (rejilla días x turnos, planificar, alerta infra-cobertura) + cierre firmado integrado en /relevo (traspaso recibido + firmar cierre). 394 db + 478 web tests. Cubre RF-PRO-003/004/008/009/010/013. FUERA: tareas operativas desde PIA (RF-PRO-005, módulo futuro). CORE OPERATIVO SIN BLOQUEOS COMPLETO: A+B+C+D. Quedan bloqueados por Angel: facturación (Verifactu/SEPA), documental+foto+deploy (OVHcloud Q-004), pagos (pasarela), firma avanzada (Q-008)."
+
 team:
   location: .claude/agents/
   governance: >-
