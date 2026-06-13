@@ -34,9 +34,11 @@ import {
   DialogContent,
   DialogTitle,
   DialogFooter,
+  EmptyState,
   FieldError,
   Input,
   Label,
+  PageHeader,
   Select,
 } from '@vetlla/ui';
 import { ROLE_LABELS } from '@/lib/labels';
@@ -355,31 +357,32 @@ export default function EquipoPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{t('team.title')}</h1>
-          <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('team.subtitle')}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canWrite && (
-            <Button onClick={() => setShowInvite((v) => !v)} data-testid="btn-invite-user">
-              Alta de usuario
-            </Button>
-          )}
-          <Link
-            href="/equipo/familias"
-            className="rounded-md border border-brand-200 px-3 py-2 text-sm hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            Acceso de familias
-          </Link>
-          <Link
-            href="/equipo/roles"
-            className="rounded-md border border-brand-200 px-3 py-2 text-sm hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-          >
-            {t('team.rolesReference')}
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={t('team.title')}
+        subtitle={t('team.subtitle')}
+        accent
+        action={
+          <div className="flex flex-wrap gap-2">
+            {canWrite && (
+              <Button onClick={() => setShowInvite((v) => !v)} data-testid="btn-invite-user">
+                Alta de usuario
+              </Button>
+            )}
+            <Link
+              href="/equipo/familias"
+              className="inline-flex min-h-[44px] items-center rounded-full border border-brand-200 px-4 py-2 text-sm hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              Acceso de familias
+            </Link>
+            <Link
+              href="/equipo/roles"
+              className="inline-flex min-h-[44px] items-center rounded-full border border-brand-200 px-4 py-2 text-sm hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            >
+              {t('team.rolesReference')}
+            </Link>
+          </div>
+        }
+      />
 
       {/* Alta de usuario (Sprint 5) */}
       {canWrite && showInvite && (
@@ -473,7 +476,10 @@ export default function EquipoPage() {
 
       {/* Lista de usuarios */}
       {usersQuery.isLoading && <p className="text-[#1A3A3F]/60">{t('state.loading')}</p>}
-      {!usersQuery.isLoading && filteredUsers.length === 0 && (
+      {!usersQuery.isLoading && filteredUsers.length === 0 && (filterRole || filterTitle) && (
+        <EmptyState variant="search" title={t('team.empty')} />
+      )}
+      {!usersQuery.isLoading && filteredUsers.length === 0 && !filterRole && !filterTitle && (
         <p className="text-[#1A3A3F]/60">{t('team.empty')}</p>
       )}
 
@@ -483,7 +489,7 @@ export default function EquipoPage() {
             key={user.id}
             data-testid="team-user-row"
             data-user-role={user.role}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-100 bg-white px-4 py-3 shadow-sm"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-white px-4 py-3 shadow-sm transition-lift"
           >
             {/* Info */}
             <div className="flex min-w-0 items-center gap-3">

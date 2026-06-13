@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Badge, Button, Card, CardContent, CardTitle, Input, Label } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, CardTitle, EmptyState, Input, Label, PageHeader } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useCareSync } from '@/offline/use-care-sync';
 import type { CarePayload } from '@/offline/types';
@@ -120,7 +120,7 @@ export default function CarePage() {
   if (!resident) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">Atención directa</h1>
+        <PageHeader title="Atención directa" />
         {!online && (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Sin conexión: tus registros se guardan en el dispositivo y se envían solos al recuperar la red.
@@ -155,7 +155,10 @@ export default function CarePage() {
             </div>
           </div>
         ))}
-        {grouped.length === 0 && <p className="text-[#1A3A3F]/60">No hay residentes.</p>}
+        {grouped.length === 0 && query && (
+          <EmptyState variant="search" title="Sin resultados" description="No hay residentes con ese nombre." />
+        )}
+        {grouped.length === 0 && !query && <p className="text-[#1A3A3F]/60">No hay residentes.</p>}
         {pendingPanel}
       </div>
     );
@@ -164,23 +167,19 @@ export default function CarePage() {
   // ---- Paso 2: registrar atención del residente ---------------------------
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <button
-            type="button"
-            onClick={() => setResidentId('')}
-            className="text-sm text-brand-700 hover:underline"
-          >
-            ← Mi unidad
-          </button>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-            {resident.firstName} {resident.lastName}
-          </h1>
-          <p className="text-sm text-[#1A3A3F]/60">
-            {resident.bed ? `Plaza ${resident.bed.code} · ${resident.bed.unit.name}` : 'Sin plaza'}
-          </p>
-        </div>
-        <Badge tone={online ? 'green' : 'amber'}>{online ? 'En línea' : 'Sin conexión'}</Badge>
+      <div>
+        <button
+          type="button"
+          onClick={() => setResidentId('')}
+          className="mb-1 text-sm text-brand-700 hover:underline"
+        >
+          ← Mi unidad
+        </button>
+        <PageHeader
+          title={`${resident.firstName} ${resident.lastName}`}
+          subtitle={resident.bed ? `Plaza ${resident.bed.code} · ${resident.bed.unit.name}` : 'Sin plaza'}
+          action={<Badge tone={online ? 'green' : 'amber'}>{online ? 'En línea' : 'Sin conexión'}</Badge>}
+        />
       </div>
 
       {/* Copiloto: texto libre → borrador de registro, con confirmación humana (H5). */}
@@ -338,7 +337,7 @@ export default function CarePage() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-[#1A3A3F]/60">Sin registros todavía.</p>
+            <EmptyState variant="check" title="Sin registros todavía" description="Los registros de hoy aparecerán aquí." />
           )}
         </CardContent>
       </Card>

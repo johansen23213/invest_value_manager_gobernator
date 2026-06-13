@@ -36,6 +36,7 @@ import {
   DialogFooter,
   DialogTitle,
   Label,
+  PageHeader,
   Select,
 } from '@vetlla/ui';
 import { api } from '@/trpc/react';
@@ -716,14 +717,10 @@ export default function RelevoPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[#1A3A3F]">
-          Traspaso de turno
-        </h1>
-        <p className="mt-1 text-sm text-[#1A3A3F]/60">
-          Notas del turno para el equipo entrante. Escanea de un vistazo.
-        </p>
-      </div>
+      <PageHeader
+        title="Traspaso de turno"
+        subtitle="Notas del turno para el equipo entrante. Escanea de un vistazo."
+      />
 
       {/* Controles de filtro */}
       <Card>

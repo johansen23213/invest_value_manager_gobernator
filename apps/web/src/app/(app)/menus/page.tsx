@@ -13,14 +13,14 @@
 import { useState, useMemo } from 'react';
 import {
   Button,
-  Card,
-  CardContent,
   Dialog,
   DialogContent,
   DialogTitle,
   EmptyState,
   Input,
   Label,
+  PageHeader,
+  SectionCard,
   Skeleton,
 } from '@vetlla/ui';
 import { api } from '@/trpc/react';
@@ -231,9 +231,10 @@ interface MealSectionProps {
   centerId: string;
   date: Date;
   onRefetch: () => void;
+  hideHeader?: boolean;
 }
 
-function MealSection({ meal, items, canEdit, centerId, date, onRefetch }: MealSectionProps) {
+function MealSection({ meal, items, canEdit, centerId, date, onRefetch, hideHeader = false }: MealSectionProps) {
   const { t, locale } = useT();
   const toast = useToast();
   const confirm = useConfirm();
@@ -271,11 +272,23 @@ function MealSection({ meal, items, canEdit, centerId, date, onRefetch }: MealSe
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
-          {MEAL_LABELS[meal]}
-        </h2>
-        {canEdit && (
+      {!hideHeader ? (
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
+            {MEAL_LABELS[meal]}
+          </h2>
+          {canEdit && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => { setEditItem(null); setFormOpen(true); }}
+            >
+              + {t('menus.addDish')}
+            </Button>
+          )}
+        </div>
+      ) : canEdit ? (
+        <div className="mb-3 flex justify-end">
           <Button
             size="sm"
             variant="secondary"
@@ -283,8 +296,8 @@ function MealSection({ meal, items, canEdit, centerId, date, onRefetch }: MealSe
           >
             + {t('menus.addDish')}
           </Button>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       {items.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-brand-100 px-4 py-3 text-sm text-[#1A3A3F]/40">
@@ -667,10 +680,7 @@ export default function MenusPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">{t('menus.title')}</h1>
-        <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('menus.subtitle')}</p>
-      </div>
+      <PageHeader title={t('menus.title')} subtitle={t('menus.subtitle')} />
 
       {/* Selector de centro */}
       {(centers.data ?? []).length > 1 && (
@@ -769,9 +779,15 @@ export default function MenusPage() {
               ))}
             </div>
           ) : (
-            MEAL_ORDER.map((meal) => (
-              <Card key={meal}>
-                <CardContent>
+            MEAL_ORDER.map((meal) => {
+              const MEAL_LABELS_MAP: Record<string, string> = {
+                DESAYUNO: t('meal.DESAYUNO'),
+                COMIDA: t('meal.COMIDA'),
+                MERIENDA: t('meal.MERIENDA'),
+                CENA: t('meal.CENA'),
+              };
+              return (
+                <SectionCard key={meal} title={MEAL_LABELS_MAP[meal] ?? meal}>
                   <MealSection
                     meal={meal}
                     items={menuByMeal.get(meal) ?? []}
@@ -779,10 +795,11 @@ export default function MenusPage() {
                     centerId={effectiveCenterId}
                     date={date}
                     onRefetch={() => void menuQuery.refetch()}
+                    hideHeader
                   />
-                </CardContent>
-              </Card>
-            ))
+                </SectionCard>
+              );
+            })
           )}
         </div>
       ) : (

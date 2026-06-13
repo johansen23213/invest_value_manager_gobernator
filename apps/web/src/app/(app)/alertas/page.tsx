@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Badge, Card, CardContent, EmptyState, Skeleton } from '@vetlla/ui';
+import { Badge, Card, CardContent, EmptyState, PageHeader, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import type { AlertItem, AlertSeverity } from '@/lib/alerts';
@@ -61,18 +61,19 @@ export default function AlertsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">Alertas</h1>
-          <p className="text-sm text-[#1A3A3F]/60">Medicación no administrada e incidencias de hoy, por prioridad.</p>
-        </div>
-        {!alerts.isLoading && data.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Badge tone="red">{high} altas</Badge>
-            <Badge tone="amber">{medium} medias</Badge>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Alertas"
+        subtitle="Medicación no administrada e incidencias de hoy, por prioridad."
+        accent
+        action={
+          !alerts.isLoading && data.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <Badge tone="red">{high} altas</Badge>
+              <Badge tone="amber">{medium} medias</Badge>
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* Alertas de medicación e incidencias */}
       <Card>
@@ -90,7 +91,7 @@ export default function AlertsPage() {
               ))}
             </div>
           ) : (
-            <EmptyState title="Sin alertas" description="No hay medicación pendiente ni incidencias hoy. Todo al día." />
+            <EmptyState variant="check" title="Sin alertas" description="No hay medicación pendiente ni incidencias hoy. Todo al día." />
           )}
         </CardContent>
       </Card>

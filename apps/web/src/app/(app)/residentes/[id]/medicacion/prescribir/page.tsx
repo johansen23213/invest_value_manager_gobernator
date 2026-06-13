@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, CardContent, CardTitle, Input, Label, Select } from '@vetlla/ui';
+import { Button, Card, CardContent, CardTitle, Input, Label, PageHeader, Select } from '@vetlla/ui';
 import { MedicationRoute, MedicationType } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
@@ -361,6 +361,7 @@ export default function PrescribirPage() {
           {t('med.prescribe.backToMar')}
         </Link>
       </div>
+      <PageHeader title={t('med.prescribe.pageTitle')} />
 
       {/* Alergias activas — siempre visible como aviso contextual */}
       {allergies.length > 0 && (

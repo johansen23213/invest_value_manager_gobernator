@@ -14,12 +14,10 @@ import { useState } from 'react';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardTitle,
   FieldError,
   Input,
   Label,
+  SectionCard,
 } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
@@ -186,17 +184,14 @@ export function SocialTab({ residentId, canWrite }: SocialTabProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Informe más reciente */}
-      <Card>
-        <CardContent>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">{t('exp.social.report.title')}</CardTitle>
-            {canWrite && (
-              <Button size="sm" onClick={openForm}>
-                {r ? t('exp.social.report.edit') : t('exp.social.report.new')}
-              </Button>
-            )}
-          </div>
-
+      <SectionCard
+        title={t('exp.social.report.title')}
+        aside={canWrite ? (
+          <Button size="sm" onClick={openForm}>
+            {r ? t('exp.social.report.edit') : t('exp.social.report.new')}
+          </Button>
+        ) : undefined}
+      >
           {latest.isLoading ? (
             <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
           ) : !r ? (
@@ -229,14 +224,11 @@ export function SocialTab({ residentId, canWrite }: SocialTabProps) {
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
 
       {/* Formulario de nuevo informe */}
       {showForm && (
-        <Card>
-          <CardContent>
-            <CardTitle className="mb-3 text-base">{t('exp.social.report.new')}</CardTitle>
+        <SectionCard title={t('exp.social.report.new')}>
             <form
               className="flex flex-col gap-4"
               noValidate
@@ -289,14 +281,11 @@ export function SocialTab({ residentId, canWrite }: SocialTabProps) {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+        </SectionCard>
       )}
 
       {/* Historial de informes */}
-      <Card>
-        <CardContent>
-          <CardTitle className="mb-3 text-base">{t('exp.social.history.title')}</CardTitle>
+      <SectionCard title={t('exp.social.history.title')}>
           {history.isLoading ? (
             <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
           ) : (history.data ?? []).length <= 1 ? (
@@ -321,8 +310,7 @@ export function SocialTab({ residentId, canWrite }: SocialTabProps) {
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
     </div>
   );
 }

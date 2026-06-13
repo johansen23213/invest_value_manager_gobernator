@@ -26,6 +26,7 @@ import {
   DialogFooter,
   DialogTitle,
   Label,
+  PageHeader,
   Select,
   Input,
 } from '@vetlla/ui';
@@ -918,21 +919,20 @@ export default function CuadrantePage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#1A3A3F]">
-            {t('cuadrante.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('cuadrante.subtitle')}</p>
-        </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setShowTemplates((v) => !v)}
-        >
-          {t('cuadrante.templates.title')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('cuadrante.title')}
+        subtitle={t('cuadrante.subtitle')}
+        accent
+        action={
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setShowTemplates((v) => !v)}
+          >
+            {t('cuadrante.templates.title')}
+          </Button>
+        }
+      />
 
       {/* Filtros */}
       <Card>
