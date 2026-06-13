@@ -151,6 +151,53 @@ business_analysis:
     A corto, Vetlla compite solo por arquitectura+UX, terreno más fácil de igualar.
 
 # --------------------------------------------------------------------------
+# Gap analysis Core Asistencial Completo (2026-06-13, Pau)
+# Motivado por decisión estratégica de Angel: competir con paridad de core
+# frente a ResiPlus / ADD Informática.
+# --------------------------------------------------------------------------
+core_asistencial_completo_gap:
+  date: 2026-06-13
+  author: pau-product
+  output_doc: docs/producto/2026-06-13-core-asistencial-completo-gap.md
+  decision_estrategica: >-
+    Angel (2026-06-13) amplía el alcance de Vetlla de "MVP diferencial cloud-native+IA"
+    a "ERP sociosanitario completo, competidor directo de ResiPlus". El diferencial
+    sigue siendo arquitectura+IA, pero ahora sobre un core funcional completo.
+  inventario_vetlla_hoy:
+    completo:
+      - "Multitenancy + RBAC + onboarding self-service"
+      - "Centros / Unidades / Plazas / Ocupación + KPIs"
+      - "Expediente sociosanitario (40+ campos, 14 tablas, 11 escalas)"
+      - "Atención directa offline-first (CareRecord + cola sync + PWA)"
+      - "Medicación + MAR completo + offline (ADR-0012)"
+      - "PIA/PAI con objetivos y revisión"
+      - "Copiloto IA (packages/ai, 3 slices; H5 in_progress)"
+      - "Auditoría RGPD (AuditLog inmutable + DSAR art.15/17)"
+      - "SuperApp familias (solicitudes + comunicados + mensajería + visitas QR)"
+    fuera_del_alcance_actual:
+      - "Notas de enfermería por turno — BLOQUEANTE inspector"
+      - "Facturación a particulares + SEPA — BLOQUEANTE para operar"
+      - "Cuadrantes / turnos — BLOQUEANTE sector"
+      - "Libro de registro autonómico — BLOQUEANTE inspector"
+      - "UNE 158101 estructurado — BLOQUEANTE Madrid nov-2026"
+      - "Gestión de exitus (proceso legal obligatorio)"
+      - "Informe de valoración PDF"
+      - "Facturación a CCAA + copagos — BLOQUEANTE para concertados"
+      - "Verifactu/factura electrónica — obligación fiscal ES"
+      - "Ficha trabajador + ausencias + nóminas"
+      - "SISAAD (informes al IMSERSO) — BLOQUEANTE concertados"
+      - "Informe social, fisioterapia, actividades, psicología"
+      - "Farmacia/almacén, cocina/menús, mantenimiento, transporte"
+  primer_modulo_recomendado:
+    id: NUR-001
+    nombre: "Notas de enfermería por turno (NursingNote)"
+    razon: >-
+      Sin dependencia externa. Bloquea abandono de ResiPlus. Refuerza flujo offline
+      existente. Activa el tercer caso de uso del copiloto (dictado de ronda).
+      Esfuerzo estimado: 2-3 días. Ratio impacto/esfuerzo máximo.
+  decisiones_para_angel: [Q-010, Q-011, Q-012]
+
+# --------------------------------------------------------------------------
 # Gap analysis SuperApp Residente/Familia (2026-06-12, Pau)
 # --------------------------------------------------------------------------
 superapp_gap_analysis:
@@ -327,6 +374,53 @@ open_questions:
       residenciales medianos sí. Ver docs/producto/2026-06-12-superapp-residente-familia-gap.md.
     status: open
     related: [docs/producto/2026-06-12-superapp-residente-familia-gap.md, D-003]
+
+  # Preguntas nuevas — Core Asistencial Completo (2026-06-13, gap analysis)
+  - id: Q-010
+    date: 2026-06-13
+    question: >-
+      DECISIÓN DE POSICIONAMIENTO ESTRATÉGICO (bloqueante para el roadmap): ¿Vetlla compite
+      en paridad funcional TOTAL con ResiPlus (incluyendo facturación a CCAA, copagos por
+      autonomía, SISAAD, contabilidad integrada, nóminas propias) o en "core suficiente +
+      mejor UX/IA/SuperApp" (bloque asistencial completo + cumplimiento normativo + facturación
+      básica a particulares + SEPA, dejando facturación CCAA/contabilidad/nóminas como
+      integraciones con software especializado)?
+      La vía de paridad total requiere: (a) asesoría normativa continua por CCAA (17 sistemas
+      de facturación concertada distintos), (b) homologación Verifactu/AEAT, (c) 3-5 años de
+      trabajo sostenido en módulos regulados. La vía "core suficiente" llega al mercado antes,
+      cubre el beachhead (centros pequeños/independientes), y puede ampliar a paridad en una
+      segunda fase. Esta decisión determina el roadmap de los próximos 18 meses.
+    status: open
+    related: [docs/producto/2026-06-13-core-asistencial-completo-gap.md, D-003, Q-011, Q-012]
+
+  - id: Q-011
+    date: 2026-06-13
+    question: >-
+      ASESORÍA NORMATIVA EXTERNA: para construir correctamente la facturación a CCAA
+      (módulo B2), los copagos (B3) y los ficheros SISAAD (E2) se necesita validación legal
+      específica por autonomía: los formatos de factura concertada, los cálculos de
+      participación del usuario (IPREM, tabla autonómica) y los ficheros XML del IMSERSO
+      varían por decreto y cambian. Un error puede hacer perder al cliente la subvención del
+      concierto o generar una liquidación incorrecta a la CCAA.
+      ¿Tiene Angel ya un asesor o gestoría especializada en el sector que pueda validar
+      los módulos económico-administrativos antes de lanzar? ¿O Vetlla necesita contratar
+      esa asesoría? Prioridad ALTA si la respuesta a Q-010 es "paridad total".
+    status: open
+    related: [docs/producto/2026-06-13-core-asistencial-completo-gap.md, Q-010]
+
+  - id: Q-012
+    date: 2026-06-13
+    question: >-
+      FACTURA ELECTRÓNICA / VERIFACTU (B5): la obligación de Verifactu (AEAT) aplica a todas
+      las empresas que emitan facturas en España (calendario por tramos: en vigor para grandes
+      empresas, en extensión a pymes). ¿Vetlla construye el módulo de factura electrónica en
+      casa (requiere proceso de homologación con la AEAT, no solo código) o se integra con un
+      proveedor certificado (Factura+, InvoPilot, Holded, etc.) que asume la homologación?
+      Recomendación de Pau: integrar con proveedor certificado para evitar el riesgo de
+      homologación directa. Esta decisión desbloquea toda la cadena de facturación (B1-B5)
+      y es necesaria antes de cobrar el primer euro de una factura de estancia.
+    status: open
+    related: [docs/producto/2026-06-13-core-asistencial-completo-gap.md, Q-010, Q-011]
 
 # --------------------------------------------------------------------------
 # Hitos
