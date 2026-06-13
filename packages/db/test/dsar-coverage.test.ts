@@ -152,6 +152,7 @@ describe('DSAR coverage — cobertura estructural por tabla con residentId (sin 
       'CareRecord',
       'ConsentRecord',
       'Diagnosis',
+      'DischargeRecord',
       'EmergencyContact',
       'FallRecord',
       'FamilyLink',
@@ -165,10 +166,12 @@ describe('DSAR coverage — cobertura estructural por tabla con residentId (sin 
       'Restraint',
       'ResidentDevice',
       'ServiceRequest',
+      'SocialReport',
       'Treatment',
       'Vaccine',
       'Visit',
       'WeightRecord',
+      'WellbeingProfile',
     ].sort();
     expect(sorted).toEqual(expectedKnown);
   });

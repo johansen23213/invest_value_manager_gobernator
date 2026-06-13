@@ -211,6 +211,26 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
     anonymize: 'delete',
     reason:    'Evolutivo médico: dato de salud de categoría especial (art. 9 RGPD). Staff-only por diseño (RF-CLI-010). Se exporta en DSAR art.15 (el interesado tiene derecho a acceder a su historia clínica) y se borra si !keepClinicalRecords.',
   },
+
+  // Épica B — Exitus/Baja, Informe Social, Perfil de Bienestar ACP
+  {
+    model:     'DischargeRecord',
+    export:    true,
+    anonymize: 'scrub',
+    reason:    'Registro de baja: contiene fecha y tipo de baja (incluyendo DEFUNCION). Se exporta en DSAR art.15. En anonimización: scrub de reason/notes/certifiedBy/destination (PII); la fila se conserva para trazabilidad administrativa (no tiene cobertura de retención sanitaria estricta pero sí obligación legal de registro de bajas). Si !keepClinicalRecords se borra.',
+  },
+  {
+    model:     'SocialReport',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Informe social: contiene situación familiar, económica, red de apoyo — datos personales de categoría especial art. 9 RGPD (información socioeconómica sensible). Se exporta en DSAR art.15. Se borra en anonimización (no tiene base de retención sanitaria obligatoria).',
+  },
+  {
+    model:     'WellbeingProfile',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Perfil de bienestar ACP (UNE 158101): contiene preferencias personales, autodeterminación, relaciones. Datos personales de la persona. Se exporta en DSAR art.15. Se borra en anonimización.',
+  },
 ];
 
 /** Lookup rápido por nombre de modelo. */

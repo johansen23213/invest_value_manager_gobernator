@@ -849,6 +849,9 @@ medication_rbac_redesign:
 core_epica_a_done:
   - "ÉPICA A del core (ADR-0016 core-suficiente) COMPLETA backend+UI: NursingNote (notas de enfermería por turno) + MedicalNote (evolución médica). RLS forzada, DSAR (dsar-registry export v3 + anonymize), permisos care:*/clinical:*/residents:read, MedicalNote staff-only (RF-CLI-010). Router clinicalNotes (nursing.create/listByResident/listForShiftHandover; medical.create/listByResident). UI: pestañas Enfermería y Evolución médica en el expediente + pantalla /relevo (traspaso de turno con incidencias resaltadas). 293 db + 380 web tests. Cubre RF-ENF/RF-CLI/RF-PRO-008-009 parciales. Siguiente: Épica B (exitus + informe social + UNE 158101)."
 
+core_epica_b_done:
+  - "ÉPICA B del core (ADR-0016 core-suficiente) COMPLETA backend+UI: (1) Exitus/baja con protocolo (DischargeRecord: register en transacción que pone status BAJA + libera cama + audita; histórico; defunción con médico certificante), (2) Informe social estructurado (SocialReport, histórico, staff-only), (3) Perfil de bienestar ACP/UNE 158101 (WellbeingProfile: 8 dimensiones + qué importa/qué evitar + revisión periódica) con panel /acp de revisiones vencidas (cumplimiento Madrid nov-2026). RLS forzada en 3 tablas, DSAR v4, permisos residents:write/read, FAMILIAR sin acceso. 323 db + 413 web tests. Cubre RF-ADM-011/012/013, RF-SOC-001..008. Siguiente: Épica C (dieta/menús/ingesta) o D (cuadrantes/turnos)."
+
 team:
   location: .claude/agents/
   governance: >-

@@ -993,6 +993,126 @@ const es: Record<string, string> = {
   'exp.medical.plan.label': 'Plan',
 
   // ---------------------------------------------------------------------------
+  // Épica B — Gestión de exitus/baja (RF-ADM-011/012/013)
+  // ---------------------------------------------------------------------------
+  'exp.discharge.title': 'Bajas',
+  'exp.discharge.register': 'Registrar baja',
+  'exp.discharge.confirm.title': 'Confirmar baja del residente',
+  'exp.discharge.confirm.desc': 'Esta acción libera la plaza y marca al residente como dado de baja. Es irreversible en la práctica. Revisa los datos antes de continuar.',
+  'exp.discharge.confirm.button': 'Confirmar baja',
+  'exp.discharge.saved': 'Baja registrada correctamente.',
+  'exp.discharge.history.title': 'Historial de bajas',
+  'exp.discharge.history.empty': 'Sin bajas registradas.',
+  'exp.discharge.field.type': 'Tipo de baja',
+  'exp.discharge.field.dischargedAt': 'Fecha y hora de la baja',
+  'exp.discharge.field.reason': 'Motivo (opcional)',
+  'exp.discharge.field.certifiedBy': 'Médico certificante',
+  'exp.discharge.field.certifiedByHint': 'Requerido en caso de fallecimiento.',
+  'exp.discharge.field.destination': 'Centro de destino',
+  'exp.discharge.field.destinationHint': 'Nombre del centro o hospital de destino.',
+  'exp.discharge.field.belongingsReturned': 'Pertenencias devueltas a la familia',
+  'exp.discharge.field.notes': 'Notas adicionales',
+  'exp.discharge.field.familyNotifiedAt': 'Fecha de notificación a la familia (opcional)',
+  // Tipos de baja (DischargeType)
+  'discharge.type.DEFUNCION':         'Fallecimiento',
+  'discharge.type.VOLUNTARIA':        'Baja voluntaria',
+  'discharge.type.TRASLADO_CENTRO':   'Traslado a otro centro',
+  'discharge.type.TRASLADO_HOSPITAL': 'Traslado a hospital',
+  'discharge.type.FIN_ESTANCIA':      'Fin de estancia',
+  'discharge.type.OTRO':              'Otro motivo',
+  // Nota de respeto para defunción
+  'exp.discharge.defuncion.note': 'Nuestro pésame al equipo y a la familia. El registro queda como prueba de buena práctica asistencial.',
+
+  // ---------------------------------------------------------------------------
+  // Épica B — Informe social (RF-SOC-001..002)
+  // ---------------------------------------------------------------------------
+  'exp.social.title': 'Social',
+  'exp.social.report.title': 'Informe social',
+  'exp.social.report.empty': 'Sin informe social. Crea el primero con el formulario.',
+  'exp.social.report.new': 'Nuevo informe social',
+  'exp.social.report.edit': 'Actualizar informe',
+  'exp.social.report.saved': 'Informe social guardado.',
+  'exp.social.report.by': 'Redactado por {name}',
+  'exp.social.history.title': 'Historial de informes',
+  'exp.social.history.empty': 'Sin informes anteriores.',
+  'exp.social.field.reportDate': 'Fecha del informe',
+  'exp.social.field.familySituation': 'Situación familiar',
+  'exp.social.field.familySituationPh': 'Composición familiar, dinámica, relaciones…',
+  'exp.social.field.supportNetwork': 'Red de apoyo',
+  'exp.social.field.supportNetworkPh': 'Personas de referencia, frecuencia de contacto…',
+  'exp.social.field.economicSituation': 'Situación económica',
+  'exp.social.field.economicSituationPh': 'Ingresos, patrimonio, situación de solvencia…',
+  'exp.social.field.benefits': 'Prestaciones y ayudas',
+  'exp.social.field.benefitsPh': 'Pensiones, ayudas a domicilio, prestaciones vinculadas…',
+  'exp.social.field.workHistory': 'Historia laboral',
+  'exp.social.field.workHistoryPh': 'Profesión, últimas actividades laborales…',
+  'exp.social.field.socialAssessment': 'Valoración social',
+  'exp.social.field.socialAssessmentPh': 'Diagnóstico social, necesidades detectadas…',
+  'exp.social.field.agreements': 'Acuerdos y compromisos',
+  'exp.social.field.agreementsPh': 'Acuerdos con familia, compromisos del centro…',
+  'exp.social.field.nextReviewDate': 'Próxima revisión',
+
+  // ---------------------------------------------------------------------------
+  // Épica B — Perfil de bienestar ACP / UNE 158101 (RF-SOC-003..006)
+  // ---------------------------------------------------------------------------
+  'exp.wellbeing.title': 'Bienestar (ACP)',
+  'exp.wellbeing.subtitle': 'Atención Centrada en la Persona · UNE 158101',
+  'exp.wellbeing.edit': 'Editar perfil de bienestar',
+  'exp.wellbeing.saved': 'Perfil de bienestar guardado.',
+  'exp.wellbeing.empty': 'Sin perfil de bienestar. Crea el primero con el formulario.',
+  'exp.wellbeing.lastUpdate': 'Actualizado por {name}',
+  // Las 8 dimensiones ACP
+  'exp.wellbeing.dim.emotionalWellbeing':     'Bienestar emocional',
+  'exp.wellbeing.dim.physicalWellbeing':      'Bienestar físico',
+  'exp.wellbeing.dim.materialWellbeing':      'Bienestar material',
+  'exp.wellbeing.dim.personalDevelopment':    'Desarrollo personal',
+  'exp.wellbeing.dim.selfDetermination':      'Autodeterminación',
+  'exp.wellbeing.dim.interpersonalRelations': 'Relaciones interpersonales',
+  'exp.wellbeing.dim.socialInclusion':        'Inclusión social',
+  'exp.wellbeing.dim.rights':                 'Derechos',
+  // Descripción de cada dimensión (lenguaje humano)
+  'exp.wellbeing.dim.emotionalWellbeing.desc':     'Cómo se siente, qué le da tranquilidad, miedos y esperanzas.',
+  'exp.wellbeing.dim.physicalWellbeing.desc':      'Salud, dolor, movilidad, sueño, alimentación.',
+  'exp.wellbeing.dim.materialWellbeing.desc':      'Vivienda, economía, pertenencias que valora.',
+  'exp.wellbeing.dim.personalDevelopment.desc':    'Aprender, crear, actividades que le dan sentido.',
+  'exp.wellbeing.dim.selfDetermination.desc':      'Decisiones propias, rutinas elegidas, control de su vida.',
+  'exp.wellbeing.dim.interpersonalRelations.desc': 'Familia, amistades, vínculos afectivos.',
+  'exp.wellbeing.dim.socialInclusion.desc':        'Participación, pertenencia, integración en la comunidad.',
+  'exp.wellbeing.dim.rights.desc':                 'Privacidad, dignidad, trato justo.',
+  // Campos narrativos de la persona
+  'exp.wellbeing.importantToThePerson':   'Qué es importante para la persona',
+  'exp.wellbeing.importantToPh':          'Qué le importa, qué la hace feliz, qué valora en su día a día…',
+  'exp.wellbeing.importantForThePerson':  'Qué necesita / qué debemos evitar',
+  'exp.wellbeing.importantForPh':         'Necesidades específicas, cosas a evitar, preferencias de cuidado…',
+  // Revisión ACP
+  'exp.wellbeing.nextReviewDate': 'Próxima revisión del perfil ACP',
+  'exp.wellbeing.review.OVERDUE':  'Revisión vencida',
+  'exp.wellbeing.review.DUE_SOON': 'Revisión próxima (≤30 días)',
+  'exp.wellbeing.review.OK':       'Al día',
+  'exp.wellbeing.review.NOT_SET':  'Sin fecha planificada',
+  'exp.wellbeing.review.daysLeft': '{days} días para la revisión',
+  'exp.wellbeing.review.daysOverdue': 'Vencida hace {days} días',
+
+  // ---------------------------------------------------------------------------
+  // Épica B — Panel de revisiones ACP vencidas (RF-SOC-007)
+  // ---------------------------------------------------------------------------
+  'nav.acp': 'Revisiones ACP',
+  'acp.title': 'Revisiones ACP pendientes',
+  'acp.subtitle': 'Residentes con revisión del perfil de bienestar vencida o próxima (UNE 158101).',
+  'acp.empty.title': 'Todo al día',
+  'acp.empty.desc': 'No hay revisiones de bienestar vencidas ni próximas.',
+  'acp.filter.center': 'Centro',
+  'acp.filter.all': 'Todos los centros',
+  'acp.col.resident': 'Residente',
+  'acp.col.nextReview': 'Próxima revisión',
+  'acp.col.status': 'Estado',
+  'acp.col.updatedBy': 'Última actualización',
+  'acp.col.actions': 'Acciones',
+  'acp.action.viewProfile': 'Ver perfil →',
+  'acp.badge.overdue': 'Vencida',
+  'acp.badge.due_soon': 'Próxima',
+
+  // ---------------------------------------------------------------------------
   // Épica A — Traspaso de turno (RF-PRO-008/009)
   // ---------------------------------------------------------------------------
   'nav.relevo': 'Traspaso',
@@ -1985,6 +2105,126 @@ const ca: Record<string, string> = {
   'exp.medical.by': 'Per {name}',
   'exp.medical.reason.label': 'Motiu',
   'exp.medical.plan.label': 'Pla',
+
+  // ---------------------------------------------------------------------------
+  // Èpica B — Gestió d'exitus/baixa (RF-ADM-011/012/013)
+  // ---------------------------------------------------------------------------
+  'exp.discharge.title': 'Baixes',
+  'exp.discharge.register': 'Registrar baixa',
+  'exp.discharge.confirm.title': 'Confirmar baixa del resident',
+  'exp.discharge.confirm.desc': 'Aquesta acció allibera la plaça i marca el resident com a donat de baixa. És irreversible a la pràctica. Revisa les dades abans de continuar.',
+  'exp.discharge.confirm.button': 'Confirmar baixa',
+  'exp.discharge.saved': 'Baixa registrada correctament.',
+  'exp.discharge.history.title': 'Historial de baixes',
+  'exp.discharge.history.empty': 'Sense baixes registrades.',
+  'exp.discharge.field.type': 'Tipus de baixa',
+  'exp.discharge.field.dischargedAt': 'Data i hora de la baixa',
+  'exp.discharge.field.reason': 'Motiu (opcional)',
+  'exp.discharge.field.certifiedBy': 'Metge certificant',
+  'exp.discharge.field.certifiedByHint': 'Necessari en cas de defunció.',
+  'exp.discharge.field.destination': 'Centre de destinació',
+  'exp.discharge.field.destinationHint': 'Nom del centre o hospital de destinació.',
+  'exp.discharge.field.belongingsReturned': 'Pertinences retornades a la família',
+  'exp.discharge.field.notes': 'Notes addicionals',
+  'exp.discharge.field.familyNotifiedAt': 'Data de notificació a la família (opcional)',
+  // Tipus de baixa (DischargeType)
+  'discharge.type.DEFUNCION':         'Defunció',
+  'discharge.type.VOLUNTARIA':        'Baixa voluntària',
+  'discharge.type.TRASLADO_CENTRO':   'Trasllat a un altre centre',
+  'discharge.type.TRASLADO_HOSPITAL': 'Trasllat a hospital',
+  'discharge.type.FIN_ESTANCIA':      'Fi d\'estada',
+  'discharge.type.OTRO':              'Un altre motiu',
+  // Nota de respecte per defunció
+  'exp.discharge.defuncion.note': 'Les nostres condolences a l\'equip i a la família. El registre queda com a prova de bona pràctica assistencial.',
+
+  // ---------------------------------------------------------------------------
+  // Èpica B — Informe social (RF-SOC-001..002)
+  // ---------------------------------------------------------------------------
+  'exp.social.title': 'Social',
+  'exp.social.report.title': 'Informe social',
+  'exp.social.report.empty': 'Sense informe social. Crea el primer amb el formulari.',
+  'exp.social.report.new': 'Nou informe social',
+  'exp.social.report.edit': 'Actualitzar informe',
+  'exp.social.report.saved': 'Informe social desat.',
+  'exp.social.report.by': 'Redactat per {name}',
+  'exp.social.history.title': 'Historial d\'informes',
+  'exp.social.history.empty': 'Sense informes anteriors.',
+  'exp.social.field.reportDate': 'Data de l\'informe',
+  'exp.social.field.familySituation': 'Situació familiar',
+  'exp.social.field.familySituationPh': 'Composició familiar, dinàmica, relacions…',
+  'exp.social.field.supportNetwork': 'Xarxa de suport',
+  'exp.social.field.supportNetworkPh': 'Persones de referència, freqüència de contacte…',
+  'exp.social.field.economicSituation': 'Situació econòmica',
+  'exp.social.field.economicSituationPh': 'Ingressos, patrimoni, situació de solvència…',
+  'exp.social.field.benefits': 'Prestacions i ajudes',
+  'exp.social.field.benefitsPh': 'Pensions, ajudes a domicili, prestacions vinculades…',
+  'exp.social.field.workHistory': 'Història laboral',
+  'exp.social.field.workHistoryPh': 'Professió, darreres activitats laborals…',
+  'exp.social.field.socialAssessment': 'Valoració social',
+  'exp.social.field.socialAssessmentPh': 'Diagnòstic social, necessitats detectades…',
+  'exp.social.field.agreements': 'Acords i compromisos',
+  'exp.social.field.agreementsPh': 'Acords amb la família, compromisos del centre…',
+  'exp.social.field.nextReviewDate': 'Propera revisió',
+
+  // ---------------------------------------------------------------------------
+  // Èpica B — Perfil de benestar ACP / UNE 158101 (RF-SOC-003..006)
+  // ---------------------------------------------------------------------------
+  'exp.wellbeing.title': 'Benestar (ACP)',
+  'exp.wellbeing.subtitle': 'Atenció Centrada en la Persona · UNE 158101',
+  'exp.wellbeing.edit': 'Editar perfil de benestar',
+  'exp.wellbeing.saved': 'Perfil de benestar desat.',
+  'exp.wellbeing.empty': 'Sense perfil de benestar. Crea el primer amb el formulari.',
+  'exp.wellbeing.lastUpdate': 'Actualitzat per {name}',
+  // Les 8 dimensions ACP
+  'exp.wellbeing.dim.emotionalWellbeing':     'Benestar emocional',
+  'exp.wellbeing.dim.physicalWellbeing':      'Benestar físic',
+  'exp.wellbeing.dim.materialWellbeing':      'Benestar material',
+  'exp.wellbeing.dim.personalDevelopment':    'Desenvolupament personal',
+  'exp.wellbeing.dim.selfDetermination':      'Autodeterminació',
+  'exp.wellbeing.dim.interpersonalRelations': 'Relacions interpersonals',
+  'exp.wellbeing.dim.socialInclusion':        'Inclusió social',
+  'exp.wellbeing.dim.rights':                 'Drets',
+  // Descripció de cada dimensió (llenguatge humà)
+  'exp.wellbeing.dim.emotionalWellbeing.desc':     'Com es sent, què li dona tranquil·litat, pors i esperances.',
+  'exp.wellbeing.dim.physicalWellbeing.desc':      'Salut, dolor, mobilitat, son, alimentació.',
+  'exp.wellbeing.dim.materialWellbeing.desc':      'Habitatge, economia, pertinences que valora.',
+  'exp.wellbeing.dim.personalDevelopment.desc':    'Aprendre, crear, activitats que li donen sentit.',
+  'exp.wellbeing.dim.selfDetermination.desc':      'Decisions pròpies, rutines escollides, control de la seva vida.',
+  'exp.wellbeing.dim.interpersonalRelations.desc': 'Família, amistats, vincles afectius.',
+  'exp.wellbeing.dim.socialInclusion.desc':        'Participació, pertinença, integració a la comunitat.',
+  'exp.wellbeing.dim.rights.desc':                 'Privadesa, dignitat, tracte just.',
+  // Camps narratius de la persona
+  'exp.wellbeing.importantToThePerson':   'Què és important per a la persona',
+  'exp.wellbeing.importantToPh':          'Què li importa, què la fa feliç, què valora en el seu dia a dia…',
+  'exp.wellbeing.importantForThePerson':  'Què necessita / què hem d\'evitar',
+  'exp.wellbeing.importantForPh':         'Necessitats específiques, coses a evitar, preferències de cura…',
+  // Revisió ACP
+  'exp.wellbeing.nextReviewDate': 'Propera revisió del perfil ACP',
+  'exp.wellbeing.review.OVERDUE':  'Revisió vençuda',
+  'exp.wellbeing.review.DUE_SOON': 'Revisió propera (≤30 dies)',
+  'exp.wellbeing.review.OK':       'Al dia',
+  'exp.wellbeing.review.NOT_SET':  'Sense data planificada',
+  'exp.wellbeing.review.daysLeft': '{days} dies per a la revisió',
+  'exp.wellbeing.review.daysOverdue': 'Vençuda fa {days} dies',
+
+  // ---------------------------------------------------------------------------
+  // Èpica B — Panell de revisions ACP vençudes (RF-SOC-007)
+  // ---------------------------------------------------------------------------
+  'nav.acp': 'Revisions ACP',
+  'acp.title': 'Revisions ACP pendents',
+  'acp.subtitle': 'Residents amb revisió del perfil de benestar vençuda o propera (UNE 158101).',
+  'acp.empty.title': 'Tot al dia',
+  'acp.empty.desc': 'No hi ha revisions de benestar vençudes ni properes.',
+  'acp.filter.center': 'Centre',
+  'acp.filter.all': 'Tots els centres',
+  'acp.col.resident': 'Resident',
+  'acp.col.nextReview': 'Propera revisió',
+  'acp.col.status': 'Estat',
+  'acp.col.updatedBy': 'Darrera actualització',
+  'acp.col.actions': 'Accions',
+  'acp.action.viewProfile': 'Veure perfil →',
+  'acp.badge.overdue': 'Vençuda',
+  'acp.badge.due_soon': 'Propera',
 
   // ---------------------------------------------------------------------------
   // Èpica A — Traspàs de torn (RF-PRO-008/009)
