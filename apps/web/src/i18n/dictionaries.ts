@@ -925,6 +925,90 @@ const es: Record<string, string> = {
   'exp.admin.advanceDirLocation': 'Localización del documento',
   'exp.admin.saved': 'Datos administrativos actualizados.',
   'exp.admin.notSet': '—',
+
+  // ---------------------------------------------------------------------------
+  // Épica A — Notas de enfermería por turno (RF-ENF-001..011)
+  // ---------------------------------------------------------------------------
+  'exp.nursing.title': 'Enfermería',
+  'exp.nursing.empty': 'Sin notas de enfermería para este turno.',
+  'exp.nursing.emptyAll': 'Sin notas de enfermería registradas.',
+  'exp.nursing.filterShift': 'Turno',
+  'exp.nursing.filterAll': 'Todos los turnos',
+  'exp.nursing.filterShift.aria': 'Filtrar por turno',
+  'exp.nursing.add': 'Nueva nota',
+  'exp.nursing.form.shift': 'Turno',
+  'exp.nursing.form.date': 'Fecha',
+  'exp.nursing.form.category': 'Categoría',
+  'exp.nursing.form.body': 'Nota',
+  'exp.nursing.form.bodyPh': 'Describe la situación del residente en este turno…',
+  'exp.nursing.form.submit': 'Registrar nota',
+  'exp.nursing.form.submitting': 'Guardando…',
+  'exp.nursing.saved': 'Nota de enfermería registrada.',
+  'exp.nursing.by': 'Por {name}',
+  'exp.nursing.incidencia.badge': 'Incidencia',
+  // Categorías de nota de enfermería (NursingNoteCategory)
+  'nursing.category.GENERAL': 'General',
+  'nursing.category.INCIDENCIA': 'Incidencia',
+  'nursing.category.CURA': 'Cura',
+  'nursing.category.CONDUCTA': 'Conducta',
+  'nursing.category.SUENO': 'Sueño',
+  'nursing.category.DOLOR': 'Dolor',
+  'nursing.category.ALIMENTACION': 'Alimentación',
+  // Turnos de nota de enfermería (NursingNoteShift)
+  'nursing.shift.MANANA': 'Mañana',
+  'nursing.shift.TARDE': 'Tarde',
+  'nursing.shift.NOCHE': 'Noche',
+  // Tipos de evolutivo médico (MedicalNoteType)
+  'medical.type.EVOLUTIVO': 'Evolutivo',
+  'medical.type.EXPLORACION': 'Exploración',
+  'medical.type.DERIVACION': 'Derivación',
+  'medical.type.VISITA': 'Visita',
+
+  // ---------------------------------------------------------------------------
+  // Épica A — Evolución médica (RF-CLI-001..006/009/011)
+  // ---------------------------------------------------------------------------
+  'exp.medical.title': 'Evolución médica',
+  'exp.medical.empty': 'Sin evolutivos médicos de este tipo.',
+  'exp.medical.emptyAll': 'Sin evolutivos médicos registrados.',
+  'exp.medical.filterType': 'Tipo',
+  'exp.medical.filterAll': 'Todos los tipos',
+  'exp.medical.filterType.aria': 'Filtrar por tipo de evolutivo',
+  'exp.medical.add': 'Nuevo evolutivo',
+  'exp.medical.form.type': 'Tipo',
+  'exp.medical.form.date': 'Fecha',
+  'exp.medical.form.reason': 'Motivo (opcional)',
+  'exp.medical.form.reasonPh': 'Motivo de la visita, derivación…',
+  'exp.medical.form.body': 'Descripción clínica',
+  'exp.medical.form.bodyPh': 'Observaciones, hallazgos, evolución del paciente…',
+  'exp.medical.form.plan': 'Plan (opcional)',
+  'exp.medical.form.planPh': 'Plan de actuación, seguimiento, tratamiento propuesto…',
+  'exp.medical.form.submit': 'Registrar evolutivo',
+  'exp.medical.form.submitting': 'Guardando…',
+  'exp.medical.saved': 'Evolutivo médico registrado.',
+  'exp.medical.by': 'Por {name}',
+  'exp.medical.reason.label': 'Motivo',
+  'exp.medical.plan.label': 'Plan',
+
+  // ---------------------------------------------------------------------------
+  // Épica A — Traspaso de turno (RF-PRO-008/009)
+  // ---------------------------------------------------------------------------
+  'nav.relevo': 'Traspaso',
+  'relevo.title': 'Traspaso de turno',
+  'relevo.subtitle': 'Notas del turno para el equipo entrante.',
+  'relevo.shift': 'Turno',
+  'relevo.date': 'Fecha',
+  'relevo.center': 'Centro',
+  'relevo.unit': 'Unidad',
+  'relevo.unitAll': 'Todas las unidades',
+  'relevo.loading': 'Cargando traspaso…',
+  'relevo.noCenters': 'No hay centros disponibles.',
+  'relevo.empty.title': 'Sin notas en este turno',
+  'relevo.empty.desc': 'No hay notas de enfermería registradas para este turno y fecha.',
+  'relevo.resident.noNotes': 'Sin notas en este turno.',
+  'relevo.resident.bed': 'Plaza {code}',
+  'relevo.incidencia.label': 'Incidencia',
+  'relevo.residents.withIncidencia': '{count} {count, plural, one {residente con incidencia} other {residentes con incidencias}}',
+  'relevo.note.at': '{date} · {shift}',
 };
 
 const ca: Record<string, string> = {
@@ -1849,6 +1933,91 @@ const ca: Record<string, string> = {
   'exp.admin.advanceDirLocation': 'Localització del document',
   'exp.admin.saved': 'Dades administratives actualitzades.',
   'exp.admin.notSet': '—',
+
+  // ---------------------------------------------------------------------------
+  // Èpica A — Notes d'infermeria per torn (RF-ENF-001..011)
+  // ---------------------------------------------------------------------------
+  'exp.nursing.title': 'Infermeria',
+  'exp.nursing.empty': 'Sense notes d\'infermeria per a aquest torn.',
+  'exp.nursing.emptyAll': 'Sense notes d\'infermeria registrades.',
+  'exp.nursing.filterShift': 'Torn',
+  'exp.nursing.filterAll': 'Tots els torns',
+  'exp.nursing.filterShift.aria': 'Filtrar per torn',
+  'exp.nursing.add': 'Nova nota',
+  'exp.nursing.form.shift': 'Torn',
+  'exp.nursing.form.date': 'Data',
+  'exp.nursing.form.category': 'Categoria',
+  'exp.nursing.form.body': 'Nota',
+  'exp.nursing.form.bodyPh': 'Descriu la situació del resident en aquest torn…',
+  'exp.nursing.form.submit': 'Registrar nota',
+  'exp.nursing.form.submitting': 'Desant…',
+  'exp.nursing.saved': 'Nota d\'infermeria registrada.',
+  'exp.nursing.by': 'Per {name}',
+  'exp.nursing.incidencia.badge': 'Incidència',
+
+  // ---------------------------------------------------------------------------
+  // Èpica A — Evolució mèdica (RF-CLI-001..006/009/011)
+  // ---------------------------------------------------------------------------
+  'exp.medical.title': 'Evolució mèdica',
+  'exp.medical.empty': 'Sense evolutius mèdics d\'aquest tipus.',
+  'exp.medical.emptyAll': 'Sense evolutius mèdics registrats.',
+  'exp.medical.filterType': 'Tipus',
+  'exp.medical.filterAll': 'Tots els tipus',
+  'exp.medical.filterType.aria': 'Filtrar per tipus d\'evolutiu',
+  'exp.medical.add': 'Nou evolutiu',
+  'exp.medical.form.type': 'Tipus',
+  'exp.medical.form.date': 'Data',
+  'exp.medical.form.reason': 'Motiu (opcional)',
+  'exp.medical.form.reasonPh': 'Motiu de la visita, derivació…',
+  'exp.medical.form.body': 'Descripció clínica',
+  'exp.medical.form.bodyPh': 'Observacions, troballes, evolució del pacient…',
+  'exp.medical.form.plan': 'Pla (opcional)',
+  'exp.medical.form.planPh': 'Pla d\'actuació, seguiment, tractament proposat…',
+  'exp.medical.form.submit': 'Registrar evolutiu',
+  'exp.medical.form.submitting': 'Desant…',
+  'exp.medical.saved': 'Evolutiu mèdic registrat.',
+  'exp.medical.by': 'Per {name}',
+  'exp.medical.reason.label': 'Motiu',
+  'exp.medical.plan.label': 'Pla',
+
+  // ---------------------------------------------------------------------------
+  // Èpica A — Traspàs de torn (RF-PRO-008/009)
+  // ---------------------------------------------------------------------------
+  'nav.relevo': 'Traspàs',
+  'relevo.title': 'Traspàs de torn',
+  'relevo.subtitle': 'Notes del torn per a l\'equip entrant.',
+  'relevo.shift': 'Torn',
+  'relevo.date': 'Data',
+  'relevo.center': 'Centre',
+  'relevo.unit': 'Unitat',
+  'relevo.unitAll': 'Totes les unitats',
+  'relevo.loading': 'Carregant traspàs…',
+  'relevo.noCenters': 'No hi ha centres disponibles.',
+  'relevo.empty.title': 'Sense notes en aquest torn',
+  'relevo.empty.desc': 'No hi ha notes d\'infermeria registrades per a aquest torn i data.',
+  'relevo.resident.noNotes': 'Sense notes en aquest torn.',
+  'relevo.resident.bed': 'Plaça {code}',
+  'relevo.incidencia.label': 'Incidència',
+  'relevo.residents.withIncidencia': '{count} {count, plural, one {resident amb incidència} other {residents amb incidències}}',
+  'relevo.note.at': '{date} · {shift}',
+
+  // Categories de nota d'infermeria (NursingNoteCategory)
+  'nursing.category.GENERAL': 'General',
+  'nursing.category.INCIDENCIA': 'Incidència',
+  'nursing.category.CURA': 'Cura',
+  'nursing.category.CONDUCTA': 'Conducta',
+  'nursing.category.SUENO': 'Son',
+  'nursing.category.DOLOR': 'Dolor',
+  'nursing.category.ALIMENTACION': 'Alimentació',
+  // Torns de nota d'infermeria (NursingNoteShift)
+  'nursing.shift.MANANA': 'Matí',
+  'nursing.shift.TARDE': 'Tarda',
+  'nursing.shift.NOCHE': 'Nit',
+  // Tipus d'evolutiu mèdic (MedicalNoteType)
+  'medical.type.EVOLUTIVO': 'Evolutiu',
+  'medical.type.EXPLORACION': 'Exploració',
+  'medical.type.DERIVACION': 'Derivació',
+  'medical.type.VISITA': 'Visita',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };
