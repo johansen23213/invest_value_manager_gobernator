@@ -212,6 +212,60 @@ cobertura_requerimientos_completos:
     Q-009: "Modelo multicentro corporativo — desbloquea: rol corporativo, BI multi-centro"
 
 # --------------------------------------------------------------------------
+# Re-cobertura de requerimientos (2026-06-13, Pau) — post Épicas A-D + SuperApp
+# Actualización del análisis de cobertura completo tras construir todo el core
+# operativo sin bloqueos (A: enfermería+médica, B: exitus+social+ACP,
+# C: nutrición/menús/ingesta, D: cuadrantes/turnos+traspaso firmado).
+# --------------------------------------------------------------------------
+recobertura_post_epicas_ad:
+  date: 2026-06-13
+  author: pau-product
+  output_doc: docs/producto/2026-06-13-cobertura-requerimientos-completos.md
+  descripcion: >-
+    Actualización del análisis RF por RF (320 RF, 32 áreas) tras la construcción
+    de las Épicas A-D del core + SuperApp (Solicitudes/Comunicaciones/Visitas) +
+    Expediente Fase 1 + Rediseño v2 + Seguridad DSAR v3-v5.
+    Fuentes verificadas: project_state.yaml secciones core_epica_*_done,
+    superapp_*_done, barrido_diseno_v2_done; routers clinical-notes.ts,
+    discharge.ts, social.ts, nutrition.ts, shifts.ts.
+  cobertura_global_actualizada:
+    total_rf: 320
+    hecho: 109       # 34% (era 89/28%)
+    parcial: 45      # 14% (era 46/14%)
+    pendiente: 79    # 25% (era 98/31%)
+    bloqueado: 34    # 11% (sin cambios)
+    fuera: 53        # 17% (sin cambios)
+    hecho_mas_parcial_pct: 48   # era 42%
+  deltas_por_epica:
+    epica_a_NursingNote_MedicalNote:
+      pendiente_a_hecho: [RF-CLI-001, RF-CLI-002, RF-PRO-008, RF-PRO-009, RF-PRO-010]
+      pendiente_a_parcial: [RF-CLI-005]
+    epica_b_exitus_social_acp:
+      parcial_a_hecho: [RF-ADM-012, RF-SOC-002, RF-SOC-003]
+      pendiente_a_hecho: [RF-ADM-013, RF-SOC-007]
+      pendiente_a_parcial: [RF-SOC-006, RF-SOC-008]
+    epica_c_nutricion:
+      pendiente_a_hecho: [RF-NUT-003, RF-NUT-004, RF-NUT-005, RF-NUT-006, RF-NUT-007, RF-NUT-008, RF-NUT-009]
+    epica_d_turnos:
+      pendiente_a_hecho: [RF-PRO-003, RF-PRO-013]
+      parcial_a_hecho: [RF-PRO-004]
+  areas_sin_cambios: >-
+    3.1, 3.3, 3.5, 3.6, 3.7, 3.8, 3.11–3.24, 3.26–3.32 mantienen valores del
+    análisis inicial. SuperApp ya estaba reflejada en el análisis inicial.
+  veredicto_fase1_actualizado:
+    items_hechos_o_parciales: 10
+    items_totales: 12
+    pct_completado: 83
+    bloqueantes_restantes:
+      - "Pagos/recibos: bloqueado Q-007 (pasarela)"
+      - "Documentos binarios: bloqueado Q-004 (object storage)"
+  proximas_4_acciones_bloque_a:
+    - { rank: 1, modulo: "MFA (TOTP) + bloqueo intentos fallidos", rf: [RNF-SEG-002, RNF-SEG-011], esfuerzo: S, razon: "Bloqueante piloto con datos reales (art. 9 RGPD)" }
+    - { rank: 2, modulo: "Push notifications VAPID", rf: [RF-NOT-001..005], esfuerzo: S, razon: "Multiplica valor de mensajería+solicitudes+visitas ya construidas" }
+    - { rank: 3, modulo: "Facturación básica — modelo Invoice + tarifas", rf: [RF-ECO-001..005], esfuerzo: L, razon: "Elimina sistema paralelo para cobros; se activa con Q-007" }
+    - { rank: 4, modulo: "Alertas de valoración vencida + gráfico de escalas", rf: [RF-VAL-004..008], esfuerzo: S, razon: "Trabajo sobre datos existentes; diferencial clínico y base IA predictiva" }
+
+# --------------------------------------------------------------------------
 # Gap analysis Core Asistencial Completo (2026-06-13, Pau)
 # Motivado por decisión estratégica de Angel: competir con paridad de core
 # frente a ResiPlus / ADD Informática.
