@@ -159,12 +159,12 @@ describe.skipIf(!hasDb)('DSAR — export y anonimización', () => {
     await prisma.$disconnect();
   });
 
-  it('exporta el expediente completo con hash de integridad (v3)', async () => {
+  it('exporta el expediente completo con hash de integridad (v4)', async () => {
     const db = forTenant({ tenantId });
     const { data, sha256 } = await exportResidentData(db, tenantId, residentId);
 
     expect(data.format).toBe('vetlla-dsar-export');
-    expect(data.version).toBe(3);
+    expect(data.version).toBe(4);
     expect((data.resident as { firstName: string }).firstName).toBe('María');
     expect((data.resident as { contacts: unknown[] }).contacts).toHaveLength(1);
     expect(data.careRecords).toHaveLength(1);

@@ -543,6 +543,100 @@ describe('paridad es/ca — Visitas (VIS-001..VIS-010)', () => {
   });
 });
 
+describe('paridad es/ca — Épica B (exitus, social, bienestar ACP)', () => {
+  const epicaBKeys = [
+    // Discharge
+    'exp.discharge.title',
+    'exp.discharge.register',
+    'exp.discharge.confirm.title',
+    'exp.discharge.confirm.button',
+    'exp.discharge.saved',
+    'exp.discharge.history.empty',
+    'exp.discharge.field.type',
+    'exp.discharge.field.dischargedAt',
+    'exp.discharge.field.certifiedBy',
+    'exp.discharge.field.belongingsReturned',
+    'discharge.type.DEFUNCION',
+    'discharge.type.VOLUNTARIA',
+    'discharge.type.TRASLADO_CENTRO',
+    'discharge.type.TRASLADO_HOSPITAL',
+    'discharge.type.FIN_ESTANCIA',
+    'discharge.type.OTRO',
+    // Social
+    'exp.social.title',
+    'exp.social.report.title',
+    'exp.social.report.empty',
+    'exp.social.report.new',
+    'exp.social.report.saved',
+    'exp.social.field.reportDate',
+    'exp.social.field.familySituation',
+    'exp.social.field.supportNetwork',
+    'exp.social.field.economicSituation',
+    'exp.social.field.socialAssessment',
+    'exp.social.field.nextReviewDate',
+    // Wellbeing ACP
+    'exp.wellbeing.title',
+    'exp.wellbeing.subtitle',
+    'exp.wellbeing.edit',
+    'exp.wellbeing.saved',
+    'exp.wellbeing.empty',
+    'exp.wellbeing.dim.emotionalWellbeing',
+    'exp.wellbeing.dim.physicalWellbeing',
+    'exp.wellbeing.dim.materialWellbeing',
+    'exp.wellbeing.dim.personalDevelopment',
+    'exp.wellbeing.dim.selfDetermination',
+    'exp.wellbeing.dim.interpersonalRelations',
+    'exp.wellbeing.dim.socialInclusion',
+    'exp.wellbeing.dim.rights',
+    'exp.wellbeing.importantToThePerson',
+    'exp.wellbeing.importantForThePerson',
+    'exp.wellbeing.nextReviewDate',
+    'exp.wellbeing.review.OVERDUE',
+    'exp.wellbeing.review.DUE_SOON',
+    'exp.wellbeing.review.OK',
+    'exp.wellbeing.review.NOT_SET',
+    // Panel ACP
+    'nav.acp',
+    'acp.title',
+    'acp.subtitle',
+    'acp.empty.title',
+    'acp.empty.desc',
+    'acp.col.resident',
+    'acp.col.nextReview',
+    'acp.col.status',
+    'acp.badge.overdue',
+    'acp.badge.due_soon',
+  ];
+
+  it('todas las claves Épica B existen en es', () => {
+    for (const key of epicaBKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves Épica B existen en ca', () => {
+    for (const key of epicaBKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de la Épica B difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'exp.discharge.confirm.desc',
+      'exp.wellbeing.subtitle',
+      'exp.social.report.empty',
+      'acp.subtitle',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
 describe('paridad es/ca — Ola B (expediente sociosanitario Fase 1)', () => {
   const olaBKeys = [
     // Chrome safety chips
