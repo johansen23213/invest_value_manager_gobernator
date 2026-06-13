@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { Card, CardContent, Skeleton } from '@vetlla/ui';
+import { Skeleton, StatCard } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import type { Permission } from '@/lib/rbac';
@@ -89,122 +89,76 @@ function OccupancyRing({
 }
 
 // ---------------------------------------------------------------------------
-// Tarjeta KPI
+// SVG icons para QuickLink — reemplazan los emojis OS-dependientes (v2)
 // ---------------------------------------------------------------------------
-interface KpiCardProps {
-  label: string;
-  value: string | number;
-  sub?: string;
-  loading: boolean;
-  href?: string;
-  cta?: string;
-  accent?: boolean;
-  /** Número en grande para dar jerarquía visual. */
-  large?: boolean;
-}
-
-function KpiCard({ label, value, sub, loading, href, cta, accent, large }: KpiCardProps) {
+function IconCare({ className }: { className?: string }) {
   return (
-    <Card
-      className={`animate-fade-in-up transition-smooth hover:shadow-card-hover ${
-        accent ? 'border-warm-200 bg-gradient-to-br from-warm-50 to-white' : ''
-      }`}
-    >
-      <CardContent className="flex flex-col gap-1">
-        <p className="text-sm font-medium text-[#1A3A3F]/70">{label}</p>
-        {loading ? (
-          <Skeleton className="mt-1 h-9 w-20" />
-        ) : (
-          <p className={large ? 'text-4xl font-extrabold tracking-tight text-[#1A3A3F]' : 'text-3xl font-bold text-[#1A3A3F]'}>
-            {value}
-            {sub && (
-              <span className="ml-1.5 text-sm font-normal text-[#1A3A3F]/70">{sub}</span>
-            )}
-          </p>
-        )}
-        {href && cta && !loading && (
-          <Link
-            href={href}
-            className="mt-1 text-sm font-semibold text-brand-600 hover:text-brand-700 hover:underline focus-visible:underline"
-          >
-            {cta}
-          </Link>
-        )}
-      </CardContent>
-    </Card>
+    <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tarjeta KPI de ocupación (especial: incluye anillo)
-// ---------------------------------------------------------------------------
-function OccupancyKpiCard({
-  occupied,
-  total,
-  loading,
-  t,
-}: {
-  occupied: number;
-  total: number;
-  loading: boolean;
-  t: (k: string, vars?: Record<string, string | number>) => string;
-}) {
-  const pctLabel = total > 0 ? `${Math.round((occupied / total) * 100)}%` : '—';
+function IconResidents({ className }: { className?: string }) {
   return (
-    <Card className="animate-fade-in-up col-span-1 transition-smooth hover:shadow-card-hover sm:col-span-1">
-      <CardContent className="flex items-center gap-4">
-        <OccupancyRing occupied={occupied} total={total} loading={loading} />
-        <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-medium text-[#1A3A3F]/70">{t('dashboard.kpi.occupancy')}</p>
-          {loading ? (
-            <Skeleton className="h-9 w-16" />
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-[#1A3A3F]" aria-label={`Ocupación: ${pctLabel}`}>
-                {pctLabel}
-              </p>
-              <p className="text-sm text-[#1A3A3F]/70">
-                {occupied}/{total} {t('dashboard.kpi.occupancyOf', { total })}
-              </p>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function IconOccupancy({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  );
+}
+
+function IconAlerts({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
   );
 }
 
 // ---------------------------------------------------------------------------
 // Acceso rápido
 // ---------------------------------------------------------------------------
-const QUICK_LINKS: { perm: Permission; href: string; titleKey: string; descKey: string; icon: string }[] = [
+const QUICK_LINKS: { perm: Permission; href: string; titleKey: string; descKey: string; Icon: (p: { className?: string }) => React.ReactElement }[] = [
   {
     perm: 'care:write',
     href: '/atencion',
     titleKey: 'nav.care',
     descKey: 'dashboard.quickLinks',
-    icon: '🩺',
+    Icon: IconCare,
   },
   {
     perm: 'residents:read',
     href: '/residentes',
     titleKey: 'nav.residents',
     descKey: 'dashboard.quickLinks',
-    icon: '👥',
+    Icon: IconResidents,
   },
   {
     perm: 'centers:read',
     href: '/ocupacion',
     titleKey: 'nav.occupancy',
     descKey: 'dashboard.quickLinks',
-    icon: '🏠',
+    Icon: IconOccupancy,
   },
   {
     perm: 'care:read',
     href: '/alertas',
     titleKey: 'nav.alerts',
     descKey: 'dashboard.quickLinks',
-    icon: '🔔',
+    Icon: IconAlerts,
   },
 ];
 
@@ -222,17 +176,27 @@ const QUICK_LINK_DESCS_CA: Record<string, string> = {
   '/alertas': "Medicació i incidències d'avui",
 };
 
-function QuickLink({ href, icon, title, desc }: { href: string; icon: string; title: string; desc: string }) {
+function QuickLink({
+  href,
+  Icon,
+  title,
+  desc,
+}: {
+  href: string;
+  Icon: (p: { className?: string }) => React.ReactElement;
+  title: string;
+  desc: string;
+}) {
   return (
     <Link
       href={href}
-      className="group flex items-start gap-3 rounded-2xl border border-brand-100/60 bg-white p-4 shadow-card transition-smooth hover:border-brand-300 hover:shadow-card-hover focus-visible:border-brand-500"
+      className="group flex items-start gap-3 rounded-2xl border border-brand-100/60 bg-white p-4 shadow-card transition-lift hover:border-brand-300 hover:shadow-card-hover focus-visible:border-brand-500"
     >
       <span
         aria-hidden="true"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-xl text-brand-700 group-hover:bg-brand-100"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 group-hover:bg-brand-100"
       >
-        {icon}
+        <Icon />
       </span>
       <div>
         <p className="font-semibold text-[#1A3A3F]">{title}</p>
@@ -261,13 +225,13 @@ function AttentionPanel({
   }
   if (alertCount === 0) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-5 py-4">
+      <div className="flex items-center gap-3 rounded-2xl border border-delight-100 bg-delight-50 px-5 py-4">
         {/* Checkmark SVG inline */}
-        <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0 text-green-600">
+        <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0 text-delight-500">
           <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
           <path d="M6.5 10.5l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <p className="text-sm font-medium text-green-800">{t('dashboard.attention.empty')}</p>
+        <p className="text-sm font-medium text-delight-700">{t('dashboard.attention.empty')}</p>
       </div>
     );
   }
@@ -338,14 +302,18 @@ export function DashboardClient() {
 
   const quickLinkDescs = locale === 'ca' ? QUICK_LINK_DESCS_CA : QUICK_LINK_DESCS;
 
+  // Porcentaje de ocupación
+  const occupancyPct = totalResidents > 0 ? `${Math.round((occupied / totalResidents) * 100)}%` : '—';
+  const occupancySub = totalResidents > 0 ? `${occupied}/${totalResidents}` : undefined;
+
   return (
     <div className="flex flex-col gap-8">
       {/* ── Saludo personalizado ───────────────────────────────────────────── */}
       <div className="animate-fade-in-up">
         {me.isLoading ? (
-          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-12 w-72" />
         ) : (
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#1A3A3F]">
+          <h1 className="font-display text-display-2xl text-[#1A3A3F]">
             {t(greetingKey, { name: userName })}
           </h1>
         )}
@@ -374,45 +342,66 @@ export function DashboardClient() {
         </section>
       )}
 
-      {/* ── KPIs visuales ─────────────────────────────────────────────────── */}
+      {/* ── KPIs visuales con StatCard v2 ─────────────────────────────────── */}
       <section aria-label="Indicadores clave">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {canCenters && (
-            <KpiCard
-              label={t('dashboard.kpi.centers')}
-              value={totalCenters}
-              loading={centers.isLoading}
-              href="/centros"
-              cta={t('dashboard.kpi.viewCenters')}
-            />
+            <Link href="/centros" className="animate-stagger-1">
+              <StatCard
+                label={t('dashboard.kpi.centers')}
+                value={totalCenters}
+                loading={centers.isLoading}
+                clickable
+              />
+            </Link>
           )}
           {canResidents && (
-            <KpiCard
-              label={t('dashboard.kpi.residents')}
-              value={totalResidents}
-              loading={residents.isLoading}
-              href="/residentes"
-              cta={t('dashboard.kpi.viewResidents')}
-              large
-            />
+            <Link href="/residentes" className="animate-stagger-2">
+              <StatCard
+                label={t('dashboard.kpi.residents')}
+                value={totalResidents}
+                loading={residents.isLoading}
+                clickable
+              />
+            </Link>
           )}
           {canResidents && (
-            <OccupancyKpiCard
-              occupied={occupied}
-              total={totalResidents}
-              loading={residents.isLoading}
-              t={t}
-            />
+            <div className="animate-stagger-3">
+              <StatCard
+                label={t('dashboard.kpi.occupancy')}
+                value={occupancyPct}
+                sub={occupancySub}
+                loading={residents.isLoading}
+                aside={
+                  <OccupancyRing
+                    occupied={occupied}
+                    total={totalResidents}
+                    loading={residents.isLoading}
+                  />
+                }
+              />
+            </div>
           )}
           {canMeds && (
-            <KpiCard
-              label={t('dashboard.kpi.alerts')}
-              value={alertCount}
-              loading={alerts.isLoading}
-              href={alertCount > 0 ? '/alertas' : undefined}
-              cta={alertCount > 0 ? t('dashboard.kpi.viewAlerts') : undefined}
-              accent={alertCount > 0}
-            />
+            alertCount > 0 ? (
+              <Link href="/alertas" className="animate-stagger-4">
+                <StatCard
+                  label={t('dashboard.kpi.alerts')}
+                  value={alertCount}
+                  loading={alerts.isLoading}
+                  accent
+                  clickable
+                />
+              </Link>
+            ) : (
+              <div className="animate-stagger-4">
+                <StatCard
+                  label={t('dashboard.kpi.alerts')}
+                  value={alertCount}
+                  loading={alerts.isLoading}
+                />
+              </div>
+            )
           )}
         </div>
       </section>
@@ -431,7 +420,7 @@ export function DashboardClient() {
               <QuickLink
                 key={l.href}
                 href={l.href}
-                icon={l.icon}
+                Icon={l.Icon}
                 title={t(l.titleKey)}
                 desc={quickLinkDescs[l.href] ?? ''}
               />
