@@ -212,6 +212,18 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
     reason:    'Evolutivo médico: dato de salud de categoría especial (art. 9 RGPD). Staff-only por diseño (RF-CLI-010). Se exporta en DSAR art.15 (el interesado tiene derecho a acceder a su historia clínica) y se borra si !keepClinicalRecords.',
   },
 
+  // Épica C — Nutrición: registro de ingesta estructurado
+  {
+    model:     'IntakeRecord',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Registro de ingesta por comida: dato de salud nutricional (art. 9 RGPD). ' +
+               'Contiene foodPct, hydrationMl y notas del residente. ' +
+               'Se exporta en DSAR art.15 (historial nutricional del interesado) y se borra ' +
+               'en anonimización si !keepClinicalRecords. ' +
+               'MenuItem NO tiene residentId y no entra en este registro.',
+  },
+
   // Épica B — Exitus/Baja, Informe Social, Perfil de Bienestar ACP
   {
     model:     'DischargeRecord',

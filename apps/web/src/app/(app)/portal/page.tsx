@@ -13,6 +13,7 @@ import {
   CARE_TYPE_LABELS,
   RESIDENT_STATUS_LABELS,
 } from '@/lib/labels';
+import { MenuDelDia } from './menu-del-dia';
 
 
 /** Aviso amable cuando el centro ha ocultado una sección a este acceso (UX-20). */
@@ -183,6 +184,17 @@ export default function PortalPage() {
             <span className="text-brand-700" aria-hidden="true">→</span>
           </div>
         </Link>
+
+        {/* Menú del día — acceso rápido (RF-NUT-005) */}
+        <div className="flex items-center gap-3 rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg shrink-0" aria-hidden="true">
+            🍽
+          </span>
+          <div>
+            <p className="font-semibold text-[#1A3A3F]">{t('portal.menu.quicklink.label')}</p>
+            <p className="text-sm text-[#1A3A3F]/60">{t('portal.menu.quicklink.desc')}</p>
+          </div>
+        </div>
       </div>
 
       {residents.map((r) => (
@@ -275,6 +287,9 @@ export default function PortalPage() {
                 </ul>
               )}
             </section>
+
+            {/* Menú del día (RF-NUT-005) */}
+            <MenuDelDia residentId={r.id} />
           </CardContent>
         </Card>
       ))}

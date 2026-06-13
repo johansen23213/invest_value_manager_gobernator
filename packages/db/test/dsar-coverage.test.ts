@@ -156,6 +156,7 @@ describe('DSAR coverage — cobertura estructural por tabla con residentId (sin 
       'EmergencyContact',
       'FallRecord',
       'FamilyLink',
+      'IntakeRecord',
       'LifeStory',
       'MedicalNote',
       'Medication',
