@@ -858,6 +858,9 @@ core_epica_c_done:
 core_epica_d_done:
   - "ÉPICA D del core (ADR-0016) COMPLETA backend+UI: cuadrantes/turnos del personal + cierre de turno firmado. ShiftTemplate (minStaff), ShiftAssignment (cuadrante, ausencias/sustituciones, @@unique, auditado), ShiftHandover (cierre firmado closedById+closedAt). Lógica coverageFor (alerta infra-cobertura, 35 tests). Dominio permisos shifts:read/manage. Las 3 tablas son datos del personal (sin residentId): RLS sí, DSAR no. UI: /cuadrante (rejilla días x turnos, planificar, alerta infra-cobertura) + cierre firmado integrado en /relevo (traspaso recibido + firmar cierre). 394 db + 478 web tests. Cubre RF-PRO-003/004/008/009/010/013. FUERA: tareas operativas desde PIA (RF-PRO-005, módulo futuro). CORE OPERATIVO SIN BLOQUEOS COMPLETO: A+B+C+D. Quedan bloqueados por Angel: facturación (Verifactu/SEPA), documental+foto+deploy (OVHcloud Q-004), pagos (pasarela), firma avanzada (Q-008)."
 
+barrido_diseno_v2_done:
+  - "BARRIDO DE DISEÑO v2 COMPLETO (directiva Angel: wow, personalidad, que no parezca app hecha por IA). Ola 1 (Elena, fundación): DM Serif Display self-hosted (RGPD), color con profundidad (acento delight verde salvia), sombras cálidas con sistema, motion con propósito + prefers-reduced-motion, sello Vetlla (asimetría de esquina), primitivas elevadas sin romper API + componentes nuevos Avatar/PageHeader/StatCard/SectionCard, docs/ux/direccion-de-arte-v2.md. Olas 2-4 (Dani, aplicación): superficies wow (login/dashboard/360/portal) + listados + atención + SuperApp + portal + gestión clínica profunda (expediente 14 tabs, PIA, MAR, prescribir, cuadrante, relevo, ACP, menús) — legibilidad clínica preservada, tablas densas sin animar, font-display solo en titulares. TODAS las ~22 pantallas con identidad v2. 478 web + 394 db tests, 49 e2e, build verde en cada ola. Pendiente menor: revisión visual de Angel con git pull (no validado aún)."
+
 team:
   location: .claude/agents/
   governance: >-

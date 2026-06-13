@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Card, CardContent, CardTitle } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, CardTitle, EmptyState, PageHeader } from '@vetlla/ui';
 import type { MedAdminStatus } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { SHIFT_LABELS } from '@/lib/labels';
@@ -341,19 +341,19 @@ export default function MedicationPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {/* M-04: enlace a prescripción solo si el usuario puede prescribir */}
-        {canPrescribe && (
-            <Link
-              href={`/residentes/${residentId}/medicacion/prescribir`}
-              data-testid="prescribir-link"
-              className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-brand-700 bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-            >
-              <IconPlus />
-              {t('med.prescribe.link')}
-            </Link>
-          )}
-        </div>
+      <PageHeader
+        title={t('med.mar.pageTitle')}
+        action={canPrescribe ? (
+          <Link
+            href={`/residentes/${residentId}/medicacion/prescribir`}
+            data-testid="prescribir-link"
+            className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-brand-700 bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <IconPlus />
+            {t('med.prescribe.link')}
+          </Link>
+        ) : undefined}
+      />
 
         {/* MAR de hoy */}
         <Card>
@@ -476,18 +476,23 @@ export default function MedicationPage() {
               // Cuando hay filtro de turno activo y no hay dosis en ese turno,
               // indicamos que el turno está limpio y ofrecemos "Ver todos".
               shiftFilter !== 'ALL' ? (
-                <p className="text-sm text-[#1A3A3F]/60">
-                  Sin dosis para el turno de {t(`mar.shift.${shiftFilter}`)}.{' '}
-                  <button
-                    type="button"
-                    onClick={() => setShiftFilter('ALL')}
-                    className="underline underline-offset-2 hover:text-[#1A3A3F] focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
-                  >
-                    {t('mar.shift.showAll')}
-                  </button>
-                </p>
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <EmptyState
+                    variant="check"
+                    title={t('med.noDosesShift')}
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => setShiftFilter('ALL')}
+                        className="text-sm text-brand-700 underline underline-offset-2 hover:text-brand-900 focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+                      >
+                        {t('mar.shift.showAll')}
+                      </button>
+                    }
+                  />
+                </div>
               ) : (
-                <p className="text-sm text-[#1A3A3F]/60">{t('med.noDoses')}</p>
+                <EmptyState variant="check" title={t('med.noDoses')} />
               )
             )}
           </CardContent>

@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { Badge, Button, Card, CardContent, CardTitle, Input, Label, Select } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, Input, Label, PageHeader, SectionCard, Select } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { CARE_PLAN_STATUS_LABELS, GOAL_STATUS_LABELS } from '@/lib/labels';
 import { useT } from '@/i18n/provider';
@@ -53,7 +53,7 @@ export default function CarePlanPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">PIA — Plan Individualizado de Atención</h1>
+      <PageHeader title="PIA — Plan Individualizado de Atención" />
 
       {canWrite && <CopilotPiaCard residentId={residentId} onCreated={() => void refresh()} />}
 
@@ -81,14 +81,15 @@ export default function CarePlanPage() {
 
       {plans.data && plans.data.length > 0 ? (
         plans.data.map((plan) => (
-          <Card key={plan.id}>
-            <CardContent>
-              <div className="mb-3 flex items-center justify-between">
-                <CardTitle className="text-base">{plan.title}</CardTitle>
-                <Badge tone={plan.status === 'ACTIVO' ? 'green' : 'neutral'}>
-                  {CARE_PLAN_STATUS_LABELS[plan.status]}
-                </Badge>
-              </div>
+          <SectionCard
+            key={plan.id}
+            title={plan.title}
+            aside={
+              <Badge tone={plan.status === 'ACTIVO' ? 'green' : 'neutral'}>
+                {CARE_PLAN_STATUS_LABELS[plan.status]}
+              </Badge>
+            }
+          >
 
               {/* Objetivos */}
               <p className="mb-1 text-sm font-medium text-[#1A3A3F]/70">Objetivos</p>
@@ -175,8 +176,7 @@ export default function CarePlanPage() {
                   </Button>
                 </form>
               )}
-            </CardContent>
-          </Card>
+          </SectionCard>
         ))
       ) : (
         <p className="text-[#1A3A3F]/60">Sin PIA todavía.</p>
