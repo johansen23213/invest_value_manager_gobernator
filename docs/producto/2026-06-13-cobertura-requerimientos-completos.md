@@ -9,9 +9,129 @@
 
 ---
 
+## ACTUALIZACIÓN 2026-06-13 (tras Épicas A-D + SuperApp completa)
+
+**Verificado en:** `project_state.yaml` secciones `core_epica_*_done`, `superapp_*_done`, `barrido_diseno_v2_done`; routers `clinical-notes.ts`, `discharge.ts`, `social.ts`, `nutrition.ts`, `shifts.ts`; pantallas `/relevo`, `/acp`, `/menus`, `/cuadrante`.
+
+### Nuevas épicas construidas desde el análisis inicial
+
+| Épica | Qué construye | RF principales movidos |
+|---|---|---|
+| SuperApp EPIC-1 Solicitudes | ServiceRequest + máquina estados + SLA + CSAT | RF-INC-001..013 (ya en análisis inicial como HECHO) |
+| SuperApp EPIC-2 Comunicaciones | Announcement/Receipt + MessageThread/Message | RF-COM-001..010 (ya en análisis inicial como HECHO) |
+| SuperApp EPIC-3 Visitas | VisitSlotConfig + Visit + QR + check-in/out | RF-VIS-001..010 (ya en análisis inicial como HECHO) |
+| Expediente Fase 1 | 28 campos Resident + 9 tablas clínicas + 11 escalas | Cubierto en análisis inicial |
+| EPIC-A Core | NursingNote + MedicalNote + /relevo | RF-CLI-001/002 HECHO; RF-CLI-005/SOC área PARCIAL; RF-PRO-008/009/010 HECHO |
+| EPIC-B Core | DischargeRecord + SocialReport + WellbeingProfile + /acp | RF-ADM-012/013 HECHO; RF-SOC-002/003/007 HECHO; RF-SOC-006/008 PARCIAL |
+| EPIC-C Core | MenuItem + IntakeRecord + kitchen.* + nutrition.* | RF-NUT-003..009 todos HECHO |
+| EPIC-D Core | ShiftTemplate + ShiftAssignment + ShiftHandover + /cuadrante | RF-PRO-003/004/008/009/010/013 HECHO |
+| Barrido diseño v2 | 22 pantallas rediseñadas (no impacta RF funcionales) | — |
+| Seguridad DSAR v3-v5 + audit inmutable | Export v5 + anonymize + dsar-registry guardia | RNF (ver docs/seguridad/2026-06-13-cumplimiento-rnf.md) |
+
+### Nuevo cuadro de mando global (320 RF)
+
+| Estado | RF | % | Delta vs. análisis inicial |
+|---|---|---|---|
+| HECHO | 109 | 34 % | +20 (+16 desde PENDIENTE, +4 desde PARCIAL) |
+| PARCIAL | 45 | 14 % | -1 (+3 desde PENDIENTE, -4 a HECHO) |
+| PENDIENTE | 79 | 25 % | -19 (16 a HECHO, 3 a PARCIAL) |
+| BLOQUEADO | 34 | 11 % | sin cambios |
+| FUERA | 53 | 17 % | sin cambios |
+
+**HECHO+PARCIAL = 154/320 = 48 % (antes: 42 %).** FUERA = 17 %. En alcance no construido = 35 %.
+
+### Cuadro de mando por área — solo áreas con cambios
+
+| Área | HECHO | PARCIAL | PENDIENTE | BLOQUEADO | FUERA | Total | Delta |
+|---|---|---|---|---|---|---|---|
+| 3.2 Admisión/baja | 5 | 2 | 6 | 0 | 0 | 14 | +2H (ADM-012 PARC→H, ADM-013 PND→H) |
+| 3.4 Historia social | 6 | 4 | 0 | 0 | 0 | 10 | +3H (SOC-002/003 PARC→H, SOC-007 PND→H), +2PARC (SOC-006/008 PND→PARC) |
+| 3.9 Medicina/clínica | 4 | 4 | 1 | 1 | 1 | 11 | +2H (CLI-001/002 PND→H), +1PARC (CLI-005 PND→PARC) |
+| 3.10 Nutrición/dietas | 9 | 0 | 0 | 0 | 0 | 9 | +7H (NUT-003..009 todos PND→H) |
+| 3.25 Profesionales/turnos | 9 | 1 | 2 | 0 | 0 | 13 | +5H (PRO-003/008/009/010/013 PND→H), +1H (PRO-004 PARC→H) |
+
+Áreas sin cambios: 3.1, 3.3, 3.5, 3.6, 3.7, 3.8, 3.11–3.24, 3.26–3.32 mantienen los valores del análisis inicial.
+
+### Veredicto actualizado sobre la Fase 1 del roadmap del documento
+
+La Fase 1 agrupa: expediente 360°, PIA, tareas, mensajería, comunicados, solicitudes, visitas, documentos, consentimientos, pagos, dashboards base, seguridad/roles/auditoría.
+
+- Expediente 360°: HECHO
+- PIA: HECHO
+- Tareas derivadas del plan: PARCIAL (objetivos y traspaso existen; tareas operativas automáticas no)
+- Mensajería: HECHO
+- Comunicados: HECHO
+- Solicitudes: HECHO
+- Visitas: HECHO
+- Documentos: PARCIAL (metadatos/consentimientos HECHO; binarios bloqueados Q-004)
+- Consentimientos: HECHO
+- Pagos: BLOQUEADO (Q-007)
+- Dashboards base: PARCIAL (ocupación+alertas+nutrition HECHO; BI económico pendiente)
+- Seguridad/roles/auditoría: HECHO
+
+**Veredicto: 10 de 12 ítems HECHOS o PARCIALES (antes: 9/12). El 83 % de la Fase 1 está construido. Los bloqueantes que quedan: Pagos (Q-007) y Documentos binarios (Q-004).**
+
+---
+
+### BLOQUES DE PENDIENTES (a 2026-06-13, post Épicas A-D)
+
+#### Bloque A — PENDIENTE construible AHORA sin bloqueo externo (orden por valor)
+
+| Rank | RF/módulo | Área | Por qué mueve la aguja | Esfuerzo |
+|---|---|---|---|---|
+| 1 | **Push notifications VAPID** (RF-NOT-001..005) | 3.15 | Sin push, el familiar no se entera de nada en tiempo real. Es la infraestructura que multiplica el valor de mensajería+solicitudes+visitas ya construidas. Requiere `PushSubscription` en schema + service worker. | S |
+| 2 | **Facturación básica a particulares** (RF-ECO-001..005, RF-ECO-008, RF-ECO-011) — modelo Invoice + tarifas | 3.26 | Sin Invoice el centro necesita un sistema paralelo para cobrar. El modelo de datos (Invoice/InvoiceLineItem/tarifa) es construible sin pasarela. Desbloquea RF-PAG-001/002/003/012/013 en cuanto llegue Q-007. | L |
+| 3 | **Alertas de valoración vencida + gráfico de evolución de escalas** (RF-VAL-004..008) | 3.5 | Los datos de 11 escalas ya existen. Periodicidad configurable + alerta + gráfico de tendencia = diferencial clínico visible sin datos nuevos. Esfuerzo bajo, impacto alto en retención. | S |
+| 4 | **Alertas de constantes fuera de rango** (RF-ENF-008) + **evolución gráfica de constantes** (RF-ENF-010) | 3.8 | Los datos de constantes ya existen en CareRecord. Añadir umbrales configurables en `overview.alerts` y gráfica en el expediente. Trabajo sobre datos existentes. | S |
+| 5 | **MFA (TOTP)** (RNF-SEG-002) + **bloqueo por intentos fallidos** (RNF-SEG-011) | RNF | Bloqueante para piloto con datos reales de salud (art. 9 RGPD). Los dos gaps de seguridad críticos que Sofía marcó como GAP-2. Sin ellos no se debería operar con datos reales. | S |
+| 6 | **Panel de indicadores de calidad** (RF-BI-001..003, RF-BI-009) | 3.29 | UPP, caídas, Norton/Braden en schema. Falta el panel agregado por cohorte con trending. Es lo que evalúa el inspector y la base para IA predictiva. | M |
+| 7 | **Módulo de actividades** (RF-ACT-001..008, RF-ACT-010) | 3.11 | Catálogo + planificación + asistencia + inscripción desde portal familiar. 9 RF todos PENDIENTE. Sin actividades el centro no puede abandonar ResiPlus para la gestión diaria de animación. | M |
+| 8 | **Centro Documental — metadatos** (RF-DOC-002/003/009/010/012, modelo Document) | 3.19 | Los metadatos del modelo Document (sin binarios) son construibles ahora. Clasificación, versionado, alertas de documentos caducados. Los binarios esperan Q-004. | S |
+| 9 | **Timeline familiar / feed de eventos** (RF-APP-008) | 3.12 | Vista cronológica de eventos del residente (pagos, mensajes, documentos, visitas, solicitudes). Sin nueva tabla, solo query multi-tabla ordenada. | S |
+| 10 | **Exportación CSV/Excel de listados** (RF-BI-007) + **importación masiva de residentes** (RF-INT-014) | 3.29 / 3.31 | El export JSON ya existe. Los centros necesitan poder importar su base de datos y exportar a Excel para el inspector. Bajo esfuerzo, alta demanda. | S |
+
+#### Bloque B — BLOQUEADO por decisión/recurso de Angel
+
+| Qué desbloquea | Decisión pendiente | RF bloqueados |
+|---|---|---|
+| **Pasarela de pagos (Q-007)** | Elegir proveedor (Stripe EU/Redsys) + modelo comercial (comisión) | RF-PAG-004..010, RF-COM-011 (SMS/Bizum), RF-ECO-007/009/010 — todo el módulo de cobro digital (10+ RF) |
+| **OVHcloud Q-004** (object storage + DPA) | Contratar OVHcloud, firma DPA, credenciales AI Endpoints | RF-DOC-001 (binarios), RF-ENF-004 (foto UPP), RF-INC-003 (adjuntos solicitud), RF-APP-014 (firma doc), RF-CLI-009 (adj informes), foto residente + INC-3 deploy UE + INC-4 copiloto real (cierre H5) |
+| **Verifactu Q-012** | Integrar con proveedor certificado (Factura+/InvoPilot) vs. homologación propia | RF-ECO-005 (facturación electrónica) — necesario antes del primer euro de factura real |
+| **Firma electrónica Q-008** | Elegir nivel (simple/avanzada/cualificada) + proveedor UE (Signaturit/ValidatedID) | RF-DOC-004/005, RF-ADM-007 (contrato ingreso), consentimientos con valor legal pleno |
+| **Push/VAPID** | Solo decisión técnica (sin dependencia de Angel, pero requiere VAPID key pública — puede decidir Pau/Marc) | RF-NOT-001..006 — sin push el familiar no recibe alertas en tiempo real |
+| **MFA/TOTP** | Sin bloqueo de Angel; es decisión de prioridad del equipo | RNF-SEG-002/011 — bloqueante piloto con datos reales |
+| **RoPA/retención Q-003** | Política de retención definitiva post-baja/fallecimiento (decisión legal + negocio Angel) | `anonymizeResident` tiene política parametrizable; la mecánica está lista, la política no |
+| **Modelo multicentro Q-009** | 1 tenant con capa grupo vs. N tenants + capa corporativa | RF-MC-003/004/009, RF-BI-006 (comparativa centros) |
+| **Posicionamiento Q-010** | Paridad total vs. core-suficiente (18-meses roadmap) | RF-ECO-006/010, RF-INT-003 (ERP contable), SISAAD, copagos CCAA |
+| **Asesoría normativa Q-011** | Gestoría especializada sector para validar facturación CCAA | RF-ECO-006, B2/B3, SISAAD |
+
+#### Bloque C — FUERA por ADR-0016 (no construir salvo decisión de Angel que amplíe alcance)
+
+App/modo residente (9 RF — RF-APR-001..009), Marketplace (9 RF — RF-MKT-001..009), IoT/acceso físico (12 RF — RF-IOT-001..012), Reservas de espacios (9 RF — RF-RESV-001..009), Encuestas completas (8 RF — RF-ENC-001..008), Integración historia clínica CCAA (RF-CLI-007, RF-INT-008), Integración farmacia externa (RF-MED-009 parcial / RF-INT-007), BI integrado con Power BI/Metabase (RF-BI-008), Telemedicina (RF-CLI-008, RF-INT-010), White-label avanzado (RF-MC-006..008), Videollamada (RF-APP-019, RF-INT-010). Total: 53 RF.
+
+---
+
+### Recomendación de las 4 próximas cosas a construir del Bloque A
+
+**1. MFA + bloqueo por intentos (RNF-SEG-002 + RNF-SEG-011) — esfuerzo S, prioridad MUST.**
+Es el requisito de seguridad que bloquea operar con datos reales de salud. Sin MFA ni protección de brute-force no hay piloto con un centro real. Va primero porque es el único bloqueante de piloto que no depende de Angel.
+
+**2. Push notifications VAPID (RF-NOT-001..005) — esfuerzo S, prioridad HIGH.**
+Infraestructura que multiplica el valor de todo lo ya construido (mensajería, solicitudes, visitas). El familiar pasa de "entrar a ver si hay algo nuevo" a recibir la notificación. Requiere `PushSubscription` en schema + service worker + VAPID keys. Sin dependencia de Angel.
+
+**3. Facturación básica — modelo Invoice + tarifas (RF-ECO-001..005) — esfuerzo L, prioridad HIGH.**
+El center director hoy no puede generar un recibo de estancia desde Vetlla. Construir Invoice/InvoiceLineItem/tarifa sin pasarela elimina el sistema paralelo (Excel o software externo). Cuando llegue Q-007 (pasarela), el cobro digital se activa sobre el modelo ya construido.
+
+**4. Alertas de valoración vencida + gráfico de escalas (RF-VAL-004..008) — esfuerzo S, prioridad MEDIUM-HIGH.**
+Trabajo puro sobre datos ya existentes (11 escalas). Periodicidad configurable + alerta automática + gráfico de tendencia en el expediente. Es el diferencial clínico que muestra valor al inspector y abre el camino a la IA predictiva (Feature 3 del copiloto: detección de patrones de riesgo RF-IA-007).
+
+---
+
 ## SÍNTESIS EJECUTIVA
 
-### 1. Cuadro de mando de cobertura global
+> **Nota:** Los datos de este bloque reflejan el estado INICIAL del análisis (antes de las Épicas A-D). Los datos actualizados (post Épicas A-D) están en la sección "ACTUALIZACIÓN 2026-06-13" al inicio del documento.
+
+### 1. Cuadro de mando de cobertura global (estado inicial, pre-Épicas A-D)
 
 | Estado | RF (320 aprox.) | % |
 |---|---|---|
@@ -21,7 +141,9 @@
 | BLOQUEADO | 34 | 11 % |
 | FUERA | 53 | 17 % |
 
-**Totales: 320 RF catalogados. HECHO+PARCIAL = 42 %. FUERA (ADR-0016) = 17 %. En alcance pero no construido (PENDIENTE+BLOQUEADO) = 41 %.**
+**Totales estado inicial: 320 RF catalogados. HECHO+PARCIAL = 42 %. FUERA (ADR-0016) = 17 %. En alcance pero no construido (PENDIENTE+BLOQUEADO) = 41 %.**
+
+**Estado actual (post-Épicas A-D): HECHO=109 (34%), PARCIAL=45 (14%), PENDIENTE=79 (25%), BLOQUEADO=34 (11%), FUERA=53 (17%). HECHO+PARCIAL = 48 %.**
 
 #### Cobertura por área (32 áreas 3.1–3.32)
 
@@ -192,8 +314,8 @@ Criterios de aceptación verificables:
 | RF-ADM-009 | PENDIENTE | Traslados internos: cambiar `bedId` es posible vía API pero no hay flujo guiado ni registro de motivo/impacto/comunicación. |
 | RF-ADM-010 | PENDIENTE | No existe registro estructurado de traslado (motivo, fecha, responsable, comunicación familiar). |
 | RF-ADM-011 | HECHO | `Resident.status` enum incluye BAJA; `dischargeDate`, `dischargeReason`. |
-| RF-ADM-012 | PARCIAL | Baja registrada en Resident. Falta: cierre administrativo (factura final, liquidación de estancia), cierre asistencial (informe de alta), documentación final. |
-| RF-ADM-013 | PENDIENTE | No existe checklist de salida. |
+| RF-ADM-012 | HECHO | `DischargeRecord` (Épica B): registro de baja en transacción (status BAJA + libera cama + audita), defunción con médico certificante, notificación a familiar, histórico. Pendiente: cierre económico (factura final) — requiere módulo Invoice. |
+| RF-ADM-013 | HECHO | `DischargeRecord` como protocolo estructurado de salida. Panel de histórico de bajas en `/residentes`. |
 | RF-ADM-014 | PENDIENTE | No existe forecast de ingresos/bajas futuras (requiere campo `expectedAdmissionDate` en preadmisión y `expectedDischargeDate` en Resident para centros de día/estancias temporales). |
 
 ### 3.3 Habitaciones, camas y ocupación
@@ -218,13 +340,13 @@ Criterios de aceptación verificables:
 | ID | Estado | Qué lo cubre en Vetlla / Qué falta |
 |---|---|---|
 | RF-SOC-001 | HECHO | `LifeStory` (tabla con RLS, vinculada a Resident). Router `clinical.getLifeStory/saveLifeStory`. |
-| RF-SOC-002 | PARCIAL | LifeStory cubre hobbies, rutina, personas importantes, preferencias alimentarias, musicales, creencias religiosas, historia relevante. Falta: situación familiar estructurada (más allá de FamilyLink), historia laboral, red de apoyo formal/informal (prestaciones, recursos externos). |
-| RF-SOC-003 | PARCIAL | LifeStory existe como base del proyecto de vida. Falta: estructura PCP (Planificación Centrada en la Persona) con las 8 dimensiones de bienestar de la UNE 158101. |
-| RF-SOC-004 | PARCIAL | `LifeStory.lifeGoals`, `currentWishes` existen. Faltan: actividades significativas mapeadas a actividades del centro, personas de referencia vinculadas a FamilyLink. |
+| RF-SOC-002 | HECHO | `SocialReport` (Épica B): informe social estructurado (situación familiar, red de apoyo formal/informal, prestaciones, historia laboral). Staff-only. Histórico de informes. |
+| RF-SOC-003 | HECHO | `WellbeingProfile` (Épica B): 8 dimensiones de bienestar ACP/UNE 158101, qué importa/qué evitar, revisión periódica. Panel `/acp` con revisiones vencidas (cumplimiento Madrid nov-2026). |
+| RF-SOC-004 | PARCIAL | `LifeStory.lifeGoals`, `currentWishes` + `WellbeingProfile` cubren parte. Falta: actividades significativas mapeadas a actividades del centro (RF-ACT aún PENDIENTE). |
 | RF-SOC-005 | HECHO | `LifeStory.importantPeople`, `fears`, `lifeGoals`. |
-| RF-SOC-006 | PENDIENTE | No existe campo de capacidades de decisión ni apoyos necesarios (apoyo en toma de decisiones, tutela, curatela). |
-| RF-SOC-007 | PENDIENTE | No existe programación de revisiones periódicas de la historia social. |
-| RF-SOC-008 | PENDIENTE | No existe registro de acuerdos con residente y familia (commitments). |
+| RF-SOC-006 | PARCIAL | `WellbeingProfile` cubre capacidades y apoyos como dimensión de bienestar. Falta: campos explícitos de régimen de tutela/curatela, representante legal formal (más allá de `legalGuardian` en FamilyLink). |
+| RF-SOC-007 | HECHO | `WellbeingProfile.nextReviewDate` + panel `/acp` con alertas de revisiones vencidas. Revisión periódica programable. |
+| RF-SOC-008 | PARCIAL | `WellbeingProfile` permite registrar qué importa y qué evitar como acuerdos implícitos. Falta: tabla explícita de `Commitment` (acuerdos formales firmados con residente y familia). |
 | RF-SOC-009 | PENDIENTE | No existe generación de tareas/intervenciones derivadas del proyecto de vida. |
 | RF-SOC-010 | PARCIAL | `FamilyLink.canSeeCare` controla visibilidad. Falta: versión no sensible del proyecto de vida explícitamente exportada al portal familiar (hoy el portal no muestra LifeStory). |
 
@@ -297,11 +419,11 @@ Criterios de aceptación verificables:
 
 | ID | Estado | Qué lo cubre en Vetlla / Qué falta |
 |---|---|---|
-| RF-CLI-001 | PENDIENTE | No existen notas médicas narrativas (evolutivos del médico). El inspector pide el registro médico. Es el hueco #2 del top 10. |
-| RF-CLI-002 | PENDIENTE | Motivo, exploración, diagnóstico, plan, tratamiento, seguimiento: no existe como nota médica. |
+| RF-CLI-001 | HECHO | `MedicalNote` (Épica A): notas médicas narrativas con campo de evolución, exploración, plan, diagnóstico vinculado. Router `clinicalNotes.medical.create/listByResident`. Staff-only (RF-CLI-010). |
+| RF-CLI-002 | HECHO | `MedicalNote` cubre motivo, exploración, diagnóstico (vinculado a `Diagnosis`), plan y tratamiento. Falta: campo de seguimiento explícito separado (hoy en `notes` libre). |
 | RF-CLI-003 | HECHO | `Diagnosis` con `status` (ACTIVO/RESUELTO/CRONICO), `description`, `diagnosedAt`, `resolvedAt`. |
 | RF-CLI-004 | HECHO | `Resident.backgroundInfo`, `allergies` (tabla), `diagnoses` (tabla). |
-| RF-CLI-005 | PENDIENTE | No existe registro de derivaciones externas (especialista, hospital, urgencias). |
+| RF-CLI-005 | PARCIAL | `MedicalNote` puede registrar derivaciones como nota. Falta: tabla estructurada de derivación externa (destino, motivo, fecha, estado de respuesta, profesional receptor). |
 | RF-CLI-006 | PENDIENTE | No existe registro de visitas médicas externas (especialista que visita el centro, médico externo). |
 | RF-CLI-007 | BLOQUEADO | Integración con historia clínica externa (Abucasis, HCIS, HC3, etc.): requiere APIs de cada CCAA, que son proyectos de integración con administración pública. No es bloqueante de Angel, pero requiere contratos con los sistemas regionales. |
 | RF-CLI-008 | FUERA | Telemedicina: fuera del alcance core-suficiente (ADR-0016). Requiere servicio de vídeo UE + homologación. |
@@ -314,14 +436,14 @@ Criterios de aceptación verificables:
 | ID | Estado | Qué lo cubre en Vetlla / Qué falta |
 |---|---|---|
 | RF-NUT-001 | HECHO | `Resident.dietType` (enum: NORMAL/TRITURADA/BLANDA/SIN_SAL/DIABETICA/RENAL/SIN_GLUTEN/VEGETARIANA/OTRA) + `liquidTexture` (enum). |
-| RF-NUT-002 | PARCIAL | `dietType`, `liquidTexture`, alergias en tabla `allergies`. Faltan: restricciones específicas (p.ej. sin potasio), suplementos nutricionales, preferencias de comida personalizadas más allá del tipo de dieta. |
-| RF-NUT-003 | PENDIENTE | No existe gestión de menús diarios/semanales del centro. |
-| RF-NUT-004 | PENDIENTE | No existe catálogo de alérgenos por plato/menú. |
-| RF-NUT-005 | PENDIENTE | No existe consulta de menú en el portal familiar (requiere RF-NUT-003). |
-| RF-NUT-006 | PENDIENTE | No existe registro de ingesta e hidratación por comida (cantidad consumida por residente). CareRecord tiene `mealIntake` pero es un campo genérico no estructurado por comida. |
-| RF-NUT-007 | PENDIENTE | No existe alerta de baja ingesta o riesgo nutricional automática. |
-| RF-NUT-008 | PENDIENTE | No existe comunicación de cambios de dieta a cocina (listado del día por unidad/comedor). |
-| RF-NUT-009 | PENDIENTE | No existen listados de comedor por turno/unidad. |
+| RF-NUT-002 | PARCIAL | `dietType`, `liquidTexture`, alergias en tabla `allergies`. Faltan: restricciones específicas (p.ej. sin potasio), suplementos nutricionales. Los 14 alérgenos UE están en `MenuItem`, no por residente individualizado. |
+| RF-NUT-003 | HECHO | `MenuItem` (Épica C): menú del centro por comida (desayuno/comida/merienda/cena) con nombre, descripción y 14 alérgenos UE (Reg. 1169/2011). Router `nutrition.menu.*`. Pantalla `/menus`. |
+| RF-NUT-004 | HECHO | 14 alérgenos UE en `MenuItem` (campos boolean: gluten, crustáceos, huevos, pescado, cacahuetes, soja, lácteos, frutos secos, apio, mostaza, sésamo, sulfitos, altramuces, moluscos). |
+| RF-NUT-005 | HECHO | `nutrition.menu.forFamily` expone el menú del día al portal familiar. Visible en `/portal`. |
+| RF-NUT-006 | HECHO | `IntakeRecord` (Épica C): ingesta estructurada por comida (`foodPct` 0-100 %, `hydrationMl`, `notes`). Router `nutrition.intake.*`. Registro offline en `/atencion`. |
+| RF-NUT-007 | HECHO | `isLowIntakeRisk` (media/racha de baja ingesta). Alerta de baja ingesta en panel `/alertas`. |
+| RF-NUT-008 | HECHO | `nutrition.kitchen.dietListing`: listado del día por unidad/comedor con la dieta especial de cada residente. Visible en `/menus` sección cocina. |
+| RF-NUT-009 | HECHO | `nutrition.kitchen.mealListing`: listados de comedor por turno/unidad. Router `nutrition.kitchen.*`. |
 
 ### 3.11 Actividades y bienestar
 
@@ -559,17 +681,17 @@ Criterios de aceptación verificables:
 |---|---|---|
 | RF-PRO-001 | HECHO | `User` con rol, centerId, estado. Router `users.list/invite/updateRole`. |
 | RF-PRO-002 | HECHO | `User.role` (UserRole enum), `User.jobTitle`, `User.centerId`. |
-| RF-PRO-003 | PENDIENTE | Turnos/guardias/ausencias/sustituciones: no existen los modelos `ShiftTemplate/ShiftAssignment`. Es el hueco #6 del top 10. |
-| RF-PRO-004 | PARCIAL | Asignación de residente a profesional de referencia: `Resident.referenceUserId` existe como campo. No hay UI para gestionarlo. |
-| RF-PRO-005 | PENDIENTE | No existe generación automática de tareas por residente/turno/plan de cuidados. |
-| RF-PRO-006 | PARCIAL | Panel de tareas: el panel principal muestra alertas clínicas y solicitudes. No hay panel de "mis tareas del turno" generado desde el PIA. |
+| RF-PRO-003 | HECHO | `ShiftTemplate` (turno tipo con `shiftName`, `startHour`, `endHour`, `minStaff`) + `ShiftAssignment` (cuadrante: asignación de `userId` a turno/día/unidad, ausencias, sustituciones, `@@unique`). Router `shifts.template.*/assignment.*`. Pantalla `/cuadrante`. |
+| RF-PRO-004 | HECHO | `ShiftAssignment` vincula profesional a turno/unidad. `coverageFor` calcula cobertura e infra-cobertura. UI `/cuadrante` con rejilla días × turnos. (La asignación de profesional de referencia a residente sigue en `Resident.referenceUserId` sin UI dedicada.) |
+| RF-PRO-005 | PENDIENTE | No existe generación automática de tareas operativas por residente/turno/plan de cuidados. FUERA de Épica D (documentado en `core_epica_d_done`). |
+| RF-PRO-006 | PARCIAL | Panel de alertas clínicas y solicitudes: HECHO. Panel de "mis tareas del turno" desde el PIA: PENDIENTE (depende de RF-PRO-005). |
 | RF-PRO-007 | HECHO | Registro desde tablet: toda la atención directa (`/atencion`) funciona desde tablet offline-first. |
-| RF-PRO-008 | PENDIENTE | Traspaso de turno digital: no existe. Es una de las funciones más diferenciadoras del sector. |
-| RF-PRO-009 | PENDIENTE | Incidencias, alertas, tareas pendientes en el traspaso: depende de RF-PRO-008. |
-| RF-PRO-010 | PENDIENTE | Checklist de inicio/fin de turno: no existe. |
-| RF-PRO-011 | PENDIENTE | Medición de carga de trabajo por equipo: no existe. |
-| RF-PRO-012 | PARCIAL | Alertas por no-administración de medicación: HECHO. Alertas por tareas del PIA vencidas: no existen. |
-| RF-PRO-013 | PENDIENTE | Firma en tareas críticas: no existe (requiere Q-008 para firma avanzada; firma simple con usuario autenticado es construible sin proveedor). |
+| RF-PRO-008 | HECHO | `ShiftHandover` (Épica D + A): cierre de turno firmado (`closedById`, `closedAt`), pantalla `/relevo` con notas de enfermería del turno, incidencias resaltadas, medicaciones no administradas, firma de cierre. |
+| RF-PRO-009 | HECHO | `/relevo` muestra incidencias, alertas de medicación y observaciones del turno que acaba. El turno entrante ve el resumen del traspaso. |
+| RF-PRO-010 | HECHO | Cierre de turno firmado en `/relevo` actúa como checklist de fin de turno. Inicio: el sanitario entrante lee el traspaso antes de iniciar la ronda. |
+| RF-PRO-011 | PENDIENTE | Medición de carga de trabajo por equipo: no existe (más allá de la alerta de infra-cobertura de `coverageFor`). |
+| RF-PRO-012 | PARCIAL | Alertas por no-administración de medicación: HECHO. Alertas por tareas del PIA vencidas: PENDIENTE. |
+| RF-PRO-013 | HECHO | `ShiftHandover.closedById + closedAt` = firma simple del profesional autenticado. La firma avanzada/cualificada (con proveedor externo) requeriría Q-008. |
 
 ### 3.26 Administración económica y facturación
 
