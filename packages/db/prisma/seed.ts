@@ -13,6 +13,7 @@ import {
   DietType,
   DischargeType,
   LiquidTexture,
+  MealType,
   MedicalNoteType,
   MessageThreadCategory,
   MedicationRoute,
@@ -1073,6 +1074,239 @@ async function main() {
   }
 
   console.log(`  Épica B: 1 baja histórica (traslado) + 1 informe social + 2 perfiles de bienestar ACP`);
+
+  // ---------------------------------------------------------------------------
+  // Seed de Épica C — Nutrición, Menús y Comedor
+  // ---------------------------------------------------------------------------
+
+  // Limpieza idempotente
+  await db.intakeRecord.deleteMany({ where: { tenantId: tenant.id } });
+  await db.menuItem.deleteMany({ where: { tenantId: tenant.id } });
+
+  const residenciaSeed = await db.center.findFirst({
+    where:   { tenantId: tenant.id, name: 'Residencia Los Olivos' },
+    select:  { id: true },
+  });
+
+  const auxiliarSeed = await db.user.findUnique({ where: { email: 'auxiliar@demo.vetlla.dev' } });
+  const directorSeedNut = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+
+  // Primeros 3 residentes activos para las ingestas
+  const demoResidents = await db.resident.findMany({
+    where:   { tenantId: tenant.id, status: ResidentStatus.ACTIVO },
+    orderBy: { lastName: 'asc' },
+    take:    3,
+  });
+
+  if (residenciaSeed && directorSeedNut && auxiliarSeed && demoResidents.length > 0) {
+    const centerIdSeed = residenciaSeed.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    // ------------------------------------------------------------------
+    // Menús — 2 días para la Residencia Los Olivos
+    // ------------------------------------------------------------------
+
+    // Día 1 (ayer) — menú estándar
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          yesterday,
+        meal:          MealType.DESAYUNO,
+        dishName:      'Café con leche o infusión + tostada con aceite de oliva y tomate',
+        allergens:     ['GLUTEN', 'LACTEOS'] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          yesterday,
+        meal:          MealType.COMIDA,
+        dishName:      'Lentejas estofadas con verduras',
+        description:   'Lentejas con zanahoria, patata y chorizo (versión sin gluten disponible)',
+        allergens:     ['SULFITOS'] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          yesterday,
+        meal:          MealType.COMIDA,
+        dishName:      'Pollo a la plancha con puré de patata (dieta triturada)',
+        allergens:     [] as unknown as Prisma.InputJsonValue,
+        isAlternative: true, // plato alternativo / dieta especial
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          yesterday,
+        meal:          MealType.MERIENDA,
+        dishName:      'Yogur natural con fruta de temporada',
+        allergens:     ['LACTEOS'] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          yesterday,
+        meal:          MealType.CENA,
+        dishName:      'Crema de calabacín + tortilla española',
+        allergens:     ['HUEVOS'] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+
+    // Día 2 (hoy) — menú estándar
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          today,
+        meal:          MealType.DESAYUNO,
+        dishName:      'Zumo de naranja natural + cereales con leche o yogur',
+        allergens:     ['GLUTEN', 'LACTEOS'] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          today,
+        meal:          MealType.COMIDA,
+        dishName:      'Paella de verduras',
+        description:   'Sin gluten. Apta para dieta blanda si se sirve bien cocida.',
+        allergens:     [] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          today,
+        meal:          MealType.COMIDA,
+        dishName:      'Merluza al vapor con puré de patata',
+        allergens:     ['PESCADO'] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          today,
+        meal:          MealType.MERIENDA,
+        dishName:      'Pieza de fruta + galletas sin gluten',
+        allergens:     [] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+    await db.menuItem.create({
+      data: {
+        tenantId:      tenant.id,
+        centerId:      centerIdSeed,
+        date:          today,
+        meal:          MealType.CENA,
+        dishName:      'Sopa de fideos + filete de ternera con ensalada',
+        allergens:     ['GLUTEN'] as unknown as Prisma.InputJsonValue,
+        isAlternative: false,
+        createdById:   directorSeedNut.id,
+      },
+    });
+
+    // ------------------------------------------------------------------
+    // Registros de ingesta — 4 registros, uno con baja ingesta
+    // ------------------------------------------------------------------
+
+    if (demoResidents[0]) {
+      // Residente 0: ingesta normal
+      await db.intakeRecord.create({
+        data: {
+          tenantId:     tenant.id,
+          residentId:   demoResidents[0].id,
+          date:         new Date(yesterday.getTime() + 8 * 60 * 60 * 1000), // ayer 08:00
+          meal:         MealType.DESAYUNO,
+          foodPct:      80,
+          hydrationMl:  200,
+          notes:        'Buen apetito. Toma bien la tostada y el café.',
+          recordedById: auxiliarSeed.id,
+        },
+      });
+      await db.intakeRecord.create({
+        data: {
+          tenantId:     tenant.id,
+          residentId:   demoResidents[0].id,
+          date:         new Date(yesterday.getTime() + 13 * 60 * 60 * 1000), // ayer 13:00
+          meal:         MealType.COMIDA,
+          foodPct:      70,
+          hydrationMl:  150,
+          recordedById: auxiliarSeed.id,
+        },
+      });
+    }
+
+    if (demoResidents[1]) {
+      // Residente 1: ingesta normal
+      await db.intakeRecord.create({
+        data: {
+          tenantId:     tenant.id,
+          residentId:   demoResidents[1].id,
+          date:         new Date(yesterday.getTime() + 13 * 60 * 60 * 1000), // ayer 13:00
+          meal:         MealType.COMIDA,
+          foodPct:      90,
+          hydrationMl:  250,
+          recordedById: auxiliarSeed.id,
+        },
+      });
+    }
+
+    if (demoResidents[2]) {
+      // Residente 2: BAJA INGESTA — 3 comidas consecutivas muy bajas
+      // (activará la alerta en el panel RF-NUT-007)
+      for (let i = 0; i < 3; i++) {
+        const mealTypes = [MealType.MERIENDA, MealType.CENA, MealType.DESAYUNO];
+        const hours     = [16, 20, 8]; // tarde de anteayer, cena de anteayer, desayuno de ayer
+        const dayOffset = i < 2 ? 2 : 1; // anteayer o ayer
+        const date = new Date(today.getTime() - dayOffset * 24 * 60 * 60 * 1000);
+        date.setHours(hours[i]!, 0, 0, 0);
+        await db.intakeRecord.create({
+          data: {
+            tenantId:     tenant.id,
+            residentId:   demoResidents[2].id,
+            date,
+            meal:         mealTypes[i] as MealType,
+            foodPct:      15, // muy bajo — activa la alerta
+            hydrationMl:  50,
+            notes:        i === 0 ? 'Rechaza la comida, dice que no tiene hambre.' : undefined,
+            recordedById: auxiliarSeed.id,
+          },
+        });
+      }
+    }
+
+    console.log(`  Épica C (Nutrición): 10 ítems de menú (2 días) + 4 registros de ingesta (1 con alerta baja ingesta)`);
+  }
 
   console.log(`Seed OK.`);
   console.log(`  Tenant: ${tenant.name}`);

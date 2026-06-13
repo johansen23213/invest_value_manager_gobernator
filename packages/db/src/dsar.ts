@@ -34,6 +34,10 @@
 //    · SocialReport: export:true, anonymize:'delete'.
 //    · WellbeingProfile: export:true, anonymize:'delete'.
 //    La versión del JSON sube de 3 a 4.
+//  - v5 (2026-06-13, Épica C): añadida IntakeRecord (registro de ingesta estructurado).
+//    · Dato de salud nutricional (art. 9 RGPD): export:true, anonymize:'delete'.
+//    · MenuItem NO tiene residentId; no se exporta individualmente (es dato del centro).
+//    La versión del JSON sube de 4 a 5.
 
 import type { TenantPrisma } from './rls';
 
@@ -68,7 +72,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 4;
+  version: 5;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -97,6 +101,8 @@ export interface ResidentExport {
   dischargeRecords: unknown[];
   socialReports: unknown[];
   wellbeingProfile: unknown | null;
+  // v5: Épica C — nutrición (registros de ingesta estructurados)
+  intakeRecords: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -153,6 +159,7 @@ export async function exportResidentData(
     dischargeRecords,
     socialReports,
     wellbeingProfile,
+    intakeRecords,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -219,11 +226,13 @@ export async function exportResidentData(
       orderBy: { reportDate: 'asc' },
     }),
     db.wellbeingProfile.findUnique({ where: { residentId } }),
+    // v5: Épica C — registros de ingesta estructurada (dato de salud nutricional).
+    db.intakeRecord.findMany({ where: { residentId }, orderBy: { date: 'asc' } }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 4,
+    version: 5,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -249,6 +258,7 @@ export async function exportResidentData(
     dischargeRecords,
     socialReports,
     wellbeingProfile,
+    intakeRecords,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -374,6 +384,8 @@ export async function anonymizeResident(
     await db.dischargeRecord.deleteMany({ where: { residentId } });
     await db.socialReport.deleteMany({ where: { residentId } });
     await db.wellbeingProfile.deleteMany({ where: { residentId } });
+    // Épica C — registros de ingesta (v5, dato de salud nutricional):
+    await db.intakeRecord.deleteMany({ where: { residentId } });
   }
 
   return {

@@ -302,6 +302,35 @@ export const DISCHARGE_TYPE_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Épica C — Nutrición, Menús y Comedor (RF-NUT-001..009)
+// ---------------------------------------------------------------------------
+
+export const MEAL_TYPE_LABELS: Record<string, string> = {
+  DESAYUNO: 'Desayuno',
+  COMIDA:   'Comida',
+  MERIENDA: 'Merienda',
+  CENA:     'Cena',
+};
+
+/** Los 14 alérgenos de declaración obligatoria (Reglamento UE 1169/2011). */
+export const ALLERGEN_LABELS: Record<string, string> = {
+  GLUTEN:         'Gluten',
+  CRUSTACEOS:     'Crustáceos',
+  HUEVOS:         'Huevos',
+  PESCADO:        'Pescado',
+  CACAHUETES:     'Cacahuetes',
+  SOJA:           'Soja',
+  LACTEOS:        'Lácteos',
+  FRUTOS_CASCARA: 'Frutos de cáscara',
+  APIO:           'Apio',
+  MOSTAZA:        'Mostaza',
+  SESAMO:         'Sésamo',
+  SULFITOS:       'Sulfitos',
+  ALTRAMUCES:     'Altramuces',
+  MOLUSCOS:       'Moluscos',
+};
+
+// ---------------------------------------------------------------------------
 // Épica B — Perfil de bienestar ACP / UNE 158101 (social.ts)
 // ---------------------------------------------------------------------------
 
