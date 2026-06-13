@@ -287,3 +287,40 @@ export const MEDICAL_NOTE_TYPE_LABELS: Record<string, string> = {
   DERIVACION:  'Derivación',
   VISITA:      'Visita',
 };
+
+// ---------------------------------------------------------------------------
+// Épica B — Gestión de exitus/baja (discharge.ts)
+// ---------------------------------------------------------------------------
+
+export const DISCHARGE_TYPE_LABELS: Record<string, string> = {
+  DEFUNCION:         'Fallecimiento',
+  VOLUNTARIA:        'Baja voluntaria',
+  TRASLADO_CENTRO:   'Traslado a otro centro',
+  TRASLADO_HOSPITAL: 'Traslado a hospital',
+  FIN_ESTANCIA:      'Fin de estancia',
+  OTRO:              'Otro motivo',
+};
+
+// ---------------------------------------------------------------------------
+// Épica B — Perfil de bienestar ACP / UNE 158101 (social.ts)
+// ---------------------------------------------------------------------------
+
+/** Las 8 dimensiones del bienestar (UNE 158101 / modelo GENCAT). */
+export const WELLBEING_DIMENSION_LABELS: Record<string, string> = {
+  emotionalWellbeing:     'Bienestar emocional',
+  physicalWellbeing:      'Bienestar físico',
+  materialWellbeing:      'Bienestar material',
+  personalDevelopment:    'Desarrollo personal',
+  selfDetermination:      'Autodeterminación',
+  interpersonalRelations: 'Relaciones interpersonales',
+  socialInclusion:        'Inclusión social',
+  rights:                 'Derechos',
+};
+
+/** Estado de la revisión ACP. */
+export const REVIEW_STATUS_LABELS: Record<string, string> = {
+  OVERDUE:  'Revisión vencida',
+  DUE_SOON: 'Revisión próxima',
+  OK:       'Al día',
+  NOT_SET:  'Sin fecha',
+};

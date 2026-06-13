@@ -45,6 +45,9 @@ import {
 } from '@/lib/labels';
 import { NursingNotesTab } from './nursing-notes-tab';
 import { MedicalNotesTab } from './medical-notes-tab';
+import { DischargeTab } from './discharge-tab';
+import { SocialTab } from './social-tab';
+import { WellbeingTab } from './wellbeing-tab';
 
 // ---------------------------------------------------------------------------
 // Esquemas de validación (reutilizan / complementan los del backend)
@@ -599,6 +602,9 @@ export default function ResidentDetailPage() {
         {canCareRead && <TabsTrigger value="enfermeria">{t('exp.nursing.title')}</TabsTrigger>}
         {canResidentsRead && <TabsTrigger value="evolucion">{t('exp.medical.title')}</TabsTrigger>}
         <TabsTrigger value="administrativo">{t('exp.admin.title')}</TabsTrigger>
+        {canResidentsRead && <TabsTrigger value="social">{t('exp.social.title')}</TabsTrigger>}
+        {canResidentsRead && <TabsTrigger value="bienestar">{t('exp.wellbeing.title')}</TabsTrigger>}
+        {canWrite && <TabsTrigger value="bajas">{t('exp.discharge.title')}</TabsTrigger>}
         {canDsar && <TabsTrigger value="rgpd">RGPD</TabsTrigger>}
       </TabsList>
 
@@ -1685,6 +1691,31 @@ export default function ResidentDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+      )}
+
+      {/* ── SOCIAL ───────────────────────────────────────────────────────── */}
+      {canResidentsRead && (
+        <TabsContent value="social">
+          <SocialTab residentId={residentId} canWrite={canWrite} />
+        </TabsContent>
+      )}
+
+      {/* ── BIENESTAR ACP ────────────────────────────────────────────────── */}
+      {canResidentsRead && (
+        <TabsContent value="bienestar">
+          <WellbeingTab residentId={residentId} canWrite={canWrite} />
+        </TabsContent>
+      )}
+
+      {/* ── BAJAS ────────────────────────────────────────────────────────── */}
+      {canWrite && (
+        <TabsContent value="bajas">
+          <DischargeTab
+            residentId={residentId}
+            residentStatus={r.status}
+            canWrite={canWrite}
+          />
         </TabsContent>
       )}
 
