@@ -55,7 +55,7 @@ function AuthPanelDecoration({ claim, sub }: { claim: string; sub: string }) {
 
       {/* Claim */}
       <div className="relative z-10 flex flex-col gap-3">
-        <p className="whitespace-pre-line text-4xl font-extrabold leading-tight tracking-tight text-white">{claim}</p>
+        <p className="font-display text-display-2xl whitespace-pre-line leading-tight text-white">{claim}</p>
         <p className="max-w-xs text-base font-medium text-brand-100/80">{sub}</p>
         <ul className="mt-4 flex flex-col gap-2 text-sm text-brand-100/70">
           <li className="flex items-center gap-2">
