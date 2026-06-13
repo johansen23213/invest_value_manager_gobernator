@@ -80,6 +80,10 @@ model User {
   // --- Visitas ---
   requestedVisits Visit[] @relation("VisitRequestedBy")
 
+  // --- Documentación clínica ---
+  nursingNotes NursingNote[] @relation("NursingNoteAuthor")
+  medicalNotes MedicalNote[] @relation("MedicalNoteAuthor")
+
   @@index([tenantId])
   @@map("users")
 }
@@ -411,6 +415,10 @@ model Resident {
 
   // --- Visitas ---
   visits Visit[]
+
+  // --- Documentación clínica (staff-only) ---
+  nursingNotes NursingNote[]
+  medicalNotes MedicalNote[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -1259,6 +1267,100 @@ model AnnouncementReceipt {
   @@index([announcementId])
   @@index([userId])
   @@map("announcement_receipts")
+}
+
+// ---------------------------------------------------------------------------
+// Épica A — Notas de enfermería por turno y Evolución médica
+// (RF-ENF-001..011, RF-CLI-001..006/009/011, RF-PRO-008/009)
+//
+// CONFIDENCIALIDAD: MedicalNote es staff-only (RF-CLI-010). NO se expone en
+// el portal de familias (family.ts / portal). El familiar nunca tiene acceso
+// a los evolutivos médicos a través de ningún endpoint.
+//
+// Permisos:
+//   NursingNote — crear/actualizar: care:write (AUXILIAR, SANITARIO, DIRECTOR).
+//                 leer: care:read.
+//                 Decisión: care:* encaja perfectamente porque la nota de
+//                 enfermería es un registro de atención directa, no un dato
+//                 clínico de categoría especial. Reutilizar sin crear permiso nuevo.
+//
+//   MedicalNote — crear: clinical:write (SANITARIO, DIRECTOR).
+//                 leer: residents:read dentro del staff.
+//                 Decisión: clinical:write es el permiso correcto — los
+//                 evolutivos médicos son documentación clínica firmada por
+//                 personal sanitario, misma capa que diagnósticos y curas.
+// ---------------------------------------------------------------------------
+
+/// Turno de enfermería. Alineado con lib/mar.ts: Mañana 06-14, Tarde 14-22, Noche 22-06.
+enum NursingNoteShift {
+  MANANA  // 06:00–13:59
+  TARDE   // 14:00–21:59
+  NOCHE   // 22:00–05:59
+}
+
+/// Categoría temática de la nota de enfermería (RF-ENF-004).
+enum NursingNoteCategory {
+  GENERAL       // anotación general del turno
+  INCIDENCIA    // incidente relevante durante el turno
+  CURA          // cura de herida/UPP realizada en el turno
+  CONDUCTA      // comportamiento / estado emocional
+  SUENO         // calidad del sueño (noturno)
+  DOLOR         // valoración/seguimiento del dolor
+  ALIMENTACION  // ingesta y aceptación de la dieta
+}
+
+/// Nota de enfermería por turno (RF-ENF-001..011).
+/// Documenta la evolución del residente durante cada turno (mañana/tarde/noche).
+/// Base del traspaso de turno (RF-PRO-008/009): listForShiftHandover agrupa
+/// las notas del turno actual de todos los residentes de un centro/unidad.
+model NursingNote {
+  id         String              @id @default(cuid())
+  tenantId   String              @map("tenant_id")
+  residentId String              @map("resident_id")
+  resident   Resident            @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  authorId   String              @map("author_id")     // enfermería / auxiliar
+  author     User                @relation("NursingNoteAuthor", fields: [authorId], references: [id])
+  shift      NursingNoteShift
+  noteDate   DateTime            @map("note_date")     // día del turno (sin hora; hora implícita en `shift`)
+  body       String              // texto libre de la nota
+  category   NursingNoteCategory? @default(GENERAL)
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, residentId])
+  @@index([tenantId, noteDate])
+  @@map("nursing_notes")
+}
+
+/// Tipo de anotación del evolutivo médico (RF-CLI-001/002).
+enum MedicalNoteType {
+  EVOLUTIVO    // seguimiento periódico del estado del residente
+  EXPLORACION  // exploración física realizada por el médico
+  DERIVACION   // derivación a especialista o urgencias
+  VISITA       // visita del médico de cabecera o especialista externo
+}
+
+/// Evolutivo médico (RF-CLI-001..006/009/011) — staff-only (RF-CLI-010).
+/// NUNCA exponer en el portal de familias ni en ningún endpoint accesible
+/// al rol FAMILIAR. Requiere clinical:write para crear.
+model MedicalNote {
+  id         String         @id @default(cuid())
+  tenantId   String         @map("tenant_id")
+  residentId String         @map("resident_id")
+  resident   Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  authorId   String         @map("author_id")     // médico / sanitario (clinical:write)
+  author     User           @relation("MedicalNoteAuthor", fields: [authorId], references: [id])
+  noteDate   DateTime       @map("note_date")     // fecha de la anotación
+  type       MedicalNoteType
+  reason     String?        // motivo de la visita / exploración
+  body       String         // texto principal del evolutivo
+  plan       String?        // plan / tratamiento derivado de esta nota
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, residentId])
+  @@index([tenantId, noteDate])
+  @@map("medical_notes")
 }
 
 /// Hilo de mensajería bidireccional entre un familiar y el centro (COM-002).
