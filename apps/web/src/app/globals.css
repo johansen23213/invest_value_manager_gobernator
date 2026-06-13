@@ -1,35 +1,75 @@
+/* ── DM Serif Display — self-hosted via @fontsource ──────────────────────────
+   Sirve desde node_modules, NUNCA desde Google Fonts.
+   RGPD: el navegador no hace ningún request a dominios externos de fuentes.
+   Solo la variante latin (es-ES / ca-ES no necesita latin-ext).
+   Verificar en DevTools Network: no debe aparecer fonts.googleapis.com.
+   ──────────────────────────────────────────────────────────────────────────── */
+@import '@fontsource/dm-serif-display/latin-400.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tokens globales ─────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
   /* Token semántico: color de texto base (navy cálido, no slate-900 frío). */
   --color-text-base: #1A3A3F;
+  /* Token de fuente display — referenciado también desde layout.tsx si se usa
+     next/font/local en el futuro. Por ahora fontsource cubre el caso de uso. */
+  --font-display: 'DM Serif Display', Georgia, serif;
 }
 
-/* Transiciones suaves en toda la app (respeta prefers-reduced-motion). */
+/* ── Reset de base ───────────────────────────────────────────────────────── */
+/* Fondo base crema/hueso Lifecare — más humano que blanco puro o slate-50. */
+body {
+  background-color: #FAF7F2;
+  color: #1A3A3F;
+  /* Habilita font-smoothing para que DM Serif Display se vea bien en pantallas
+     de alta densidad (tablets retina de auxiliares). */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Focus ring consistente y visible ───────────────────────────────────── */
+/* Color petróleo — contraste sobre crema (7.9:1) y sobre blanco (8.2:1). */
+:focus-visible {
+  outline: 2px solid #14666B;
+  outline-offset: 2px;
+}
+
+/* ── Transiciones base (respeta prefers-reduced-motion) ─────────────────── */
 @media (prefers-reduced-motion: no-preference) {
   .transition-smooth {
     transition-property: color, background-color, border-color, box-shadow, opacity, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
   }
+
+  /* Elevación interactiva para cards clickables: sube 1px + sombra más profunda.
+     Combinar con hover:shadow-card-hover en el elemento. */
+  .transition-lift {
+    transition-property: box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+  .transition-lift:hover {
+    transform: translateY(-1px);
+  }
+  .transition-lift:active {
+    transform: translateY(0);
+  }
 }
 
-/* Fondo base crema/hueso Lifecare — más humano que el blanco puro o el slate-50 frío. */
-body {
-  background-color: #FAF7F2;
-  color: #1A3A3F;
+/* Fallback: sin transiciones cuando el usuario prefiere movimiento reducido. */
+@media (prefers-reduced-motion: reduce) {
+  .transition-smooth,
+  .transition-lift {
+    transition: none;
+  }
 }
 
-/* Focus ring consistente y visible. Color petróleo para contraste sobre crema y blanco. */
-:focus-visible {
-  outline: 2px solid #14666B;
-  outline-offset: 2px;
-}
-
-/* Animación de entrada para tarjetas y KPIs en el dashboard. */
+/* ── Animaciones de entrada ──────────────────────────────────────────────── */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -41,13 +81,78 @@ body {
   }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* spring suave para diálogos y menús */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animaciones solo si el usuario no prefiere movimiento reducido. */
 @media (prefers-reduced-motion: no-preference) {
   .animate-fade-in-up {
     animation: fadeInUp 0.25s ease-out both;
   }
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out both;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  /* Stagger — añadir clase + animate-fade-in-up (el delay la hace escalonada) */
+  .animate-stagger-1 { animation: fadeInUp 0.25s ease-out 50ms both; }
+  .animate-stagger-2 { animation: fadeInUp 0.25s ease-out 100ms both; }
+  .animate-stagger-3 { animation: fadeInUp 0.25s ease-out 150ms both; }
+  .animate-stagger-4 { animation: fadeInUp 0.25s ease-out 200ms both; }
 }
 
-/* Anillo de ocupación SVG — track en tono crema/gris cálido. */
+/* Fallback: sin animaciones cuando el usuario prefiere movimiento reducido. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-stagger-1,
+  .animate-stagger-2,
+  .animate-stagger-3,
+  .animate-stagger-4 {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── El Sello Vetlla — "curva de cuidado" ───────────────────────────────── */
+/* Acento de borde superior-izquierdo en teal, esquina diferencial 3xl.
+   Usar en StatCard y PageHeader (no en listados ni botones).
+   Combinar con rounded-2xl en el resto de esquinas del elemento. */
+.vetlla-card-accent {
+  border-left: 2px solid rgb(20 102 107 / 0.40);
+  border-top: 2px solid rgb(20 102 107 / 0.40);
+  border-top-left-radius: 1.5rem; /* rounded-3xl */
+}
+
+/* Banda de acento lateral izquierda — variante para PageHeader y secciones. */
+.vetlla-accent-bar {
+  border-left: 3px solid #1e8a8c; /* brand-500 */
+  padding-left: 1rem;
+}
+
+/* ── Glow de foco en inputs (complementa el focus ring) ─────────────────── */
+.focus-glow:focus-within {
+  box-shadow: 0 0 0 3px rgb(20 102 107 / 0.25);
+}
+
+/* ── Anillo de ocupación SVG ─────────────────────────────────────────────── */
 .occupancy-ring-track {
   stroke: #E8DDD0;
   fill: none;
@@ -55,10 +160,15 @@ body {
 .occupancy-ring-fill {
   fill: none;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .occupancy-ring-fill {
+    transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }
 
-/* Divisor ondulado SVG para las páginas de auth (decorativo). */
+/* ── Decoración SVG auth ─────────────────────────────────────────────────── */
+/* Divisor ondulado para páginas de auth (decorativo). */
 .wave-divider {
   display: block;
   width: 100%;
@@ -66,13 +176,23 @@ body {
   line-height: 0;
 }
 
-/* Blob decorativo de fondo — usa clip-path para no añadir dependencias. */
+/* Blob decorativo de fondo — solo en superficies de color (panel teal auth).
+   Nunca sobre la crema base (demasiado sutil para distinguirse). */
 .blob-bg::before {
   content: '';
   position: absolute;
   inset: -20%;
-  background: radial-gradient(ellipse 60% 50% at 30% 40%, rgb(20 102 107 / 0.12) 0%, transparent 70%),
-              radial-gradient(ellipse 40% 40% at 75% 70%, rgb(231 111 81 / 0.08) 0%, transparent 60%);
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 40%, rgb(20 102 107 / 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 75% 70%, rgb(231 111 81 / 0.08) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
+}
+
+/* ── Utilidad scrollbar-none (nav horizontal en móvil) ──────────────────── */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
