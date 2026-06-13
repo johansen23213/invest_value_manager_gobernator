@@ -19,6 +19,9 @@ const es: Record<string, string> = {
   'nav.alerts': 'Alertas',
   'nav.conflicts': 'Conflictos',
   'nav.portal': 'Portal',
+  'nav.group.asistencial': 'Asistencial',
+  'nav.group.familias': 'Familias',
+  'nav.group.centro': 'Centro',
 
   // Panel decorativo auth — claim Lifecare (dirección de arte Ola 1)
   'auth.panel.claim': 'Cuidar bien,\ncon menos papeleo.',
@@ -1027,6 +1030,9 @@ const ca: Record<string, string> = {
   'nav.alerts': 'Alertes',
   'nav.conflicts': 'Conflictes',
   'nav.portal': 'Portal',
+  'nav.group.asistencial': 'Assistencial',
+  'nav.group.familias': 'Famílies',
+  'nav.group.centro': 'Centre',
 
   // Panel decoratiu auth — claim Lifecare (direcció d'art Ona 1)
   'auth.panel.claim': 'Cuidar bé,\namb menys paperassa.',
