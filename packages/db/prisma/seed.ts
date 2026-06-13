@@ -5,6 +5,7 @@ import {
   AnnouncementAudience,
   AnnouncementCategory,
   AssessmentType,
+  AssignmentStatus,
   CenterType,
   ConsentType,
   ContactRelation,
@@ -1306,6 +1307,197 @@ async function main() {
     }
 
     console.log(`  Épica C (Nutrición): 10 ítems de menú (2 días) + 4 registros de ingesta (1 con alerta baja ingesta)`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed de Épica D — Cuadrantes/Turnos del personal + Cierre de turno firmado
+  // ---------------------------------------------------------------------------
+
+  // Limpieza idempotente
+  await db.shiftHandover.deleteMany({ where: { tenantId: tenant.id } });
+  await db.shiftAssignment.deleteMany({ where: { tenantId: tenant.id } });
+  await db.shiftTemplate.deleteMany({ where: { tenantId: tenant.id } });
+
+  const seedDirector  = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+  const seedSanitario = await db.user.findUnique({ where: { email: 'sanitario@demo.vetlla.dev' } });
+  const seedAuxiliar  = await db.user.findUnique({ where: { email: 'auxiliar@demo.vetlla.dev' } });
+
+  const seedResidencia = await db.center.findFirst({
+    where:   { tenantId: tenant.id, name: 'Residencia Los Olivos' },
+    select:  { id: true },
+  });
+
+  const seedPlanta1 = seedResidencia
+    ? await db.unit.findFirst({
+        where:   { tenantId: tenant.id, centerId: seedResidencia.id, name: 'Planta 1' },
+        select:  { id: true },
+      })
+    : null;
+
+  if (seedDirector && seedSanitario && seedAuxiliar && seedResidencia && seedPlanta1) {
+    const shiftCenterId = seedResidencia.id;
+    const shiftUnitId   = seedPlanta1.id;
+    const shiftTenantId = tenant.id;
+
+    const shiftToday = new Date();
+    shiftToday.setUTCHours(0, 0, 0, 0);
+    const shiftTomorrow = new Date(shiftToday);
+    shiftTomorrow.setDate(shiftToday.getDate() + 1);
+    const shiftYesterday = new Date(shiftToday);
+    shiftYesterday.setDate(shiftToday.getDate() - 1);
+
+    // ------------------------------------------------------------------
+    // 3 Plantillas de turno para la Residencia Los Olivos (Planta 1)
+    // ------------------------------------------------------------------
+
+    await db.shiftTemplate.create({
+      data: {
+        tenantId:    shiftTenantId,
+        centerId:    shiftCenterId,
+        unitId:      shiftUnitId,
+        name:        'Mañana Planta 1',
+        shift:       NursingNoteShift.MANANA,
+        startTime:   '06:00',
+        endTime:     '14:00',
+        minStaff:    2,  // mínimo 2 auxiliares en mañana
+        active:      true,
+        createdById: seedDirector.id,
+      },
+    });
+
+    await db.shiftTemplate.create({
+      data: {
+        tenantId:    shiftTenantId,
+        centerId:    shiftCenterId,
+        unitId:      shiftUnitId,
+        name:        'Tarde Planta 1',
+        shift:       NursingNoteShift.TARDE,
+        startTime:   '14:00',
+        endTime:     '22:00',
+        minStaff:    2,
+        active:      true,
+        createdById: seedDirector.id,
+      },
+    });
+
+    await db.shiftTemplate.create({
+      data: {
+        tenantId:    shiftTenantId,
+        centerId:    shiftCenterId,
+        unitId:      shiftUnitId,
+        name:        'Noche Planta 1',
+        shift:       NursingNoteShift.NOCHE,
+        startTime:   '22:00',
+        endTime:     '06:00',
+        minStaff:    1,  // mínimo 1 auxiliar en noche
+        active:      true,
+        createdById: seedDirector.id,
+      },
+    });
+
+    // ------------------------------------------------------------------
+    // Asignaciones: hoy y mañana
+    // Una asignación con AUSENTE sin sustituto para demo de infra-cobertura
+    // ------------------------------------------------------------------
+
+    // Hoy — MAÑANA: sanitario CONFIRMADO
+    await db.shiftAssignment.create({
+      data: {
+        tenantId:    shiftTenantId,
+        userId:      seedSanitario.id,
+        date:        shiftToday,
+        shift:       NursingNoteShift.MANANA,
+        unitId:      shiftUnitId,
+        status:      AssignmentStatus.CONFIRMADO,
+        createdById: seedDirector.id,
+      },
+    });
+
+    // Hoy — MAÑANA: auxiliar AUSENTE sin sustituto (genera alerta infra-cobertura)
+    await db.shiftAssignment.create({
+      data: {
+        tenantId:         shiftTenantId,
+        userId:           seedAuxiliar.id,
+        date:             shiftToday,
+        shift:            NursingNoteShift.MANANA,
+        unitId:           shiftUnitId,
+        status:           AssignmentStatus.AUSENTE,
+        substituteUserId: null,
+        notes:            'Baja por enfermedad. Sin sustituto asignado.',
+        createdById:      seedDirector.id,
+      },
+    });
+
+    // Hoy — TARDE: auxiliar CONFIRMADO + sanitario SUSTITUIDO por director
+    await db.shiftAssignment.create({
+      data: {
+        tenantId:    shiftTenantId,
+        userId:      seedAuxiliar.id,
+        date:        shiftToday,
+        shift:       NursingNoteShift.TARDE,
+        unitId:      shiftUnitId,
+        status:      AssignmentStatus.CONFIRMADO,
+        createdById: seedDirector.id,
+      },
+    });
+    await db.shiftAssignment.create({
+      data: {
+        tenantId:         shiftTenantId,
+        userId:           seedSanitario.id,
+        date:             shiftToday,
+        shift:            NursingNoteShift.TARDE,
+        unitId:           shiftUnitId,
+        status:           AssignmentStatus.SUSTITUIDO,
+        substituteUserId: seedDirector.id, // director como sustituto de enfermería
+        notes:            'Sanitario en formación. Director cubre el turno.',
+        createdById:      seedDirector.id,
+      },
+    });
+
+    // Mañana — MAÑANA: ambos PLANIFICADO
+    await db.shiftAssignment.create({
+      data: {
+        tenantId:    shiftTenantId,
+        userId:      seedSanitario.id,
+        date:        shiftTomorrow,
+        shift:       NursingNoteShift.MANANA,
+        unitId:      shiftUnitId,
+        status:      AssignmentStatus.PLANIFICADO,
+        createdById: seedDirector.id,
+      },
+    });
+    await db.shiftAssignment.create({
+      data: {
+        tenantId:    shiftTenantId,
+        userId:      seedAuxiliar.id,
+        date:        shiftTomorrow,
+        shift:       NursingNoteShift.MANANA,
+        unitId:      shiftUnitId,
+        status:      AssignmentStatus.PLANIFICADO,
+        createdById: seedDirector.id,
+      },
+    });
+
+    // ------------------------------------------------------------------
+    // Cierre de turno firmado de ejemplo (ayer — turno de mañana)
+    // ------------------------------------------------------------------
+
+    await db.shiftHandover.create({
+      data: {
+        tenantId:         shiftTenantId,
+        centerId:         shiftCenterId,
+        unitId:           shiftUnitId,
+        date:             shiftYesterday,
+        shift:            NursingNoteShift.MANANA,
+        summary:          'Turno de mañana sin incidencias graves. Todos los residentes han desayunado bien. Se ha realizado higiene completa. Constantes en rango normal en todos los residentes. El residente hab. 1-02 refiere leve dolor abdominal que cede con postura.',
+        incidentsSummary: 'Hab. 1-02: dolor abdominal leve (EVA 2/10). Se ha comunicado a enfermería. Se recomienda vigilancia y control de deposición.',
+        pendingTasks:     'Revisar deposición residente hab. 1-02 en turno de tarde. Confirmar que llega el sustituto del auxiliar en el turno de noche.',
+        closedById:       seedSanitario.id,
+        closedAt:         new Date(shiftYesterday.getTime() + 14 * 60 * 60 * 1000), // ayer a las 14:00
+      },
+    });
+
+    console.log(`  Épica D (Turnos): 3 plantillas (mañana/tarde/noche Planta 1) + 6 asignaciones (hoy/mañana con AUSENTE+SUSTITUIDO para demo) + 1 cierre de turno firmado (ayer mañana)`);
   }
 
   console.log(`Seed OK.`);

@@ -38,6 +38,15 @@ export const PERMISSIONS = [
   //                  guardada en centers:write (mínimo privilegio, sin proliferación de permisos).
   'visits:request',   // el FAMILIAR solicita visitas para sus residentes y las gestiona
   'visits:manage',    // el staff gestiona la agenda, check-in/out, no-show
+  // Cuadrantes/turnos del personal (Épica D — RF-PRO-003/004/008/009/010/013)
+  // Dominio nuevo justificado: los turnos del personal son un recurso propio,
+  // distinto de los datos clínicos (care:*) y de la gestión de usuarios (users:*).
+  // shifts:read   → ver cuadrante y asignaciones (DIRECTOR + SANITARIO + AUXILIAR).
+  // shifts:manage → planificar cuadrante, plantillas, ausencias (DIRECTOR + SUPERADMIN).
+  // Cierre de turno firmado (handover) usa care:write/care:read (el mismo permiso
+  // que habilita al responsable del turno a documentar la atención).
+  'shifts:read',      // ver cuadrante mensual, asignaciones, estado de cobertura
+  'shifts:manage',    // planificar cuadrante, gestionar plantillas y ausencias/sustituciones
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -67,6 +76,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'comms:read',
     'comms:broadcast',
     'visits:manage',
+    'shifts:read',
+    'shifts:manage',
   ],
   SANITARIO: [
     'tenant:read',
@@ -92,6 +103,10 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     // expediente. Mantenerlo aquí es menos restrictivo que crear un permiso
     // separado y la recepción habitualmente la llevan auxiliares o dirección.
     'visits:manage',
+    // SANITARIO puede ver el cuadrante (shifts:read): necesita saber qué equipo
+    // tiene en cada turno para coordinar la atención clínica. No puede planificarlo
+    // (shifts:manage es exclusivo de dirección).
+    'shifts:read',
   ],
   // El auxiliar registra atención directa y administra medicación (MAR).
   // En muchos centros el auxiliar hace las funciones de recepción (check-in/out).
@@ -107,6 +122,9 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'requests:manage',
     'comms:read',
     'visits:manage',
+    // AUXILIAR puede ver su cuadrante (shifts:read): necesita saber en qué turno
+    // está asignado y quiénes son sus compañeros. No puede planificarlo (shifts:manage).
+    'shifts:read',
   ],
   FAMILIAR: [
     'tenant:read',
