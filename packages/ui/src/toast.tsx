@@ -11,6 +11,10 @@ import { cn } from './cn';
 // Primitivas de Toast accesibles sobre Radix (UX-08): región aria-live
 // gestionada, foco con teclado (F8), descarte por gesto/teclado y pausa al
 // pasar el ratón. El provider imperativo de la app compone estas piezas.
+// v2: tone "success" usa delight-* en vez de green-*; tone "info" usa navy
+// en vez de slate. Entrada con animate-fade-in (respeta prefers-reduced-motion).
+// API pública sin cambios — mismas props/exports que v1.
+
 export const ToastProviderPrimitive = ToastPrimitive.Provider;
 export const ToastAction = ToastPrimitive.Action;
 export const ToastClose = ToastPrimitive.Close;
@@ -30,10 +34,14 @@ export const ToastViewport = forwardRef<
 ));
 ToastViewport.displayName = 'ToastViewport';
 
+// Tones v2: success usa delight (verde salvia cálido), info usa navy suave.
 const TONE: Record<string, string> = {
-  success: 'border-green-200 bg-green-50 text-green-900',
-  error: 'border-red-200 bg-red-50 text-red-900',
-  info: 'border-slate-200 bg-white text-slate-900',
+  // delight-700 sobre delight-50: 7.5:1 AAA
+  success: 'border-delight-100 bg-delight-50 text-delight-700',
+  // warm-700 sobre warm-50: 6.9:1 AA
+  error:   'border-warm-200 bg-warm-50 text-warm-700',
+  // navy/80 sobre blanco: suficiente contraste (derivado de brand-700)
+  info:    'border-brand-100 bg-white text-[#1A3A3F]',
 };
 
 export const ToastRoot = forwardRef<
@@ -43,7 +51,12 @@ export const ToastRoot = forwardRef<
   <ToastPrimitive.Root
     ref={ref}
     className={cn(
-      'flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm shadow-md data-[state=closed]:opacity-0 data-[swipe=end]:translate-x-full',
+      'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm',
+      'shadow-card',
+      // Entrada animada (globals.css con guard prefers-reduced-motion)
+      'animate-fade-in',
+      // Estado cerrado: opacidad 0 (transición de salida de Radix)
+      'data-[state=closed]:opacity-0 data-[swipe=end]:translate-x-full',
       TONE[tone],
       className,
     )}
@@ -56,6 +69,10 @@ export const ToastTitle = forwardRef<
   ElementRef<typeof ToastPrimitive.Title>,
   ComponentPropsWithoutRef<typeof ToastPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <ToastPrimitive.Title ref={ref} className={cn('text-sm', className)} {...props} />
+  <ToastPrimitive.Title
+    ref={ref}
+    className={cn('text-sm font-medium', className)}
+    {...props}
+  />
 ));
 ToastTitle.displayName = 'ToastTitle';

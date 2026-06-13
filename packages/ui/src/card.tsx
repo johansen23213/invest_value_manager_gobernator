@@ -2,7 +2,11 @@ import type { HTMLAttributes } from 'react';
 import { cn } from './cn';
 
 // Tarjeta con radio Lifecare (rounded-2xl) y sombra cálida sutil.
-// Borde en tono petróleo muy suave para coherencia con la paleta.
+// v2: transition-lift disponible como clase adicional para cards clickables.
+// Usar cn('shadow-card transition-lift hover:shadow-card-hover', className)
+// en el consumidor cuando la card sea interactiva.
+// API pública sin cambios — mismos subcomponentes y props que v1.
+
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
@@ -16,11 +20,22 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('border-b border-brand-100/50 px-6 py-4', className)} {...props} />;
+  return (
+    <div
+      className={cn('border-b border-brand-100/50 px-6 py-4', className)}
+      {...props}
+    />
+  );
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn('text-lg font-semibold text-[#1A3A3F]', className)} {...props} />;
+  // text-[#1A3A3F] en vez de text-slate-900 — navy cálido Lifecare.
+  return (
+    <h2
+      className={cn('text-lg font-semibold text-[#1A3A3F]', className)}
+      {...props}
+    />
+  );
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
