@@ -1,7 +1,7 @@
 # Vetlla — SaaS de gestión sociosanitaria
 
 > **Producto:** SaaS cloud-native, multitenant y API-first para centros del sector de la dependencia en España (residencias de mayores, centros de día, viviendas tuteladas/supervisadas).
-> **Diferencial:** copiloto de IA agéntica que automatiza el trabajo administrativo pesado. No buscamos completitud funcional (eso lo tiene el líder, ResiPlus), sino ser cloud-native de verdad, API-first y con IA útil.
+> **Diferencial:** copiloto de IA agéntica que automatiza el trabajo administrativo pesado. **Aspiramos a un core asistencial completo** (equivalente funcional a ResiPlus en lo que un centro usa a diario), pero **ganamos por ser cloud-native de verdad, API-first, multitenant y con IA útil** — no por acumular profundidad normativa. Grado: **core-suficiente + diferencial**, no paridad total (ver `docs/adr/0016`). El núcleo asistencial + la SuperApp residente/familia ya están en marcha; el resto del core entra por fases.
 > **Estado:** planificación del MVP. Fuente de verdad del avance: `project_state.yaml`.
 
 ---
@@ -12,7 +12,9 @@ El MVP demuestra el **bucle de uso diario** + el **diferencial de IA**, no el ER
 
 **Dentro:** multitenancy + auth + RBAC; gestión de centros/unidades/plazas/camas y ocupación; expediente sociosanitario del residente (datos, contactos, dependencia, alergias, diagnósticos, escalas Barthel/Tinetti); atención directa offline-first desde tablet (constantes, ABVD, deposiciones, ingesta, incidencias); medicación + MAR básico con alertas de no-administrado; PIA/PAI con objetivos y seguimiento; portal de familias (solo lectura); IA Copilot (2 features estrella); soporte en el modelo de datos para pricing por plaza/módulo.
 
-**Fuera (roadmap):** facturación/contabilidad completa, cuadrantes/turnos, mantenimiento, transporte, integraciones farmacia/administración, apps nativas (la PWA cubre el MVP), copiloto de cumplimiento normativo.
+**Dentro (roadmap por fases — ADR-0016, core-suficiente):** facturación/cobros (cuotas, copagos, SEPA), RRHH/turnos/cuadrantes, farmacia/almacén, dietética, mantenimiento, transporte, informes regulatorios a la administración. Se construyen por fases, acotados a lo que un centro usa a diario; la profundidad normativa por CCAA se mete bajo demanda de cliente real, no de forma especulativa.
+
+**Fuera:** apps nativas (la PWA cubre móvil), paridad normativa exhaustiva por comunidad autónoma, copiloto de cumplimiento normativo completo.
 
 ---
 
