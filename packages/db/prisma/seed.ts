@@ -12,9 +12,12 @@ import {
   DeviceType,
   DietType,
   LiquidTexture,
+  MedicalNoteType,
   MessageThreadCategory,
   MedicationRoute,
   MedicationType,
+  NursingNoteCategory,
+  NursingNoteShift,
   PlaceRegime,
   Prisma,
   RestraintType,
@@ -882,6 +885,87 @@ async function main() {
     });
 
     console.log(`  Visitas: 4 franjas configuradas + 1 visita confirmada futura (QR: ${demoQrCode}) + 1 visita completada pasada`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed de documentación clínica (Épica A)
+  // Notas de enfermería + evolutivos médicos del residente demo
+  // ---------------------------------------------------------------------------
+
+  // Limpieza idempotente
+  await db.nursingNote.deleteMany({ where: { tenantId: tenant.id } });
+  await db.medicalNote.deleteMany({ where: { tenantId: tenant.id } });
+
+  const sanitario = await db.user.findUnique({ where: { email: 'sanitario@demo.vetlla.dev' } });
+  const auxiliar  = await db.user.findUnique({ where: { email: 'auxiliar@demo.vetlla.dev' } });
+  const directorSeed = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+
+  // Primer residente del tenant (por nombre)
+  const seedResident = await db.resident.findFirst({
+    where: { tenantId: tenant.id },
+    orderBy: { lastName: 'asc' },
+  });
+
+  if (seedResident && auxiliar && sanitario && directorSeed) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    // 1) Nota de enfermería turno MANANA — GENERAL
+    await db.nursingNote.create({
+      data: {
+        tenantId:   tenant.id,
+        residentId: seedResident.id,
+        authorId:   auxiliar.id,
+        shift:      NursingNoteShift.MANANA,
+        noteDate:   today,
+        category:   NursingNoteCategory.GENERAL,
+        body:       'Residente tranquila. Ha desayunado bien (zumo, tostada y café con leche). Ha realizado higiene completa sin incidencias. Buena orientación temporal. Humor estable.',
+      },
+    });
+
+    // 2) Nota de enfermería turno TARDE — DOLOR (del día anterior)
+    await db.nursingNote.create({
+      data: {
+        tenantId:   tenant.id,
+        residentId: seedResident.id,
+        authorId:   sanitario.id,
+        shift:      NursingNoteShift.TARDE,
+        noteDate:   yesterday,
+        category:   NursingNoteCategory.DOLOR,
+        body:       'Residente refiere dolor en rodilla izquierda EVA 4/10. Se administra Paracetamol 1g según pauta. Reevaluación en 60 minutos: dolor reducido a EVA 2/10. Queda en reposo relativo. Se comunica a la enfermera de guardia.',
+      },
+    });
+
+    // 3) Nota de enfermería turno NOCHE — SUENO (del día anterior)
+    await db.nursingNote.create({
+      data: {
+        tenantId:   tenant.id,
+        residentId: seedResident.id,
+        authorId:   auxiliar.id,
+        shift:      NursingNoteShift.NOCHE,
+        noteDate:   yesterday,
+        category:   NursingNoteCategory.SUENO,
+        body:       'Sueño discontinuo. Se levanta dos veces durante la noche (02:15 y 04:40) para ir al baño. No presenta confusión nocturna. Vuelve a dormir sin incidencias. Constantes en rango normal.',
+      },
+    });
+
+    // 4) Evolutivo médico — EVOLUTIVO (seguimiento periódico)
+    await db.medicalNote.create({
+      data: {
+        tenantId:   tenant.id,
+        residentId: seedResident.id,
+        authorId:   sanitario.id,
+        noteDate:   today,
+        type:       MedicalNoteType.EVOLUTIVO,
+        reason:     'Revisión mensual del estado de salud',
+        body:       'Residente en buen estado general. TA 130/80 mmHg. FC 72 lpm. Peso estable (67 kg). No refiere dolor en el momento de la exploración. Herida en rodilla izquierda cicatrizando correctamente. Pauta medicamentosa sin cambios. Familia informada.',
+        plan:       'Mantener pauta actual. Control tensional en 2 semanas. Revisión geriátrica en 3 meses.',
+      },
+    });
+
+    console.log(`  Documentación clínica (Épica A): 3 notas de enfermería + 1 evolutivo médico para residente ${seedResident.firstName} ${seedResident.lastName}`);
   }
 
   console.log(`Seed OK.`);

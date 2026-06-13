@@ -43,6 +43,8 @@ import {
   RESTRAINT_TYPE_LABELS,
   UPP_ORIGIN_LABELS,
 } from '@/lib/labels';
+import { NursingNotesTab } from './nursing-notes-tab';
+import { MedicalNotesTab } from './medical-notes-tab';
 
 // ---------------------------------------------------------------------------
 // Esquemas de validación (reutilizan / complementan los del backend)
@@ -154,6 +156,9 @@ export default function ResidentDetailPage() {
   const canWrite = me.data?.permissions.includes('residents:write') ?? false;
   const canClinical = me.data?.permissions.includes('clinical:write') ?? false;
   const canDsar = me.data?.permissions.includes('dsar:manage') ?? false;
+  const canCareRead = me.data?.permissions.includes('care:read') ?? false;
+  const canCareWrite = me.data?.permissions.includes('care:write') ?? false;
+  const canResidentsRead = me.data?.permissions.includes('residents:read') ?? false;
   const resident = api.residents.get.useQuery({ id: residentId });
 
   // Clínico+: datos adicionales
@@ -591,6 +596,8 @@ export default function ResidentDetailPage() {
         <TabsTrigger value="diagnosticos">Diagnósticos</TabsTrigger>
         <TabsTrigger value="cuidados">{t('exp.care.title')}</TabsTrigger>
         <TabsTrigger value="clinico">{t('exp.clinical.title')}</TabsTrigger>
+        {canCareRead && <TabsTrigger value="enfermeria">{t('exp.nursing.title')}</TabsTrigger>}
+        {canResidentsRead && <TabsTrigger value="evolucion">{t('exp.medical.title')}</TabsTrigger>}
         <TabsTrigger value="administrativo">{t('exp.admin.title')}</TabsTrigger>
         {canDsar && <TabsTrigger value="rgpd">RGPD</TabsTrigger>}
       </TabsList>
@@ -1433,6 +1440,24 @@ export default function ResidentDetailPage() {
           </Card>
         </div>
       </TabsContent>
+
+      {/* ── NOTAS DE ENFERMERÍA ──────────────────────────────────────────── */}
+      {canCareRead && (
+        <TabsContent value="enfermeria">
+          <NursingNotesTab residentId={residentId} canWrite={canCareWrite} />
+        </TabsContent>
+      )}
+
+      {/* ── EVOLUCIÓN MÉDICA ─────────────────────────────────────────────── */}
+      {canResidentsRead && (
+        <TabsContent value="evolucion">
+          <MedicalNotesTab
+            residentId={residentId}
+            canRead={canResidentsRead}
+            canWrite={canClinical}
+          />
+        </TabsContent>
+      )}
 
       {/* ── ADMINISTRATIVO ───────────────────────────────────────────────── */}
       <TabsContent value="administrativo">

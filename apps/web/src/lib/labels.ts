@@ -257,3 +257,33 @@ export const VISIT_STATUS_LABELS: Record<string, string> = {
   COMPLETADA:  'Completada',
   NO_SHOW:     'No presentado',
 };
+
+// ---------------------------------------------------------------------------
+// Notas de enfermería y evolución médica (Épica A del core asistencial)
+// ---------------------------------------------------------------------------
+
+/** Turno de la nota de enfermería (NursingNoteShift). */
+export const NURSING_NOTE_SHIFT_LABELS: Record<string, string> = {
+  MANANA: 'Mañana',
+  TARDE:  'Tarde',
+  NOCHE:  'Noche',
+};
+
+/** Categoría de la nota de enfermería (NursingNoteCategory). */
+export const NURSING_NOTE_CATEGORY_LABELS: Record<string, string> = {
+  GENERAL:     'General',
+  INCIDENCIA:  'Incidencia',
+  CURA:        'Cura',
+  CONDUCTA:    'Conducta',
+  SUENO:       'Sueño',
+  DOLOR:       'Dolor',
+  ALIMENTACION: 'Alimentación',
+};
+
+/** Tipo de evolutivo médico (MedicalNoteType). */
+export const MEDICAL_NOTE_TYPE_LABELS: Record<string, string> = {
+  EVOLUTIVO:   'Evolutivo',
+  EXPLORACION: 'Exploración',
+  DERIVACION:  'Derivación',
+  VISITA:      'Visita',
+};

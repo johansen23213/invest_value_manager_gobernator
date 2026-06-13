@@ -846,6 +846,9 @@ medication_rbac_redesign:
 # Definiciones en .claude/agents/ (ver .claude/agents/README.md). El CIO
 # gobierna y desbloquea cuando un especialista se atasca.
 # --------------------------------------------------------------------------
+core_epica_a_done:
+  - "ÉPICA A del core (ADR-0016 core-suficiente) COMPLETA backend+UI: NursingNote (notas de enfermería por turno) + MedicalNote (evolución médica). RLS forzada, DSAR (dsar-registry export v3 + anonymize), permisos care:*/clinical:*/residents:read, MedicalNote staff-only (RF-CLI-010). Router clinicalNotes (nursing.create/listByResident/listForShiftHandover; medical.create/listByResident). UI: pestañas Enfermería y Evolución médica en el expediente + pantalla /relevo (traspaso de turno con incidencias resaltadas). 293 db + 380 web tests. Cubre RF-ENF/RF-CLI/RF-PRO-008-009 parciales. Siguiente: Épica B (exitus + informe social + UNE 158101)."
+
 team:
   location: .claude/agents/
   governance: >-
