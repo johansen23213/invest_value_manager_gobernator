@@ -3,25 +3,45 @@
 /**
  * Traspaso de turno — pantalla de lectura rápida para el equipo entrante.
  * Épica A — RF-PRO-008/009.
+ * Épica D — RF-PRO-010/013: cierre de turno firmado + traspaso recibido.
  *
  * Permiso: care:read (AUXILIAR + SANITARIO + DIRECTOR).
+ * Cierre de turno (Firmar): care:write.
  *
  * Flujo:
  *   1. El usuario selecciona turno (preselección = currentShift) y fecha.
  *   2. Si el tenant tiene más de un centro, elige centro; si tiene varios,
  *      elige también unidad (opcional).
- *   3. Se muestra la lista de residentes con sus notas del turno.
+ *   3. Se muestra el traspaso recibido del turno anterior (handover anterior).
+ *   4. Se muestra la lista de residentes con sus notas del turno.
  *      - Residentes con categoría INCIDENCIA se destacan visualmente.
  *      - Residentes sin notas muestran estado vacío amable.
+ *   5. Si care:write, botón "Cerrar turno": abre el cierre pre-relleno con
+ *      incidencias del turno y el hint de medicaciones. Al firmar: closedById+closedAt.
+ *   6. Si el turno ya está cerrado: muestra el cierre en modo lectura.
  *
  * Ruta: /relevo
  */
 
 import { useState, useEffect } from 'react';
-import { Badge, Card, CardContent, Label, Select } from '@vetlla/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+  Label,
+  Select,
+} from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
-import { formatDate } from '@/lib/format';
+import { useToast } from '@/components/toast';
+import { formatDate, formatTime } from '@/lib/format';
 import { currentShift, type Shift } from '@/lib/mar';
 import {
   NURSING_NOTE_SHIFT_LABELS,
@@ -73,6 +93,549 @@ function IconAlert({ className }: { className?: string }) {
   );
 }
 
+function IconSignature({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 17h4l9-9-4-4-9 9v4z" />
+      <line x1="14" y1="4" x2="20" y2="10" />
+      <line x1="3" y1="21" x2="21" y2="21" />
+    </svg>
+  );
+}
+
+function IconCheck({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Panel: traspaso recibido del turno anterior
+// ---------------------------------------------------------------------------
+
+type PreviousHandoverPanelProps = {
+  centerId: string;
+  date: string;
+  shift: Shift;
+  unitId: string | undefined;
+};
+
+/**
+ * Calcula el turno ANTERIOR al dado para mostrar el traspaso que recibe el
+ * equipo entrante. El equipo entrante de MANANA lee el cierre de NOCHE;
+ * el de TARDE lee el de MANANA; el de NOCHE lee el de TARDE.
+ */
+function previousShift(shift: Shift): Shift {
+  if (shift === 'MANANA') return 'NOCHE';
+  if (shift === 'TARDE')  return 'MANANA';
+  return 'TARDE';
+}
+
+/**
+ * Cuando el turno anterior es NOCHE y el turno actual es MANANA,
+ * el cierre de NOCHE es del día anterior.
+ */
+function previousShiftDate(date: string, shift: Shift): Date {
+  const d = new Date(date);
+  if (shift === 'MANANA') {
+    d.setDate(d.getDate() - 1);
+  }
+  return d;
+}
+
+function PreviousHandoverPanel({ centerId, date, shift, unitId }: PreviousHandoverPanelProps) {
+  const { t, locale } = useT();
+  const prevShift = previousShift(shift);
+  const prevDate  = previousShiftDate(date, shift);
+
+  const handoverQuery = api.shifts.handover.getForShift.useQuery(
+    { centerId, date: prevDate, shift: prevShift, unitId },
+    { enabled: Boolean(centerId) },
+  );
+
+  const handover = handoverQuery.data;
+
+  if (handoverQuery.isLoading) {
+    return (
+      <Card className="border-brand-200">
+        <CardContent>
+          <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <section aria-labelledby="previous-handover-heading">
+      <Card className="border-l-4 border-l-brand-500">
+        <CardHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle id="previous-handover-heading">
+              {t('handover.received.title')}
+            </CardTitle>
+            <Badge tone={SHIFT_CHIP_TONE[prevShift] ?? 'neutral'}>
+              {NURSING_NOTE_SHIFT_LABELS[prevShift] ?? prevShift}
+            </Badge>
+            <Badge tone="neutral">{formatDate(locale, prevDate)}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!handover ? (
+            <p className="text-sm italic text-[#1A3A3F]/50">{t('handover.received.none')}</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {/* Firma */}
+              <div className="flex flex-wrap items-center gap-2">
+                <IconCheck className="text-green-600" />
+                <span className="text-sm font-semibold text-[#1A3A3F]">
+                  {t('handover.received.signedBy', { name: handover.closedBy?.name ?? '—' })}
+                  {handover.closedAt
+                    ? ` ${t('handover.received.at', { time: formatTime(locale, handover.closedAt) })}`
+                    : ''}
+                </span>
+              </div>
+
+              {/* Resumen */}
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
+                  {t('handover.received.summary')}
+                </p>
+                <p className="whitespace-pre-wrap text-sm text-[#1A3A3F]">{handover.summary}</p>
+              </div>
+
+              {/* Incidencias */}
+              {handover.incidentsSummary && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
+                    {t('handover.received.incidents')}
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-warm-700">{handover.incidentsSummary}</p>
+                </div>
+              )}
+
+              {/* Pendientes */}
+              {handover.pendingTasks && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
+                    {t('handover.received.pending')}
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-amber-800">{handover.pendingTasks}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Panel: cierre de turno actual (lectura o acción de firmar)
+// ---------------------------------------------------------------------------
+
+type HandoverCloseProps = {
+  centerId: string;
+  date: string;
+  shift: Shift;
+  unitId: string | undefined;
+  canWrite: boolean;
+  onHandoverChange: () => void;
+};
+
+function HandoverClosePanel({
+  centerId,
+  date,
+  shift,
+  unitId,
+  canWrite,
+  onHandoverChange,
+}: HandoverCloseProps) {
+  const { t, locale } = useT();
+  const { success: toastSuccess, error: toastError } = useToast();
+
+  const [open, setOpen] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [incidentsSummary, setIncidentsSummary] = useState('');
+  const [pendingTasks, setPendingTasks] = useState('');
+  const [summaryError, setSummaryError] = useState('');
+
+  // Cargar el cierre existente
+  const closedQuery = api.shifts.handover.getForShift.useQuery(
+    { centerId, date: new Date(date), shift, unitId },
+    { enabled: Boolean(centerId) },
+  );
+
+  // Cargar el draft al abrir el modal
+  const draftQuery = api.shifts.handover.draft.useQuery(
+    { centerId, date: new Date(date), shift, unitId },
+    { enabled: open && Boolean(centerId) },
+  );
+
+  // Cuando llega el draft, pre-rellenar
+  useEffect(() => {
+    if (!open) return;
+    const existing = draftQuery.data?.existingHandover;
+    if (existing) {
+      setSummary(existing.summary ?? '');
+      setIncidentsSummary(existing.incidentsSummary ?? '');
+      setPendingTasks(existing.pendingTasks ?? '');
+    }
+  }, [draftQuery.data, open]);
+
+  const closeMutation = api.shifts.handover.close.useMutation({
+    onSuccess: () => {
+      toastSuccess(t('handover.close.signed'));
+      setOpen(false);
+      void closedQuery.refetch();
+      onHandoverChange();
+    },
+    onError: () => {
+      toastError(t('handover.close.error'));
+    },
+  });
+
+  function handleOpen() {
+    setSummary('');
+    setIncidentsSummary('');
+    setPendingTasks('');
+    setSummaryError('');
+    setOpen(true);
+  }
+
+  function handleSign(e: React.FormEvent) {
+    e.preventDefault();
+    setSummaryError('');
+    if (!summary.trim()) {
+      setSummaryError(t('handover.close.required.summary'));
+      return;
+    }
+    closeMutation.mutate({
+      centerId,
+      date: new Date(date),
+      shift,
+      unitId,
+      summary: summary.trim(),
+      incidentsSummary: incidentsSummary.trim() || undefined,
+      pendingTasks: pendingTasks.trim() || undefined,
+    });
+  }
+
+  const closed = closedQuery.data;
+  const draft  = draftQuery.data;
+
+  if (closedQuery.isLoading) {
+    return null;
+  }
+
+  // MODO LECTURA: turno ya cerrado
+  if (closed) {
+    return (
+      <section aria-labelledby="current-handover-heading">
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <IconCheck className="text-green-600" />
+                <CardTitle id="current-handover-heading">
+                  {t('handover.closed.title')}
+                </CardTitle>
+              </div>
+              {canWrite && (
+                <Button size="sm" variant="secondary" onClick={handleOpen}>
+                  {t('handover.closed.edit')}
+                </Button>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-green-700">
+              {t('handover.closed.signedBy', { name: closed.closedBy?.name ?? '—' })}
+              {closed.closedAt
+                ? ` ${t('handover.closed.at', {
+                    time: formatTime(locale, closed.closedAt),
+                    date: formatDate(locale, closed.closedAt),
+                  })}`
+                : ''}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
+                  {t('handover.received.summary')}
+                </p>
+                <p className="whitespace-pre-wrap text-sm text-[#1A3A3F]">{closed.summary}</p>
+              </div>
+              {closed.incidentsSummary && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
+                    {t('handover.received.incidents')}
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-warm-700">{closed.incidentsSummary}</p>
+                </div>
+              )}
+              {closed.pendingTasks && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#1A3A3F]/40">
+                    {t('handover.received.pending')}
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-amber-800">{closed.pendingTasks}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dialog de reedición */}
+        {open && (
+          <HandoverCloseDialog
+            open={open}
+            onClose={() => setOpen(false)}
+            draft={draft ?? null}
+            summary={summary}
+            setSummary={setSummary}
+            incidentsSummary={incidentsSummary}
+            setIncidentsSummary={setIncidentsSummary}
+            pendingTasks={pendingTasks}
+            setPendingTasks={setPendingTasks}
+            summaryError={summaryError}
+            onSign={handleSign}
+            isPending={closeMutation.isPending}
+            t={t}
+          />
+        )}
+      </section>
+    );
+  }
+
+  // MODO ACCIÓN: botón de cerrar turno
+  if (!canWrite) return null;
+
+  return (
+    <>
+      <div className="flex justify-end">
+        <Button size="lg" onClick={handleOpen}>
+          <IconSignature className="mr-2" />
+          {t('handover.close.button')}
+        </Button>
+      </div>
+
+      {open && (
+        <HandoverCloseDialog
+          open={open}
+          onClose={() => setOpen(false)}
+          draft={draft ?? null}
+          summary={summary}
+          setSummary={setSummary}
+          incidentsSummary={incidentsSummary}
+          setIncidentsSummary={setIncidentsSummary}
+          pendingTasks={pendingTasks}
+          setPendingTasks={setPendingTasks}
+          summaryError={summaryError}
+          onSign={handleSign}
+          isPending={closeMutation.isPending}
+          t={t}
+        />
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dialog del cierre de turno
+// ---------------------------------------------------------------------------
+
+type IncidentNote = {
+  id: string;
+  body: string;
+  resident?: { firstName: string; lastName: string } | null;
+  author?: { name: string | null; jobTitle: string | null } | null;
+};
+
+type HandoverCloseDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  draft: {
+    incidentNotes: IncidentNote[];
+    existingHandover: unknown;
+    medHint: string;
+  } | null;
+  summary: string;
+  setSummary: (v: string) => void;
+  incidentsSummary: string;
+  setIncidentsSummary: (v: string) => void;
+  pendingTasks: string;
+  setPendingTasks: (v: string) => void;
+  summaryError: string;
+  onSign: (e: React.FormEvent) => void;
+  isPending: boolean;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+};
+
+function HandoverCloseDialog({
+  open,
+  onClose,
+  draft,
+  summary,
+  setSummary,
+  incidentsSummary,
+  setIncidentsSummary,
+  pendingTasks,
+  setPendingTasks,
+  summaryError,
+  onSign,
+  isPending,
+  t,
+}: HandoverCloseDialogProps) {
+  const incidentNotes = draft?.incidentNotes ?? [];
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        aria-describedby="handover-close-desc"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto"
+      >
+        <DialogTitle>{t('handover.close.title')}</DialogTitle>
+        <p id="handover-close-desc" className="mt-1 text-sm text-[#1A3A3F]/60">
+          {t('handover.close.intro')}
+        </p>
+
+        {/* Hint de medicaciones */}
+        <div className="mt-4 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-700">
+          <span className="font-semibold">{t('handover.close.medHint')}: </span>
+          {t('handover.close.medHintDesc')}
+        </div>
+
+        {/* Incidencias del turno */}
+        <div className="mt-4">
+          <h3 className="mb-2 text-sm font-semibold text-[#1A3A3F]">
+            {t('handover.close.incidents.title')}
+          </h3>
+          {incidentNotes.length === 0 ? (
+            <p className="text-sm italic text-[#1A3A3F]/50">
+              {t('handover.close.incidents.empty')}
+            </p>
+          ) : (
+            <ul role="list" className="flex flex-col gap-2">
+              {incidentNotes.map((note) => (
+                <li
+                  key={note.id}
+                  className="rounded-xl border border-warm-200 bg-warm-50 px-3 py-2"
+                >
+                  {note.resident && (
+                    <p className="mb-0.5 text-xs font-semibold text-warm-700">
+                      {note.resident.firstName} {note.resident.lastName}
+                    </p>
+                  )}
+                  <p className="text-sm text-[#1A3A3F]">{note.body}</p>
+                  {note.author?.name && (
+                    <p className="mt-0.5 text-xs text-[#1A3A3F]/40">
+                      {note.author.name}
+                      {note.author.jobTitle ? ` · ${note.author.jobTitle}` : ''}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Formulario */}
+        <form onSubmit={onSign} className="mt-6 flex flex-col gap-4" noValidate>
+          {/* Resumen obligatorio */}
+          <div>
+            <Label htmlFor="handover-summary">
+              {t('handover.close.field.summary')}
+              <span className="ml-1 text-red-500" aria-hidden="true">*</span>
+            </Label>
+            <textarea
+              id="handover-summary"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder={t('handover.close.field.summaryPh')}
+              rows={4}
+              required
+              aria-required="true"
+              aria-invalid={Boolean(summaryError)}
+              aria-describedby={summaryError ? 'handover-summary-err' : undefined}
+              className="min-h-touch w-full rounded-2xl border border-brand-200 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              maxLength={20000}
+            />
+            {summaryError && (
+              <p id="handover-summary-err" role="alert" className="mt-1 text-sm text-red-600">
+                {summaryError}
+              </p>
+            )}
+          </div>
+
+          {/* Incidencias (opcional) */}
+          <div>
+            <Label htmlFor="handover-incidents">{t('handover.close.field.incidents')}</Label>
+            <textarea
+              id="handover-incidents"
+              value={incidentsSummary}
+              onChange={(e) => setIncidentsSummary(e.target.value)}
+              placeholder={t('handover.close.field.incidentsPh')}
+              rows={3}
+              className="min-h-touch w-full rounded-2xl border border-brand-200 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              maxLength={10000}
+            />
+          </div>
+
+          {/* Pendientes (opcional) */}
+          <div>
+            <Label htmlFor="handover-pending">{t('handover.close.field.pending')}</Label>
+            <textarea
+              id="handover-pending"
+              value={pendingTasks}
+              onChange={(e) => setPendingTasks(e.target.value)}
+              placeholder={t('handover.close.field.pendingPh')}
+              rows={3}
+              className="min-h-touch w-full rounded-2xl border border-brand-200 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              maxLength={10000}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {t('action.cancel')}
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              <IconSignature className="mr-2" />
+              {isPending ? t('handover.close.signing') : t('handover.close.sign')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Componente principal
 // ---------------------------------------------------------------------------
@@ -86,6 +649,9 @@ export default function RelevoPage() {
   const [selectedShift, setSelectedShift] = useState<Shift>(currentShift(new Date()));
   const [selectedCenterId, setSelectedCenterId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+
+  // handoverKey fuerza re-fetch del panel de traspaso recibido si se firma
+  const [handoverKey, setHandoverKey] = useState(0);
 
   // Cargar centros del tenant
   const centersQuery = api.centers.list.useQuery();
@@ -104,7 +670,11 @@ export default function RelevoPage() {
     { enabled: Boolean(selectedCenterId) },
   );
 
-  // Cargar el traspaso de turno
+  // Permisos del usuario
+  const meQuery = api.me.useQuery();
+  const canWrite = meQuery.data?.permissions.includes('care:write') ?? false;
+
+  // Cargar el traspaso de turno (notas de enfermería)
   const handoverQuery = api.clinicalNotes.nursing.listForShiftHandover.useQuery(
     {
       centerId: selectedCenterId,
@@ -224,6 +794,37 @@ export default function RelevoPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ──────────────────────────────────────────────────────────────────
+          Bloque Épica D: Traspaso del turno anterior + Cierre de turno
+      ────────────────────────────────────────────────────────────────── */}
+      {selectedCenterId && (
+        <>
+          {/* Traspaso recibido del turno anterior — prominente, arriba */}
+          <PreviousHandoverPanel
+            key={`prev-${handoverKey}-${selectedCenterId}-${selectedDate}-${selectedShift}-${selectedUnitId}`}
+            centerId={selectedCenterId}
+            date={selectedDate}
+            shift={selectedShift}
+            unitId={selectedUnitId || undefined}
+          />
+
+          {/* Cierre del turno actual (firmar / lectura) */}
+          <HandoverClosePanel
+            key={`close-${handoverKey}-${selectedCenterId}-${selectedDate}-${selectedShift}-${selectedUnitId}`}
+            centerId={selectedCenterId}
+            date={selectedDate}
+            shift={selectedShift}
+            unitId={selectedUnitId || undefined}
+            canWrite={canWrite}
+            onHandoverChange={() => setHandoverKey((k) => k + 1)}
+          />
+        </>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────
+          Bloque original: Notas del turno por residente
+      ────────────────────────────────────────────────────────────────── */}
 
       {/* Resumen rápido del turno */}
       {!handoverQuery.isLoading && handover.length > 0 && (
