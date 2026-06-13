@@ -276,6 +276,33 @@ describe('paridad es/ca — MAR filtro de turno (UX-17)', () => {
   });
 });
 
+describe('paridad es/ca — Nav grupos (UX-nav-grupos)', () => {
+  const navGroupKeys = [
+    'nav.group.asistencial',
+    'nav.group.familias',
+    'nav.group.centro',
+  ];
+
+  it('todas las claves de grupos nav existen en es', () => {
+    for (const key of navGroupKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de grupos nav existen en ca', () => {
+    for (const key of navGroupKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('las traducciones de grupos nav difieren entre es y ca', () => {
+    // 'Asistencial' ≠ 'Assistencial', 'Familias' ≠ 'Famílies', 'Centro' ≠ 'Centre'
+    for (const key of navGroupKeys) {
+      expect(DICTIONARIES.ca[key]).not.toBe(DICTIONARIES.es[key]);
+    }
+  });
+});
+
 describe('paridad es/ca — Ola 1 Lifecare (auth panel claim)', () => {
   const authPanelKeys = ['auth.panel.claim', 'auth.panel.sub', 'auth.panel.trust'];
 
