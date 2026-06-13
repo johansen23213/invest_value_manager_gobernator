@@ -13,9 +13,12 @@ import { Logo } from '@/components/logo';
 import { hasPermission } from '@/lib/rbac';
 import { forTenant } from '@vetlla/db';
 import { trialDaysLeft } from '@/lib/plans';
+import { NavDropdown, type NavDropdownItem } from '@/components/nav-dropdown';
 
-// Componente de enlace de navegación con indicador de página activa.
+// ---------------------------------------------------------------------------
+// NavLink — enlace suelto en la barra de navegación principal.
 // aria-current="page" para accesibilidad (WCAG 2.4.4) + estilo visual petróleo.
+// ---------------------------------------------------------------------------
 async function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
   const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
   return (
@@ -33,6 +36,47 @@ async function NavLink({ href, label, pathname }: { href: string; label: string;
   );
 }
 
+// ---------------------------------------------------------------------------
+// isItemActive — determina si un pathname activa un ítem de nav.
+// ---------------------------------------------------------------------------
+function isItemActive(pathname: string, href: string): boolean {
+  return pathname === href || (href !== '/' && pathname.startsWith(href));
+}
+
+// ---------------------------------------------------------------------------
+// AppLayout — shell principal para usuarios autenticados (staff y familiar).
+//
+// NAVEGACIÓN AGRUPADA (UX-nav-grupos):
+//
+// Los 14 enlaces planos se reagrupan en 1 enlace suelto + 3 dropdowns:
+//
+//   Inicio  |  Asistencial ▾  |  Familias ▾  |  Centro ▾
+//
+//   Asistencial: Residentes, Atención, Traspaso, Alertas, Conflictos
+//   Familias:    Solicitudes, Visitas, Comunicación
+//   Centro:      Centros, Ocupación, Equipo, Auditoría, Plan
+//
+// Criterio de agrupación (arquitectura de información):
+//   - Asistencial: todo lo que un auxiliar/sanitario usa a pie de cama.
+//     Residentes y Atención son el núcleo; Traspaso, Alertas y Conflictos
+//     son extensiones operativas del mismo flujo asistencial.
+//   - Familias: la capa de contacto con el exterior (solicitudes, visitas,
+//     mensajería). Gestionado mayoritariamente por Dirección/Sanitario.
+//   - Centro: configuración y gobernanza (centros, ocupación, equipo,
+//     auditoría, plan). Orientado a Dirección/Superadmin.
+//   Inicio queda suelto: es el dashboard, el punto de anclaje.
+//
+// Permisos: un ítem solo aparece si el usuario tiene el permiso requerido.
+// Si tras filtrar el grupo queda vacío, el dropdown no se renderiza.
+//
+// E2E — DECISIÓN DE COMPATIBILIDAD:
+//   Todos los specs de Playwright navegan via page.goto(url) directo, no
+//   mediante click en enlaces del nav global. Los helpers de los specs
+//   (goToFirstResidentMedicacion, goToDisfagiaResident…) también usan URL
+//   directa. Por tanto, el hecho de que los enlaces estén dentro de un
+//   dropdown no rompe ningún test existente. Los enlaces permanecen en el
+//   DOM (hidden attr cuando el menú está cerrado) para robustez adicional.
+// ---------------------------------------------------------------------------
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect('/login');
@@ -52,6 +96,56 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     if (tenant?.plan === 'TRIAL') trialDays = trialDaysLeft(tenant.trialEndsAt);
   }
 
+  // ── Grupo Asistencial ──────────────────────────────────────────────────────
+  // Todos los roles staff ven Residentes y Atención (sin permiso explícito en
+  // el código actual — la protección está en las propias páginas).
+  // Alertas, Traspaso y Conflictos requieren care:read.
+  const asistencialItems: NavDropdownItem[] = [
+    { href: '/residentes', label: t('nav.residents'), active: isItemActive(pathname, '/residentes') },
+    { href: '/atencion',   label: t('nav.care'),      active: isItemActive(pathname, '/atencion') },
+    ...(hasPermission(user.role, 'care:read')
+      ? [
+          { href: '/relevo',     label: t('nav.relevo'),    active: isItemActive(pathname, '/relevo') },
+          { href: '/alertas',    label: t('nav.alerts'),    active: isItemActive(pathname, '/alertas') },
+          { href: '/conflictos', label: t('nav.conflicts'), active: isItemActive(pathname, '/conflictos') },
+        ]
+      : []),
+  ];
+
+  // ── Grupo Familias ─────────────────────────────────────────────────────────
+  const familiasItems: NavDropdownItem[] = [
+    ...(hasPermission(user.role, 'requests:manage')
+      ? [{ href: '/solicitudes',  label: t('nav.requests'), active: isItemActive(pathname, '/solicitudes') }]
+      : []),
+    ...(hasPermission(user.role, 'visits:manage')
+      ? [{ href: '/visitas',      label: t('nav.visits'),   active: isItemActive(pathname, '/visitas') }]
+      : []),
+    ...(hasPermission(user.role, 'comms:read')
+      ? [{ href: '/comunicacion', label: t('nav.comms'),    active: isItemActive(pathname, '/comunicacion') }]
+      : []),
+  ];
+
+  // ── Grupo Centro ───────────────────────────────────────────────────────────
+  const centroItems: NavDropdownItem[] = [
+    { href: '/centros',   label: t('nav.centers'),  active: isItemActive(pathname, '/centros') },
+    ...(hasPermission(user.role, 'centers:read')
+      ? [{ href: '/ocupacion', label: t('nav.occupancy'), active: isItemActive(pathname, '/ocupacion') }]
+      : []),
+    ...(hasPermission(user.role, 'users:read')
+      ? [{ href: '/equipo',    label: t('nav.team'),     active: isItemActive(pathname, '/equipo') }]
+      : []),
+    ...(hasPermission(user.role, 'audit:read')
+      ? [{ href: '/auditoria', label: t('nav.audit'),    active: isItemActive(pathname, '/auditoria') }]
+      : []),
+    ...(hasPermission(user.role, 'users:write')
+      ? [{ href: '/plan',      label: t('nav.plan'),     active: isItemActive(pathname, '/plan') }]
+      : []),
+  ];
+
+  const asistencialActive = asistencialItems.some((i) => i.active);
+  const familiasActive    = familiasItems.some((i) => i.active);
+  const centroActive      = centroItems.some((i) => i.active);
+
   return (
     <CareSyncProvider>
       <ToastProvider>
@@ -67,52 +161,60 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
             {/* Header con fondo blanco/crema y borde inferior petróleo sutil */}
             <header className="sticky top-0 z-30 border-b border-brand-100/60 bg-white/95 backdrop-blur-sm">
-              <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+              <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
                 {/* Marca + nav principal */}
-                <div className="flex items-center gap-4">
-                  <Link href={isFamily ? '/portal' : '/'} aria-label={t('app.name')}>
+                <div className="flex items-center gap-4 min-w-0">
+                  <Link href={isFamily ? '/portal' : '/'} aria-label={t('app.name')} className="shrink-0">
                     <Logo />
                   </Link>
-                  <nav className="flex items-center gap-0.5 text-sm" aria-label="Principal">
+
+                  {/*
+                    Nav principal:
+                    - Desktop: enlace suelto Inicio + 3 dropdowns agrupados en una fila.
+                    - Móvil (< md): el header se convierte en una barra más estrecha;
+                      los dropdowns usan posición absolute y el menú hamburguesa
+                      oculta/muestra la barra completa de grupos. En esta iteración
+                      los grupos se muestran en línea con overflow-x auto para que
+                      sean accesibles sin hamburguesa (el siguiente sprint añadirá el
+                      drawer móvil). El flex-wrap está eliminado para evitar la "sopa
+                      de píldoras" anterior en móvil — ahora la barra es scrollable.
+                  */}
+                  <nav
+                    className="flex items-center gap-0.5 text-sm overflow-x-auto scrollbar-none"
+                    aria-label="Principal"
+                  >
                     {isFamily ? (
-                      <>
-                        <NavLink href="/portal" label={t('nav.portal')} pathname={pathname} />
-                      </>
+                      <NavLink href="/portal" label={t('nav.portal')} pathname={pathname} />
                     ) : (
                       <>
+                        {/* Inicio — enlace suelto, sin grupo */}
                         <NavLink href="/" label={t('nav.home')} pathname={pathname} />
-                        <NavLink href="/centros" label={t('nav.centers')} pathname={pathname} />
-                        {hasPermission(user.role, 'centers:read') && (
-                          <NavLink href="/ocupacion" label={t('nav.occupancy')} pathname={pathname} />
+
+                        {/* Grupo Asistencial */}
+                        {asistencialItems.length > 0 && (
+                          <NavDropdown
+                            label={t('nav.group.asistencial')}
+                            items={asistencialItems}
+                            groupActive={asistencialActive}
+                          />
                         )}
-                        <NavLink href="/residentes" label={t('nav.residents')} pathname={pathname} />
-                        <NavLink href="/atencion" label={t('nav.care')} pathname={pathname} />
-                        {hasPermission(user.role, 'care:read') && (
-                          <NavLink href="/alertas" label={t('nav.alerts')} pathname={pathname} />
+
+                        {/* Grupo Familias */}
+                        {familiasItems.length > 0 && (
+                          <NavDropdown
+                            label={t('nav.group.familias')}
+                            items={familiasItems}
+                            groupActive={familiasActive}
+                          />
                         )}
-                        {hasPermission(user.role, 'care:read') && (
-                          <NavLink href="/relevo" label={t('nav.relevo')} pathname={pathname} />
-                        )}
-                        {hasPermission(user.role, 'care:read') && (
-                          <NavLink href="/conflictos" label={t('nav.conflicts')} pathname={pathname} />
-                        )}
-                        {hasPermission(user.role, 'requests:manage') && (
-                          <NavLink href="/solicitudes" label={t('nav.requests')} pathname={pathname} />
-                        )}
-                        {hasPermission(user.role, 'visits:manage') && (
-                          <NavLink href="/visitas" label={t('nav.visits')} pathname={pathname} />
-                        )}
-                        {hasPermission(user.role, 'comms:read') && (
-                          <NavLink href="/comunicacion" label={t('nav.comms')} pathname={pathname} />
-                        )}
-                        {hasPermission(user.role, 'users:read') && (
-                          <NavLink href="/equipo" label={t('nav.team')} pathname={pathname} />
-                        )}
-                        {hasPermission(user.role, 'audit:read') && (
-                          <NavLink href="/auditoria" label={t('nav.audit')} pathname={pathname} />
-                        )}
-                        {hasPermission(user.role, 'users:write') && (
-                          <NavLink href="/plan" label={t('nav.plan')} pathname={pathname} />
+
+                        {/* Grupo Centro */}
+                        {centroItems.length > 0 && (
+                          <NavDropdown
+                            label={t('nav.group.centro')}
+                            items={centroItems}
+                            groupActive={centroActive}
+                          />
                         )}
                       </>
                     )}
@@ -120,7 +222,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 </div>
 
                 {/* Controles de usuario */}
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm shrink-0">
                   <LocaleSwitcher />
                   {!isFamily && <SyncStatusBadge />}
                   <span className="hidden rounded-full bg-brand-50 px-3 py-1.5 text-[#1A3A3F]/70 sm:inline">
