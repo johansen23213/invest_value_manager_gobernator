@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Badge } from '@vetlla/ui';
+import { Avatar, Badge } from '@vetlla/ui';
 import type { AllergySeverity } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
@@ -15,45 +15,6 @@ import {
   LIQUID_TEXTURE_LABELS,
   RESIDENT_STATUS_LABELS,
 } from '@/lib/labels';
-
-// ---------------------------------------------------------------------------
-// Avatar con iniciales y color estable derivado del nombre
-// ---------------------------------------------------------------------------
-
-/** Genera un índice de color (0–7) estable a partir del nombre del residente. */
-function nameColorIndex(name: string): number {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash << 5) - hash + name.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash) % 8;
-}
-
-const AVATAR_PALETTES = [
-  { bg: 'bg-brand-100', text: 'text-brand-800', border: 'border-brand-200' },
-  { bg: 'bg-warm-100', text: 'text-warm-800', border: 'border-warm-200' },
-  { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-200' },
-  { bg: 'bg-sky-100', text: 'text-sky-800', border: 'border-sky-200' },
-  { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200' },
-  { bg: 'bg-rose-100', text: 'text-rose-800', border: 'border-rose-200' },
-  { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-200' },
-  { bg: 'bg-indigo-100', text: 'text-indigo-800', border: 'border-indigo-200' },
-];
-
-function ResidentAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
-  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  const idx = nameColorIndex(`${firstName}${lastName}`);
-  const palette = AVATAR_PALETTES[idx] ?? AVATAR_PALETTES[0]!;
-  return (
-    <div
-      aria-hidden="true"
-      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-base font-bold ${palette.bg} ${palette.text} ${palette.border}`}
-    >
-      {initials}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Cálculo de edad
@@ -340,7 +301,7 @@ export function ResidentChrome({ residentId }: { residentId: string }) {
         {/* Identidad: avatar + nombre + metadatos */}
         <div className="flex flex-wrap items-start gap-3">
           {r && (
-            <ResidentAvatar firstName={r.firstName} lastName={r.lastName} />
+            <Avatar name={`${r.firstName} ${r.lastName}`} size="lg" />
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">

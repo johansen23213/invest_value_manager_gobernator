@@ -105,7 +105,7 @@ export default function RestablecerPage() {
           <span className="text-lg font-extrabold tracking-tight text-[#1A3A3F]">Vetlla</span>
         </div>
 
-        <h1 className="mb-6 text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
+        <h1 className="mb-6 font-display text-display-xl text-[#1A3A3F]">
           {t('reset.title')}
         </h1>
 

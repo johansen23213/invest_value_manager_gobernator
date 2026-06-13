@@ -16,11 +16,9 @@ import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardTitle,
   Input,
   Label,
+  SectionCard,
   Tabs,
   TabsContent,
   TabsList,
@@ -139,7 +137,7 @@ export default function Resident360Page() {
   return (
     <div className="mt-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#1A3A3F]">{t('r360.title')}</h2>
+        <h2 className="font-display text-display-lg text-[#1A3A3F]">{t('r360.title')}</h2>
         <Badge tone={online ? 'green' : 'amber'}>{online ? t('r360.online') : t('r360.offline')}</Badge>
       </div>
 
@@ -154,153 +152,143 @@ export default function Resident360Page() {
         <TabsContent value="hoy">
           <div className="grid gap-4 md:grid-cols-2">
             {/* Medicación pendiente */}
-            <Card>
-              <CardContent>
-                <div className="mb-3 flex items-center justify-between">
-                  <CardTitle className="text-base">{t('r360.med.title')}</CardTitle>
-                  <Link
-                    href={`/residentes/${residentId}/medicacion`}
-                    className="text-sm text-brand-700 hover:underline"
-                  >
-                    {t('r360.med.viewMar')}
-                  </Link>
-                </div>
-                <p className="mb-3 text-sm text-[#1A3A3F]/70" aria-live="polite">
-                  {t('r360.med.summary', { administered: medSummary.administered, total: medSummary.total })}
-                  {medSummary.notAdministered > 0 && (
-                    <>
-                      {' · '}
-                      <span className="font-medium text-red-700">
-                        {t('r360.med.notAdministered', { count: medSummary.notAdministered })}
-                      </span>
-                    </>
-                  )}
-                </p>
-                {medSummary.pending.length > 0 ? (
-                  <ul className="flex flex-col gap-2">
-                    {medSummary.pending.map((d) => (
-                      <li
-                        key={`${d.medicationId}-${d.scheduledAt}`}
-                        className={`flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${
-                          d.overdue ? 'bg-amber-50' : 'bg-brand-50'
-                        }`}
-                      >
-                        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                          <strong className="shrink-0">{formatTime(locale, d.scheduledAt)}</strong>
-                          <span className="truncate">
-                            {d.medicationName} ({d.dose})
-                          </span>
-                          {d.overdue && <Badge tone="amber">{t('r360.med.overdue')}</Badge>}
-                        </span>
-                        {canAdminister && (
-                          <Button
-                            size="sm"
-                            className="min-h-[48px] px-4"
-                            onClick={() => void administer(d.medicationId, d.medicationName, d.scheduledAt)}
-                            aria-label={t('r360.med.administerAria', {
-                              name: d.medicationName,
-                              dose: d.dose,
-                              time: formatTime(locale, d.scheduledAt),
-                            })}
-                          >
-                            {t('med.actions.administer')}
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.med.noPending')}</p>
+            <SectionCard
+              title={t('r360.med.title')}
+              aside={
+                <Link
+                  href={`/residentes/${residentId}/medicacion`}
+                  className="text-sm text-brand-700 hover:underline"
+                >
+                  {t('r360.med.viewMar')}
+                </Link>
+              }
+            >
+              <p className="mb-3 text-sm text-[#1A3A3F]/70" aria-live="polite">
+                {t('r360.med.summary', { administered: medSummary.administered, total: medSummary.total })}
+                {medSummary.notAdministered > 0 && (
+                  <>
+                    {' · '}
+                    <span className="font-medium text-red-700">
+                      {t('r360.med.notAdministered', { count: medSummary.notAdministered })}
+                    </span>
+                  </>
                 )}
-              </CardContent>
-            </Card>
+              </p>
+              {medSummary.pending.length > 0 ? (
+                <ul className="flex flex-col gap-2">
+                  {medSummary.pending.map((d) => (
+                    <li
+                      key={`${d.medicationId}-${d.scheduledAt}`}
+                      className={`flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm ${
+                        d.overdue ? 'bg-amber-50' : 'bg-brand-50'
+                      }`}
+                    >
+                      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                        <strong className="shrink-0">{formatTime(locale, d.scheduledAt)}</strong>
+                        <span className="truncate">
+                          {d.medicationName} ({d.dose})
+                        </span>
+                        {d.overdue && <Badge tone="amber">{t('r360.med.overdue')}</Badge>}
+                      </span>
+                      {canAdminister && (
+                        <Button
+                          size="sm"
+                          className="min-h-[48px] px-4"
+                          onClick={() => void administer(d.medicationId, d.medicationName, d.scheduledAt)}
+                          aria-label={t('r360.med.administerAria', {
+                            name: d.medicationName,
+                            dose: d.dose,
+                            time: formatTime(locale, d.scheduledAt),
+                          })}
+                        >
+                          {t('med.actions.administer')}
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.med.noPending')}</p>
+              )}
+            </SectionCard>
 
             {/* Constantes rápidas */}
             {canCareWrite && (
-              <Card>
-                <CardContent>
-                  <CardTitle className="mb-3 text-base">{t('r360.vitals.title')}</CardTitle>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="tension">{t('r360.vitals.tension')}</Label>
-                      <Input id="tension" inputMode="numeric" placeholder="120/80" value={vitals.tension} onChange={(e) => setVitals((s) => ({ ...s, tension: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="fc">{t('r360.vitals.fc')}</Label>
-                      <Input id="fc" type="number" inputMode="numeric" value={vitals.fc} onChange={(e) => setVitals((s) => ({ ...s, fc: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="temp">{t('r360.vitals.temp')}</Label>
-                      <Input id="temp" type="number" inputMode="decimal" step="0.1" value={vitals.temperatura} onChange={(e) => setVitals((s) => ({ ...s, temperatura: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="sato2">{t('r360.vitals.sato2')}</Label>
-                      <Input id="sato2" type="number" inputMode="numeric" value={vitals.sato2} onChange={(e) => setVitals((s) => ({ ...s, sato2: e.target.value }))} />
-                    </div>
+              <SectionCard title={t('r360.vitals.title')}>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="tension">{t('r360.vitals.tension')}</Label>
+                    <Input id="tension" inputMode="numeric" placeholder="120/80" value={vitals.tension} onChange={(e) => setVitals((s) => ({ ...s, tension: e.target.value }))} />
                   </div>
-                  <Button
-                    size="lg"
-                    className="mt-3 w-full"
-                    onClick={async () => {
-                      await registerCare('CONSTANTES', cleanPayload(vitals));
-                      setVitals({ tension: '', fc: '', temperatura: '', sato2: '' });
-                    }}
-                  >
-                    {t('r360.vitals.title')}
-                  </Button>
-                </CardContent>
-              </Card>
+                  <div>
+                    <Label htmlFor="fc">{t('r360.vitals.fc')}</Label>
+                    <Input id="fc" type="number" inputMode="numeric" value={vitals.fc} onChange={(e) => setVitals((s) => ({ ...s, fc: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label htmlFor="temp">{t('r360.vitals.temp')}</Label>
+                    <Input id="temp" type="number" inputMode="decimal" step="0.1" value={vitals.temperatura} onChange={(e) => setVitals((s) => ({ ...s, temperatura: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label htmlFor="sato2">{t('r360.vitals.sato2')}</Label>
+                    <Input id="sato2" type="number" inputMode="numeric" value={vitals.sato2} onChange={(e) => setVitals((s) => ({ ...s, sato2: e.target.value }))} />
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  className="mt-3 w-full"
+                  onClick={async () => {
+                    await registerCare('CONSTANTES', cleanPayload(vitals));
+                    setVitals({ tension: '', fc: '', temperatura: '', sato2: '' });
+                  }}
+                >
+                  {t('r360.vitals.title')}
+                </Button>
+              </SectionCard>
             )}
 
             {/* Incidencia rápida */}
             {canCareWrite && (
-              <Card>
-                <CardContent>
-                  <CardTitle className="mb-3 text-base">{t('r360.incident.title')}</CardTitle>
-                  <Label htmlFor="inc">{t('r360.incident.label')}</Label>
-                  <Input
-                    id="inc"
-                    value={incident}
-                    onChange={(e) => setIncident(e.target.value)}
-                    placeholder={t('r360.incident.placeholder')}
-                  />
-                  <Button
-                    size="lg"
-                    className="mt-3 w-full"
-                    onClick={async () => {
-                      await registerCare('INCIDENCIA', cleanPayload({ descripcion: incident }));
-                      setIncident('');
-                    }}
-                  >
-                    {t('r360.incident.title')}
-                  </Button>
-                </CardContent>
-              </Card>
+              <SectionCard title={t('r360.incident.title')}>
+                <Label htmlFor="inc">{t('r360.incident.label')}</Label>
+                <Input
+                  id="inc"
+                  value={incident}
+                  onChange={(e) => setIncident(e.target.value)}
+                  placeholder={t('r360.incident.placeholder')}
+                />
+                <Button
+                  size="lg"
+                  className="mt-3 w-full"
+                  onClick={async () => {
+                    await registerCare('INCIDENCIA', cleanPayload({ descripcion: incident }));
+                    setIncident('');
+                  }}
+                >
+                  {t('r360.incident.title')}
+                </Button>
+              </SectionCard>
             )}
 
             {/* Registros de hoy / recientes */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.records.recent')}</CardTitle>
-                {!online ? (
-                  <p className="text-sm text-slate-500">{t('r360.records.offline')}</p>
-                ) : records.data && records.data.length > 0 ? (
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {records.data.slice(0, 6).map((rec) => (
-                      <li key={rec.id} className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2">
-                        <span className="min-w-0">
-                          <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
-                          <span className="text-[#1A3A3F]/70">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
-                        </span>
-                        <span className="shrink-0 text-[#1A3A3F]/40">{formatDateTime(locale, rec.recordedAt)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.records.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title={t('r360.records.recent')}>
+              {!online ? (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.records.offline')}</p>
+              ) : records.data && records.data.length > 0 ? (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {records.data.slice(0, 6).map((rec) => (
+                    <li key={rec.id} className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2">
+                      <span className="min-w-0">
+                        <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
+                        <span className="text-[#1A3A3F]/70">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
+                      </span>
+                      <span className="shrink-0 text-[#1A3A3F]/40">{formatDateTime(locale, rec.recordedAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.records.empty')}</p>
+              )}
+            </SectionCard>
           </div>
         </TabsContent>
 
@@ -308,183 +296,164 @@ export default function Resident360Page() {
         <TabsContent value="salud">
           <div className="grid gap-4 md:grid-cols-2">
             {/* Alergias */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.allergies.title')}</CardTitle>
-                {r.allergies.length > 0 ? (
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {r.allergies.map((al) => (
-                      <li key={al.id} className="flex items-center gap-2">
-                        <Badge tone="red">{al.substance.toUpperCase()}</Badge>
-                        {al.reaction && <span className="text-[#1A3A3F]/60">{al.reaction}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('med.allergies.none')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title={t('r360.allergies.title')}>
+              {r.allergies.length > 0 ? (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {r.allergies.map((al) => (
+                    <li key={al.id} className="flex items-center gap-2">
+                      <Badge tone="red">{al.substance.toUpperCase()}</Badge>
+                      {al.reaction && <span className="text-[#1A3A3F]/60">{al.reaction}</span>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('med.allergies.none')}</p>
+              )}
+            </SectionCard>
 
             {/* Escalas — todos los tipos valorados (ahora 11 posibles) */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.scales.title')}</CardTitle>
-                {latestAssessments.length > 0 ? (
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {latestAssessments.map((a) => (
-                      <li key={a.id} className="flex items-center justify-between">
-                        <span className="text-[#1A3A3F]">{ASSESSMENT_TYPE_LABELS[a.type] ?? a.type}</span>
-                        <span className="text-[#1A3A3F]/70">
-                          <strong>{a.score ?? '—'}</strong>{' '}
-                          <span className="text-[#1A3A3F]/40">· {formatDate(locale, a.assessedAt)}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.scales.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title={t('r360.scales.title')}>
+              {latestAssessments.length > 0 ? (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {latestAssessments.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between">
+                      <span className="text-[#1A3A3F]">{ASSESSMENT_TYPE_LABELS[a.type] ?? a.type}</span>
+                      <span className="text-[#1A3A3F]/70">
+                        <strong>{a.score ?? '—'}</strong>{' '}
+                        <span className="text-[#1A3A3F]/40">· {formatDate(locale, a.assessedAt)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.scales.empty')}</p>
+              )}
+            </SectionCard>
 
             {/* Dispositivos activos */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.devices.title')}</CardTitle>
-                {(r.devices ?? []).length > 0 ? (
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {(r.devices ?? []).map((d) => (
-                      <li key={d.id} className="flex flex-wrap items-center gap-2">
-                        <Badge tone="neutral">{DEVICE_TYPE_LABELS[d.type] ?? d.type}</Badge>
-                        {d.description && (
-                          <span className="text-[#1A3A3F]/60">{d.description}</span>
-                        )}
-                        {d.since && (
-                          <span className="text-[#1A3A3F]/40">desde {formatDate(locale, d.since)}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.devices.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title={t('r360.devices.title')}>
+              {(r.devices ?? []).length > 0 ? (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {(r.devices ?? []).map((d) => (
+                    <li key={d.id} className="flex flex-wrap items-center gap-2">
+                      <Badge tone="neutral">{DEVICE_TYPE_LABELS[d.type] ?? d.type}</Badge>
+                      {d.description && (
+                        <span className="text-[#1A3A3F]/60">{d.description}</span>
+                      )}
+                      {d.since && (
+                        <span className="text-[#1A3A3F]/40">desde {formatDate(locale, d.since)}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.devices.empty')}</p>
+              )}
+            </SectionCard>
 
             {/* UPP activas */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.upp.title')}</CardTitle>
-                {(r.pressureUlcers ?? []).length > 0 ? (
-                  <ul className="flex flex-col gap-2 text-sm">
-                    {(r.pressureUlcers ?? []).map((u) => (
-                      <li key={u.id} className="rounded-md bg-warm-50 px-3 py-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge tone="amber">
-                            {t('r360.upp.stage', { stage: String(u.stage) })}
-                          </Badge>
-                          <span className="font-medium text-[#1A3A3F]">{u.location}</span>
-                          <span className="text-[#1A3A3F]/40">
-                            {UPP_ORIGIN_LABELS[u.acquired] ?? u.acquired}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-[#1A3A3F]/60">
-                          {u.curings && u.curings.length > 0
-                            ? t('r360.upp.lastCuring', { date: formatDate(locale, u.curings[0]!.date) })
-                            : t('r360.upp.noCuring')}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.upp.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title={t('r360.upp.title')}>
+              {(r.pressureUlcers ?? []).length > 0 ? (
+                <ul className="flex flex-col gap-2 text-sm">
+                  {(r.pressureUlcers ?? []).map((u) => (
+                    <li key={u.id} className="rounded-md bg-warm-50 px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone="amber">
+                          {t('r360.upp.stage', { stage: String(u.stage) })}
+                        </Badge>
+                        <span className="font-medium text-[#1A3A3F]">{u.location}</span>
+                        <span className="text-[#1A3A3F]/40">
+                          {UPP_ORIGIN_LABELS[u.acquired] ?? u.acquired}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[#1A3A3F]/60">
+                        {u.curings && u.curings.length > 0
+                          ? t('r360.upp.lastCuring', { date: formatDate(locale, u.curings[0]!.date) })
+                          : t('r360.upp.noCuring')}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.upp.empty')}</p>
+              )}
+            </SectionCard>
 
             {/* Peso reciente con tendencia */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.weight.title')}</CardTitle>
-                {(r.weights ?? []).length > 0 ? (() => {
-                  const latest = r.weights![0]!;
-                  const prev = r.weights![1];
-                  let trendBadge: React.ReactNode = null;
-                  if (prev) {
-                    const diff = latest.weightKg - prev.weightKg;
-                    if (diff > 0.5) {
-                      trendBadge = <Badge tone="amber">↑ {t('r360.weight.trend.up')}</Badge>;
-                    } else if (diff < -0.5) {
-                      trendBadge = <Badge tone="red">↓ {t('r360.weight.trend.down')}</Badge>;
-                    } else {
-                      trendBadge = <Badge tone="neutral">→ {t('r360.weight.trend.stable')}</Badge>;
-                    }
+            <SectionCard title={t('r360.weight.title')}>
+              {(r.weights ?? []).length > 0 ? (() => {
+                const latest = r.weights![0]!;
+                const prev = r.weights![1];
+                let trendBadge: React.ReactNode = null;
+                if (prev) {
+                  const diff = latest.weightKg - prev.weightKg;
+                  if (diff > 0.5) {
+                    trendBadge = <Badge tone="amber">↑ {t('r360.weight.trend.up')}</Badge>;
+                  } else if (diff < -0.5) {
+                    trendBadge = <Badge tone="red">↓ {t('r360.weight.trend.down')}</Badge>;
+                  } else {
+                    trendBadge = <Badge tone="neutral">→ {t('r360.weight.trend.stable')}</Badge>;
                   }
-                  return (
-                    <div className="flex flex-wrap items-center gap-3 text-sm">
-                      <span className="text-2xl font-bold text-[#1A3A3F]">
-                        {latest.weightKg} kg
-                      </span>
-                      {trendBadge}
-                      <span className="text-[#1A3A3F]/40">{formatDate(locale, latest.recordedAt)}</span>
-                      {latest.bmi && (
-                        <span className="text-[#1A3A3F]/60">IMC: {latest.bmi}</span>
-                      )}
-                    </div>
-                  );
-                })() : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.weight.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+                }
+                return (
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <span className="text-2xl font-bold text-[#1A3A3F]">
+                      {latest.weightKg} kg
+                    </span>
+                    {trendBadge}
+                    <span className="text-[#1A3A3F]/40">{formatDate(locale, latest.recordedAt)}</span>
+                    {latest.bmi && (
+                      <span className="text-[#1A3A3F]/60">IMC: {latest.bmi}</span>
+                    )}
+                  </div>
+                );
+              })() : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.weight.empty')}</p>
+              )}
+            </SectionCard>
 
             {/* Diagnósticos */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.dx.title')}</CardTitle>
-                {r.diagnoses.length > 0 ? (
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {r.diagnoses.map((dx) => (
-                      <li key={dx.id} className="flex flex-wrap items-center gap-2">
-                        {dx.code && <Badge tone="blue">{dx.code}</Badge>}
-                        <span className="text-[#1A3A3F]">{dx.description}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.dx.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title={t('r360.dx.title')}>
+              {r.diagnoses.length > 0 ? (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {r.diagnoses.map((dx) => (
+                    <li key={dx.id} className="flex flex-wrap items-center gap-2">
+                      {dx.code && <Badge tone="blue">{dx.code}</Badge>}
+                      <span className="text-[#1A3A3F]">{dx.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.dx.empty')}</p>
+              )}
+            </SectionCard>
 
             {/* Medicación activa */}
-            <Card>
-              <CardContent>
-                <div className="mb-3 flex items-center justify-between">
-                  <CardTitle className="text-base">{t('r360.activeMed.title')}</CardTitle>
-                  <Link
-                    href={`/residentes/${residentId}/medicacion`}
-                    className="text-sm text-brand-700 hover:underline"
-                  >
-                    {t('r360.manage')}
-                  </Link>
-                </div>
-                {activeMeds.length > 0 ? (
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {activeMeds.map((m) => (
-                      <li key={m.id} className="flex flex-wrap items-center gap-2">
-                        <strong className="text-[#1A3A3F]">{m.name}</strong>
-                        <span className="text-[#1A3A3F]/60">· {m.dose}</span>
-                        {m.type === 'PRN' && <Badge tone="blue">{t('r360.prn')}</Badge>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.activeMed.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard
+              title={t('r360.activeMed.title')}
+              aside={
+                <Link
+                  href={`/residentes/${residentId}/medicacion`}
+                  className="text-sm text-brand-700 hover:underline"
+                >
+                  {t('r360.manage')}
+                </Link>
+              }
+            >
+              {activeMeds.length > 0 ? (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {activeMeds.map((m) => (
+                    <li key={m.id} className="flex flex-wrap items-center gap-2">
+                      <strong className="text-[#1A3A3F]">{m.name}</strong>
+                      <span className="text-[#1A3A3F]/60">· {m.dose}</span>
+                      {m.type === 'PRN' && <Badge tone="blue">{t('r360.prn')}</Badge>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.activeMed.empty')}</p>
+              )}
+            </SectionCard>
           </div>
           <p className="mt-3 text-sm text-[#1A3A3F]/60">
             {t('r360.health.editHint')}{' '}
@@ -499,71 +468,67 @@ export default function Resident360Page() {
         <TabsContent value="atencion">
           <div className="flex flex-col gap-4">
             {/* PIA activo */}
-            <Card>
-              <CardContent>
-                <div className="mb-3 flex items-center justify-between">
-                  <CardTitle className="text-base">{t('r360.pia.title')}</CardTitle>
-                  <Link
-                    href={`/residentes/${residentId}/pia`}
-                    className="text-sm text-brand-700 hover:underline"
-                  >
-                    {t('r360.pia.manage')}
-                  </Link>
+            <SectionCard
+              title={t('r360.pia.title')}
+              aside={
+                <Link
+                  href={`/residentes/${residentId}/pia`}
+                  className="text-sm text-brand-700 hover:underline"
+                >
+                  {t('r360.pia.manage')}
+                </Link>
+              }
+            >
+              {activePlans.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {activePlans.map((plan) => (
+                    <section key={plan.id} aria-label={`Plan ${plan.title}`}>
+                      <div className="mb-2 flex items-center gap-2">
+                        <strong className="text-sm">{plan.title}</strong>
+                        <Badge tone="green">{CARE_PLAN_STATUS_LABELS[plan.status] ?? plan.status}</Badge>
+                      </div>
+                      {plan.goals.length > 0 ? (
+                        <ul className="flex flex-col gap-1 border-l-2 border-brand-100 pl-3 text-sm">
+                          {plan.goals.map((g) => (
+                            <li key={g.id} className="flex flex-wrap items-center gap-2">
+                              <span>{g.description}</span>
+                              <Badge tone={g.status === 'CONSEGUIDO' ? 'green' : 'neutral'}>
+                                {GOAL_STATUS_LABELS[g.status] ?? g.status}
+                              </Badge>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-[#1A3A3F]/60">{t('r360.pia.noGoals')}</p>
+                      )}
+                    </section>
+                  ))}
                 </div>
-                {activePlans.length > 0 ? (
-                  <div className="flex flex-col gap-4">
-                    {activePlans.map((plan) => (
-                      <section key={plan.id} aria-label={`Plan ${plan.title}`}>
-                        <div className="mb-2 flex items-center gap-2">
-                          <strong className="text-sm">{plan.title}</strong>
-                          <Badge tone="green">{CARE_PLAN_STATUS_LABELS[plan.status] ?? plan.status}</Badge>
-                        </div>
-                        {plan.goals.length > 0 ? (
-                          <ul className="flex flex-col gap-1 border-l-2 border-brand-100 pl-3 text-sm">
-                            {plan.goals.map((g) => (
-                              <li key={g.id} className="flex flex-wrap items-center gap-2">
-                                <span>{g.description}</span>
-                                <Badge tone={g.status === 'CONSEGUIDO' ? 'green' : 'neutral'}>
-                                  {GOAL_STATUS_LABELS[g.status] ?? g.status}
-                                </Badge>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-xs text-[#1A3A3F]/60">{t('r360.pia.noGoals')}</p>
-                        )}
-                      </section>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.pia.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.pia.empty')}</p>
+              )}
+            </SectionCard>
 
             {/* Timeline de registros de cuidado */}
-            <Card>
-              <CardContent>
-                <CardTitle className="mb-3 text-base">{t('r360.history.title')}</CardTitle>
-                {!online ? (
-                  <p className="text-sm text-slate-500">{t('r360.records.offline')}</p>
-                ) : records.data && records.data.length > 0 ? (
-                  <ol className="flex flex-col gap-2">
-                    {records.data.map((rec) => (
-                      <li key={rec.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-brand-100/60 pb-2 text-sm last:border-0">
-                        <span className="min-w-0">
-                          <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
-                          <span className="text-[#1A3A3F]/70">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
-                        </span>
-                        <span className="shrink-0 text-[#1A3A3F]/40">{formatDateTime(locale, rec.recordedAt)}</span>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="text-sm text-[#1A3A3F]/60">{t('r360.history.empty')}</p>
-                )}
-              </CardContent>
-            </Card>
+            <SectionCard title={t('r360.history.title')}>
+              {!online ? (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.records.offline')}</p>
+              ) : records.data && records.data.length > 0 ? (
+                <ol className="flex flex-col gap-2">
+                  {records.data.map((rec) => (
+                    <li key={rec.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-brand-100/60 pb-2 text-sm last:border-0">
+                      <span className="min-w-0">
+                        <Badge tone="neutral">{CARE_TYPE_LABELS[rec.type]}</Badge>{' '}
+                        <span className="text-[#1A3A3F]/70">{payloadSummary(rec.payload as Record<string, unknown>)}</span>
+                      </span>
+                      <span className="shrink-0 text-[#1A3A3F]/40">{formatDateTime(locale, rec.recordedAt)}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-sm text-[#1A3A3F]/60">{t('r360.history.empty')}</p>
+              )}
+            </SectionCard>
           </div>
         </TabsContent>
       </Tabs>
