@@ -852,6 +852,9 @@ core_epica_a_done:
 core_epica_b_done:
   - "ÉPICA B del core (ADR-0016 core-suficiente) COMPLETA backend+UI: (1) Exitus/baja con protocolo (DischargeRecord: register en transacción que pone status BAJA + libera cama + audita; histórico; defunción con médico certificante), (2) Informe social estructurado (SocialReport, histórico, staff-only), (3) Perfil de bienestar ACP/UNE 158101 (WellbeingProfile: 8 dimensiones + qué importa/qué evitar + revisión periódica) con panel /acp de revisiones vencidas (cumplimiento Madrid nov-2026). RLS forzada en 3 tablas, DSAR v4, permisos residents:write/read, FAMILIAR sin acceso. 323 db + 413 web tests. Cubre RF-ADM-011/012/013, RF-SOC-001..008. Siguiente: Épica C (dieta/menús/ingesta) o D (cuadrantes/turnos)."
 
+core_epica_c_done:
+  - "ÉPICA C del core (ADR-0016) COMPLETA backend+UI: nutrición/menús/comedor. MenuItem (menú del centro por comida con 14 alérgenos UE 1169/2011, dato de centro), IntakeRecord (ingesta estructurada por comida foodPct 0-100 + hidratación, DSAR v5), lógica isLowIntakeRisk (media/racha). Router nutrition (menu.* centers:write/care:read, menu.forFamily portal:read, intake.* care:*, kitchen.dietListing/mealListing). UI: /menus (menú+cocina), ingesta estructurada en /atencion, panel de baja ingesta en /alertas, menú en el portal del familiar. RLS forzada, 357 db + 439 web tests. Cubre RF-NUT-001..009. Siguiente: Épica D (cuadrantes/turnos)."
+
 team:
   location: .claude/agents/
   governance: >-
