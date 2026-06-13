@@ -6,7 +6,7 @@ project:
   description: SaaS cloud-native de gestión sociosanitaria (residencias, centros de día, viviendas tuteladas) con copiloto de IA agéntica.
   phase: building            # planning | building | done
   current_milestone: H5      # en construcción (reactivado 2026-06-09, ADR-0010); resto del MVP completo
-  last_updated: 2026-06-11
+  last_updated: 2026-06-13
   # 2026-06-11 (GC-2 · ejecución en bloque "producto vendible"): tras cerrar INC-1 se
   # ejecutaron consecutivamente TODOS los sprints no bloqueados por Angel, verificados
   # contra Postgres 16 LOCAL con RLS real (rol vetlla_app NOSUPERUSER NOBYPASSRLS creado
@@ -149,6 +149,67 @@ business_analysis:
   tension: >-
     Palabras vs. actos: el diferencial declarado (IA Copilot) está en H5 diferido.
     A corto, Vetlla compite solo por arquitectura+UX, terreno más fácil de igualar.
+
+# --------------------------------------------------------------------------
+# Análisis de cobertura completo: 320 RF en 32 áreas (2026-06-13, Pau)
+# Fuente de verdad de cobertura funcional de Vetlla contra el catálogo
+# completo de requerimientos ResiPlus+SuperApp+Benchmark entregado por Angel.
+# --------------------------------------------------------------------------
+cobertura_requerimientos_completos:
+  date: 2026-06-13
+  author: pau-product
+  output_doc: docs/producto/2026-06-13-cobertura-requerimientos-completos.md
+  descripcion: >-
+    Análisis RF por RF de las 32 áreas (3.1–3.32) del catálogo completo de
+    requerimientos v1.0 (13/06/2026). Metodología: 5 estados por RF
+    (HECHO/PARCIAL/PENDIENTE/BLOQUEADO/FUERA). Fuentes verificadas:
+    schema.prisma (38 modelos), 22 routers tRPC, dos gap analyses previos.
+    Alcance alineado con ADR-0016 (core-suficiente + diferencial, no paridad total).
+  cobertura_global:
+    total_rf: 320
+    hecho: 89        # 28%
+    parcial: 46      # 14%
+    pendiente: 98    # 31%
+    bloqueado: 34    # 11%
+    fuera: 53        # 17%
+    hecho_mas_parcial_pct: 42
+  veredicto_fase1_documento:
+    descripcion: >-
+      La Fase 1 del roadmap del documento (línea 842): expediente 360º, PIA, tareas,
+      mensajería, comunicados, solicitudes, visitas, documentos, consentimientos,
+      pagos, dashboards base, seguridad/roles/auditoría.
+    items_hechos_o_parciales: 9
+    items_totales: 12
+    pct_completado: 75
+    bloqueantes_restantes:
+      - "Pagos/recibos: bloqueado por Q-007 (pasarela)"
+      - "Documentos binarios: bloqueado por Q-004 (object storage)"
+      - "Dashboards completos: PARCIAL (faltan KPIs de visitas/pagos/satisfacción)"
+  top_10_huecos:
+    - { rank: 1, modulo: "Notas de enfermería por turno", area: "3.8", esfuerzo: S, bloqueante_inspector: true }
+    - { rank: 2, modulo: "Evolución médica básica", area: "3.9", esfuerzo: M }
+    - { rank: 3, modulo: "Gestión de exitus", area: "3.2", esfuerzo: S, obligatorio_ley: true }
+    - { rank: 4, modulo: "Informe social estructurado", area: "3.4", esfuerzo: M }
+    - { rank: 5, modulo: "Facturación particulares básica + liquidación estancias", area: "3.26", esfuerzo: L }
+    - { rank: 6, modulo: "Cuadrantes y turnos básico + traspaso digital", area: "3.25", esfuerzo: L }
+    - { rank: 7, modulo: "Dieta individualizada + menús + registro ingesta", area: "3.10", esfuerzo: M }
+    - { rank: 8, modulo: "UNE 158101 estructurado (8 dimensiones ACP)", area: "3.4", esfuerzo: M, bloqueante_madrid_nov2026: true }
+    - { rank: 9, modulo: "Alertas de valoración vencida y tendencias de escalas", area: "3.5", esfuerzo: S }
+    - { rank: 10, modulo: "Panel de indicadores de calidad", area: "3.29", esfuerzo: M }
+  epicas_proximas_recomendadas:
+    - { id: EPIC-A, nombre: "Notas de enfermería por turno + Evolución médica básica", esfuerzo: M, bloqueo: ninguno }
+    - { id: EPIC-B, nombre: "Gestión de exitus + Informe social + UNE 158101", esfuerzo: M, bloqueo: ninguno }
+    - { id: EPIC-C, nombre: "Dieta individualizada + Menús + Registro de ingesta", esfuerzo: M, bloqueo: ninguno }
+    - { id: EPIC-D, nombre: "Cuadrantes/turnos básico + Traspaso de turno digital", esfuerzo: L, bloqueo: ninguno }
+  bloqueadores_angel:
+    Q-004: "Object storage UE — desbloquea: repositorio documental binario, foto residente, adjuntos, INC-3, INC-4"
+    Q-007: "Pasarela de pagos — desbloquea: todo RF-PAG-001..013"
+    Q-008: "Firma electrónica proveedor+nivel — desbloquea: contratos, autorizaciones con valor legal"
+    Q-010: "Posicionamiento paridad total vs. core-suficiente — determina roadmap 18 meses"
+    Q-011: "Asesoría normativa externa — desbloquea: facturación CCAA, copagos, SISAAD"
+    Q-012: "Verifactu/proveedor certificado — desbloquea: facturación electrónica completa"
+    Q-006: "App nativa vs. PWA en tiendas — impacta adopción de familiares en iOS"
+    Q-009: "Modelo multicentro corporativo — desbloquea: rol corporativo, BI multi-centro"
 
 # --------------------------------------------------------------------------
 # Gap analysis Core Asistencial Completo (2026-06-13, Pau)
