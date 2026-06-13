@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge, Card, CardContent, EmptyState, Skeleton, Table, Td, Th } from '@vetlla/ui';
+import { Badge, Card, CardContent, EmptyState, PageHeader, Skeleton, Table, Td, Th } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDateTime } from '@/lib/format';
@@ -21,12 +21,11 @@ export default function AuditPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">Registro de actividad</h1>
-        <p className="text-sm text-[#1A3A3F]/60">
-          Trazabilidad de las acciones sobre datos personales (RGPD). Registro inmutable.
-        </p>
-      </div>
+      <PageHeader
+        title="Registro de actividad"
+        subtitle="Trazabilidad de las acciones sobre datos personales (RGPD). Registro inmutable."
+        accent
+      />
 
       <Card>
         <CardContent>

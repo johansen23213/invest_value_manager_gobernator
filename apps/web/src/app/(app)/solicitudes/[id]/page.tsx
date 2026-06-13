@@ -2,7 +2,7 @@
 
 import { use, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Badge, Button, Card, CardContent, Label, Select, Skeleton } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, Label, SectionCard, Select, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
@@ -188,91 +188,81 @@ export default function SolicitudStaffDetallePage({
       {/* Gestión: cambiar estado + asignar */}
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Cambiar estado */}
-        <Card>
-          <CardContent>
-            <h2 className="mb-3 font-semibold text-[#1A3A3F]">
-              {t('requests.staff.detail.changeStatus')}
-            </h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!selectedStatus) return;
-                updateStatus.mutate({ requestId: id, status: selectedStatus });
-              }}
-              className="flex flex-col gap-3"
-            >
-              <div>
-                <Label htmlFor="status-select">{t('requests.staff.detail.changeStatus')}</Label>
-                <Select
-                  id="status-select"
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as SRStatus)}
-                >
-                  <option value="">{t('requests.staff.filterAll')}</option>
-                  {ALL_STATUSES.map((s) => {
-                    const isValid = canTransition(currentStatus, s);
-                    return (
-                      <option key={s} value={s} disabled={!isValid}>
-                        {SR_STATUS_LABELS[s]}
-                        {!isValid ? ' (no disponible)' : ''}
-                      </option>
-                    );
-                  })}
-                </Select>
-              </div>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!selectedStatus || updateStatus.isPending || !validTransitions.includes(selectedStatus as SRStatus)}
+        <SectionCard title={t('requests.staff.detail.changeStatus')}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!selectedStatus) return;
+              updateStatus.mutate({ requestId: id, status: selectedStatus });
+            }}
+            className="flex flex-col gap-3"
+          >
+            <div>
+              <Label htmlFor="status-select">{t('requests.staff.detail.changeStatus')}</Label>
+              <Select
+                id="status-select"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as SRStatus)}
               >
-                {updateStatus.isPending ? t('state.loading') : t('action.save')}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <option value="">{t('requests.staff.filterAll')}</option>
+                {ALL_STATUSES.map((s) => {
+                  const isValid = canTransition(currentStatus, s);
+                  return (
+                    <option key={s} value={s} disabled={!isValid}>
+                      {SR_STATUS_LABELS[s]}
+                      {!isValid ? ' (no disponible)' : ''}
+                    </option>
+                  );
+                })}
+              </Select>
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!selectedStatus || updateStatus.isPending || !validTransitions.includes(selectedStatus as SRStatus)}
+            >
+              {updateStatus.isPending ? t('state.loading') : t('action.save')}
+            </Button>
+          </form>
+        </SectionCard>
 
         {/* Asignar */}
-        <Card>
-          <CardContent>
-            <h2 className="mb-3 font-semibold text-[#1A3A3F]">
-              {t('requests.staff.detail.assign')}
-            </h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!selectedAssignee) return;
-                assign.mutate({ requestId: id, assignedToId: selectedAssignee });
-              }}
-              className="flex flex-col gap-3"
-            >
-              <div>
-                <Label htmlFor="assignee-select">{t('requests.staff.detail.assign')}</Label>
-                <Select
-                  id="assignee-select"
-                  value={selectedAssignee}
-                  onChange={(e) => setSelectedAssignee(e.target.value)}
-                  disabled={teamUsers.isLoading}
-                >
-                  <option value="">{t('requests.staff.filterAll')}</option>
-                  {(teamUsers.data ?? []).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name ?? u.email}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!selectedAssignee || assign.isPending}
+        <SectionCard title={t('requests.staff.detail.assign')}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!selectedAssignee) return;
+              assign.mutate({ requestId: id, assignedToId: selectedAssignee });
+            }}
+            className="flex flex-col gap-3"
+          >
+            <div>
+              <Label htmlFor="assignee-select">{t('requests.staff.detail.assign')}</Label>
+              <Select
+                id="assignee-select"
+                value={selectedAssignee}
+                onChange={(e) => setSelectedAssignee(e.target.value)}
+                disabled={teamUsers.isLoading}
               >
-                {assign.isPending
-                  ? t('state.loading')
-                  : t('requests.staff.detail.assignSubmit')}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <option value="">{t('requests.staff.filterAll')}</option>
+                {(teamUsers.data ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name ?? u.email}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!selectedAssignee || assign.isPending}
+            >
+              {assign.isPending
+                ? t('state.loading')
+                : t('requests.staff.detail.assignSubmit')}
+            </Button>
+          </form>
+        </SectionCard>
       </div>
 
       {/* Hilo de conversación */}

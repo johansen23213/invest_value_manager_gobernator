@@ -11,7 +11,7 @@
  */
 
 import Link from 'next/link';
-import { Badge, Card, CardContent, EmptyState } from '@vetlla/ui';
+import { Badge, Card, CardContent, EmptyState, PageHeader } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
@@ -67,12 +67,7 @@ export default function AcpPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-          {t('acp.title')}
-        </h1>
-        <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('acp.subtitle')}</p>
-      </div>
+      <PageHeader title={t('acp.title')} subtitle={t('acp.subtitle')} />
 
       {/* Resumen de badges */}
       {!reviewsQ.isLoading && reviews.length > 0 && (

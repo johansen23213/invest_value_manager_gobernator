@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Badge, Card, CardContent, EmptyState, Skeleton } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, EmptyState, PageHeader, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
@@ -245,29 +245,24 @@ export default function PortalVisitasPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-            {t('visits.portal.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('visits.portal.intro')}</p>
-          {nextConfirmed && (
-            <p className="mt-2">
+      <PageHeader
+        title={t('visits.portal.title')}
+        subtitle={t('visits.portal.intro')}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {nextConfirmed && (
               <Badge tone="green">
                 {t('visits.portal.nextVisit', {
                   date: formatDate(locale, new Date(nextConfirmed.scheduledAt)),
                 })}
               </Badge>
-            </p>
-          )}
-        </div>
-        <Link
-          href="/portal/visitas/nueva"
-          className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-brand-700 px-5 py-2 text-base font-semibold text-white transition hover:bg-brand-800 active:bg-brand-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
-        >
-          {t('visits.portal.new')}
-        </Link>
-      </div>
+            )}
+            <Link href="/portal/visitas/nueva">
+              <Button size="lg">{t('visits.portal.new')}</Button>
+            </Link>
+          </div>
+        }
+      />
 
       {/* Contenido */}
       {visitsQ.isLoading ? (

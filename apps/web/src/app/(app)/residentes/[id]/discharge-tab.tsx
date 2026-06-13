@@ -13,9 +13,6 @@ import { z } from 'zod';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardTitle,
   Dialog,
   DialogClose,
   DialogContent,
@@ -24,6 +21,7 @@ import {
   FieldError,
   Input,
   Label,
+  SectionCard,
   Select,
 } from '@vetlla/ui';
 import type { DischargeType } from '@vetlla/db';
@@ -164,22 +162,19 @@ export function DischargeTab({ residentId, residentStatus, canWrite }: Discharge
   return (
     <div className="flex flex-col gap-4">
       {/* Cabecera con botón de acción */}
-      <Card>
-        <CardContent>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">{t('exp.discharge.title')}</CardTitle>
-            {canWrite && isActivo && (
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={() => setOpen(true)}
-                aria-haspopup="dialog"
-              >
-                {t('exp.discharge.register')}
-              </Button>
-            )}
-          </div>
-
+      <SectionCard
+        title={t('exp.discharge.title')}
+        aside={canWrite && isActivo ? (
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => setOpen(true)}
+            aria-haspopup="dialog"
+          >
+            {t('exp.discharge.register')}
+          </Button>
+        ) : undefined}
+      >
           {/* Histórico */}
           <section aria-label={t('exp.discharge.history.title')}>
             <h3 className="mb-2 text-sm font-semibold text-[#1A3A3F]">
@@ -238,8 +233,7 @@ export function DischargeTab({ residentId, residentStatus, canWrite }: Discharge
               </ul>
             )}
           </section>
-        </CardContent>
-      </Card>
+      </SectionCard>
 
       {/* Dialog de registro de baja */}
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetFields(); }}>

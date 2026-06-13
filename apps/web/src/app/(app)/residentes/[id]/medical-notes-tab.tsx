@@ -17,11 +17,9 @@ import { useState } from 'react';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardTitle,
   FieldError,
   Label,
+  SectionCard,
   Select,
 } from '@vetlla/ui';
 import { MedicalNoteType } from '@vetlla/db';
@@ -123,42 +121,41 @@ export function MedicalNotesTab({ residentId, canRead, canWrite }: MedicalNotesT
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardContent>
-          {/* Cabecera con título + filtro + botón nuevo evolutivo */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">Evolución médica</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Filtro por tipo */}
-              <div>
-                <Label htmlFor="medical-type-filter" className="sr-only">
-                  Filtrar por tipo de evolutivo
-                </Label>
-                <Select
-                  id="medical-type-filter"
-                  aria-label="Filtrar por tipo de evolutivo"
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as MedicalNoteType | '')}
-                  className="min-w-[160px]"
-                >
-                  <option value="">Todos los tipos</option>
-                  {Object.entries(MEDICAL_NOTE_TYPE_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </Select>
-              </div>
-              {canWrite && (
-                <Button
-                  size="sm"
-                  onClick={() => setFormOpen((o) => !o)}
-                  aria-expanded={formOpen}
-                  aria-controls="medical-note-form"
-                >
-                  {formOpen ? 'Cancelar' : 'Nuevo evolutivo'}
-                </Button>
-              )}
+      <SectionCard
+        title="Evolución médica"
+        aside={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Filtro por tipo */}
+            <div>
+              <Label htmlFor="medical-type-filter" className="sr-only">
+                Filtrar por tipo de evolutivo
+              </Label>
+              <Select
+                id="medical-type-filter"
+                aria-label="Filtrar por tipo de evolutivo"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as MedicalNoteType | '')}
+                className="min-w-[160px]"
+              >
+                <option value="">Todos los tipos</option>
+                {Object.entries(MEDICAL_NOTE_TYPE_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </Select>
             </div>
+            {canWrite && (
+              <Button
+                size="sm"
+                onClick={() => setFormOpen((o) => !o)}
+                aria-expanded={formOpen}
+                aria-controls="medical-note-form"
+              >
+                {formOpen ? 'Cancelar' : 'Nuevo evolutivo'}
+              </Button>
+            )}
           </div>
+        }
+      >
 
           {/* Formulario de alta */}
           {canWrite && formOpen && (
@@ -310,8 +307,7 @@ export function MedicalNotesTab({ residentId, canRead, canWrite }: MedicalNotesT
               ))}
             </ul>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
     </div>
   );
 }

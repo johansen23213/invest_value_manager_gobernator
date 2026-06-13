@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, EmptyState, Input, Skeleton } from '@vetlla/ui';
+import { Card, CardContent, EmptyState, Input, PageHeader, Skeleton } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
@@ -304,12 +304,11 @@ export default function VisitasStaffPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Cabecera */}
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
-          {t('visits.staff.title')}
-        </h1>
-        <p className="mt-1 text-sm text-[#1A3A3F]/60">{t('visits.staff.intro')}</p>
-      </div>
+      <PageHeader
+        title={t('visits.staff.title')}
+        subtitle={t('visits.staff.intro')}
+        accent
+      />
 
       {/* Caja de check-in destacada */}
       <Card className="border-2 border-brand-200 bg-brand-50/40">
