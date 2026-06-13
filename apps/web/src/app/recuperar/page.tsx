@@ -42,7 +42,7 @@ export default function RecuperarPage() {
           <span className="text-lg font-extrabold tracking-tight text-[#1A3A3F]">Vetlla</span>
         </div>
 
-        <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-[#1A3A3F]">
+        <h1 className="mb-1 font-display text-display-xl text-[#1A3A3F]">
           {t('reset.requestTitle')}
         </h1>
         <p className="mb-6 text-sm text-[#1A3A3F]/70">{t('reset.requestHint')}</p>

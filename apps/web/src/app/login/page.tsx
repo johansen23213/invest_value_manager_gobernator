@@ -78,7 +78,7 @@ export default async function LoginPage({
 
         {/* Claim principal */}
         <div className="relative z-10 flex flex-col gap-4">
-          <p className="whitespace-pre-line text-4xl font-extrabold leading-tight tracking-tight text-white lg:text-5xl">
+          <p className="font-display text-display-2xl whitespace-pre-line leading-tight text-white">
             {t('auth.panel.claim')}
           </p>
           <p className="max-w-xs text-lg font-medium text-brand-100/80">
@@ -125,7 +125,7 @@ export default async function LoginPage({
           {registered && (
             <div
               role="status"
-              className="mb-4 rounded-2xl border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800"
+              className="mb-4 rounded-2xl border border-delight-100 bg-delight-50 px-4 py-3 text-sm text-delight-700"
             >
               {t('login.registered')}
             </div>
@@ -133,7 +133,7 @@ export default async function LoginPage({
           {reset && (
             <div
               role="status"
-              className="mb-4 rounded-2xl border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800"
+              className="mb-4 rounded-2xl border border-delight-100 bg-delight-50 px-4 py-3 text-sm text-delight-700"
             >
               {t('login.resetDone')}
             </div>
