@@ -1828,6 +1828,127 @@ const es: Record<string, string> = {
   'activities.portal.attended':    'Asistió',
   'activities.portal.notAttended': 'No asistió',
   'activities.portal.pending':     'Pendiente',
+
+  // ---------------------------------------------------------------------------
+  // Diagnósticos con estado (DiagnosisType, DiagnosisStatus)
+  // ---------------------------------------------------------------------------
+
+  // Tipos de diagnóstico
+  'dx.type.PRINCIPAL':  'Principal',
+  'dx.type.SECUNDARIO': 'Secundario',
+
+  // Estados de diagnóstico
+  'dx.status.ACTIVO':   'Activo',
+  'dx.status.CRONICO':  'Crónico',
+  'dx.status.RESUELTO': 'Resuelto',
+
+  // Pantalla / pestaña de diagnósticos del expediente
+  'exp.dx.title':                'Diagnósticos',
+  'exp.dx.subtitle':             'Diagnósticos clínicos con estado y seguimiento.',
+  'exp.dx.empty':                'Sin diagnósticos registrados.',
+  'exp.dx.add':                  'Añadir diagnóstico',
+  'exp.dx.section.active':       'Activos y crónicos',
+  'exp.dx.section.resolved':     'Resueltos',
+  'exp.dx.section.resolved.empty': 'Sin diagnósticos resueltos.',
+  'exp.dx.badge.ACTIVO':         'Activo',
+  'exp.dx.badge.CRONICO':        'Crónico',
+  'exp.dx.badge.RESUELTO':       'Resuelto',
+  'exp.dx.badge.PRINCIPAL':      'Principal',
+  'exp.dx.badge.SECUNDARIO':     'Secundario',
+  'exp.dx.code':                 'Código (CIE-10, opcional)',
+  'exp.dx.codePh':               'p. ej. I10, E11.9',
+  'exp.dx.resolvedAt':           'Fecha de resolución',
+
+  // Formulario de nuevo diagnóstico
+  'exp.dx.form.title':           'Nuevo diagnóstico',
+  'exp.dx.form.edit':            'Editar diagnóstico',
+  'exp.dx.form.code':            'Código (CIE-10, opcional)',
+  'exp.dx.form.description':     'Descripción',
+  'exp.dx.form.descriptionPh':   'p. ej. Hipertensión arterial esencial',
+  'exp.dx.form.type':            'Tipo',
+  'exp.dx.form.status':          'Estado inicial',
+  'exp.dx.form.diagnosedAt':     'Fecha de diagnóstico',
+  'exp.dx.form.notes':           'Notas (opcional)',
+  'exp.dx.form.notesPh':         'Observaciones clínicas adicionales…',
+  'exp.dx.form.submit':          'Guardar diagnóstico',
+  'exp.dx.form.submitting':      'Guardando…',
+  'exp.dx.form.saved':           'Diagnóstico guardado.',
+
+  // Transición de estado
+  'exp.dx.transition.title':     'Cambiar estado',
+  'exp.dx.transition.next':      'Nuevo estado',
+  'exp.dx.transition.resolvedAt': 'Fecha de resolución (obligatoria)',
+  'exp.dx.transition.submit':    'Aplicar cambio',
+  'exp.dx.transition.submitting': 'Guardando…',
+  'exp.dx.transition.done':      'Estado del diagnóstico actualizado.',
+  'exp.dx.resolve.title':        'Marcar como resuelto',
+  'exp.dx.resolve.resolvedAt':   'Fecha de resolución',
+  'exp.dx.resolve.submit':       'Marcar como resuelto',
+  'exp.dx.resolve.done':         'Diagnóstico marcado como resuelto.',
+
+  // Resumen en visión 360
+  'r360.dx.status':              '{activo} activos · {cronico} crónicos · {resuelto} resueltos',
+  'r360.dx.viewAll':             'Ver todos →',
+
+  // ---------------------------------------------------------------------------
+  // Ayudas técnicas / productos de apoyo (AssistiveDeviceType, AssistiveDeviceStatus)
+  // ---------------------------------------------------------------------------
+
+  // Tipos de ayuda técnica
+  'ad.type.SILLA_RUEDAS':        'Silla de ruedas',
+  'ad.type.ANDADOR':             'Andador',
+  'ad.type.GRUA':                'Grúa de transferencia',
+  'ad.type.CAMA_ARTICULADA':     'Cama articulada',
+  'ad.type.AUDIFONO':            'Audífono',
+  'ad.type.OXIGENO':             'Oxigenoterapia',
+  'ad.type.MULETAS':             'Muletas / bastón',
+  'ad.type.ORTESIS':             'Ortesis / prótesis',
+  'ad.type.SILLA_DUCHA':         'Silla de ducha',
+  'ad.type.COLCHON_ANTIESCARAS': 'Colchón antiescaras',
+  'ad.type.OTRO':                'Otro',
+
+  // Estados de ayuda técnica
+  'ad.status.ACTIVO':   'Activa',
+  'ad.status.RETIRADO': 'Retirada',
+
+  // Propiedad
+  'ad.ownership.center':   'Del centro',
+  'ad.ownership.resident': 'Del residente',
+
+  // Pantalla / pestaña de ayudas técnicas del expediente
+  'exp.ad.title':                 'Ayudas técnicas',
+  'exp.ad.subtitle':              'Productos de apoyo asignados al residente.',
+  'exp.ad.empty':                 'Sin ayudas técnicas registradas.',
+  'exp.ad.add':                   'Añadir ayuda técnica',
+  'exp.ad.section.active':        'Activas',
+  'exp.ad.section.active.empty':  'Sin ayudas técnicas activas.',
+  'exp.ad.section.retired':       'Retiradas',
+  'exp.ad.section.retired.empty': 'Sin ayudas técnicas retiradas.',
+  'exp.ad.prescribedAt':          'Asignada el',
+  'exp.ad.retiredAt':             'Retirada el',
+  'exp.ad.ownedByCenter':         'Propiedad del centro',
+  'exp.ad.ownedByResident':       'Propiedad del residente',
+
+  // Formulario de nueva ayuda técnica
+  'exp.ad.form.title':           'Nueva ayuda técnica',
+  'exp.ad.form.type':            'Tipo',
+  'exp.ad.form.description':     'Descripción (opcional)',
+  'exp.ad.form.descriptionPh':   'p. ej. Invacare Action 3 NG, bipedestador Rifton',
+  'exp.ad.form.prescribedAt':    'Fecha de asignación',
+  'exp.ad.form.ownedByCenter':   '¿Es propiedad del centro?',
+  'exp.ad.form.notes':           'Notas (opcional)',
+  'exp.ad.form.notesPh':         'Instrucciones de uso, estado del dispositivo…',
+  'exp.ad.form.submit':          'Guardar ayuda técnica',
+  'exp.ad.form.submitting':      'Guardando…',
+  'exp.ad.form.saved':           'Ayuda técnica registrada.',
+
+  // Acción de retirada
+  'exp.ad.retire.title':         'Retirar ayuda técnica',
+  'exp.ad.retire.retiredAt':     'Fecha de retirada',
+  'exp.ad.retire.notes':         'Motivo / notas de retirada (opcional)',
+  'exp.ad.retire.notesPh':       'p. ej. Residente ya no la necesita tras la mejoría',
+  'exp.ad.retire.submit':        'Confirmar retirada',
+  'exp.ad.retire.done':          'Ayuda técnica retirada.',
 };
 
 const ca: Record<string, string> = {
@@ -3646,6 +3767,127 @@ const ca: Record<string, string> = {
   'activities.portal.attended':    'Va assistir',
   'activities.portal.notAttended': 'No va assistir',
   'activities.portal.pending':     'Pendent',
+
+  // ---------------------------------------------------------------------------
+  // Diagnòstics amb estat (DiagnosisType, DiagnosisStatus)
+  // ---------------------------------------------------------------------------
+
+  // Tipus de diagnòstic
+  'dx.type.PRINCIPAL':  'Principal',
+  'dx.type.SECUNDARIO': 'Secundari',
+
+  // Estats de diagnòstic
+  'dx.status.ACTIVO':   'Actiu',
+  'dx.status.CRONICO':  'Crònic',
+  'dx.status.RESUELTO': 'Resolt',
+
+  // Pantalla / pestanya de diagnòstics de l'expedient
+  'exp.dx.title':                  'Diagnòstics',
+  'exp.dx.subtitle':               'Diagnòstics clínics amb estat i seguiment.',
+  'exp.dx.empty':                  'Sense diagnòstics registrats.',
+  'exp.dx.add':                    'Afegir diagnòstic',
+  'exp.dx.section.active':         'Actius i crònics',
+  'exp.dx.section.resolved':       'Resolts',
+  'exp.dx.section.resolved.empty': 'Sense diagnòstics resolts.',
+  'exp.dx.badge.ACTIVO':           'Actiu',
+  'exp.dx.badge.CRONICO':          'Crònic',
+  'exp.dx.badge.RESUELTO':         'Resolt',
+  'exp.dx.badge.PRINCIPAL':        'Principal',
+  'exp.dx.badge.SECUNDARIO':       'Secundari',
+  'exp.dx.code':                   'Codi (CIE-10, opcional)',
+  'exp.dx.codePh':                 'p. ex. I10, E11.9',
+  'exp.dx.resolvedAt':             'Data de resolució',
+
+  // Formulari de nou diagnòstic
+  'exp.dx.form.title':           'Nou diagnòstic',
+  'exp.dx.form.edit':            'Editar diagnòstic',
+  'exp.dx.form.code':            'Codi (CIE-10, opcional)',
+  'exp.dx.form.description':     'Descripció',
+  'exp.dx.form.descriptionPh':   'p. ex. Hipertensió arterial essencial',
+  'exp.dx.form.type':            'Tipus',
+  'exp.dx.form.status':          'Estat inicial',
+  'exp.dx.form.diagnosedAt':     'Data de diagnòstic',
+  'exp.dx.form.notes':           'Notes (opcional)',
+  'exp.dx.form.notesPh':         'Observacions clíniques addicionals…',
+  'exp.dx.form.submit':          'Desar diagnòstic',
+  'exp.dx.form.submitting':      'Desant…',
+  'exp.dx.form.saved':           'Diagnòstic desat.',
+
+  // Transició d'estat
+  'exp.dx.transition.title':      'Canviar estat',
+  'exp.dx.transition.next':       'Nou estat',
+  'exp.dx.transition.resolvedAt': 'Data de resolució (obligatòria)',
+  'exp.dx.transition.submit':     'Aplicar canvi',
+  'exp.dx.transition.submitting': 'Desant…',
+  'exp.dx.transition.done':       'Estat del diagnòstic actualitzat.',
+  'exp.dx.resolve.title':         'Marcar com a resolt',
+  'exp.dx.resolve.resolvedAt':    'Data de resolució',
+  'exp.dx.resolve.submit':        'Marcar com a resolt',
+  'exp.dx.resolve.done':          'Diagnòstic marcat com a resolt.',
+
+  // Resum a visió 360
+  'r360.dx.status':  '{activo} actius · {cronico} crònics · {resuelto} resolts',
+  'r360.dx.viewAll': 'Veure tots →',
+
+  // ---------------------------------------------------------------------------
+  // Ajudes tècniques / productes de suport (AssistiveDeviceType, AssistiveDeviceStatus)
+  // ---------------------------------------------------------------------------
+
+  // Tipus d'ajuda tècnica
+  'ad.type.SILLA_RUEDAS':        'Cadira de rodes',
+  'ad.type.ANDADOR':             'Caminador',
+  'ad.type.GRUA':                'Grua de transferència',
+  'ad.type.CAMA_ARTICULADA':     'Llit articulat',
+  'ad.type.AUDIFONO':            'Audiòfon',
+  'ad.type.OXIGENO':             'Oxigenoteràpia',
+  'ad.type.MULETAS':             'Crosses / bastó',
+  'ad.type.ORTESIS':             'Ortesi / pròtesi',
+  'ad.type.SILLA_DUCHA':         'Cadira de dutxa',
+  'ad.type.COLCHON_ANTIESCARAS': 'Matalàs antiescares',
+  'ad.type.OTRO':                'Altre',
+
+  // Estats d'ajuda tècnica
+  'ad.status.ACTIVO':   'Activa',
+  'ad.status.RETIRADO': 'Retirada',
+
+  // Propietat
+  'ad.ownership.center':   'Del centre',
+  'ad.ownership.resident': 'Del resident',
+
+  // Pantalla / pestanya d'ajudes tècniques de l'expedient
+  'exp.ad.title':                  'Ajudes tècniques',
+  'exp.ad.subtitle':               'Productes de suport assignats al resident.',
+  'exp.ad.empty':                  'Sense ajudes tècniques registrades.',
+  'exp.ad.add':                    'Afegir ajuda tècnica',
+  'exp.ad.section.active':         'Actives',
+  'exp.ad.section.active.empty':   'Sense ajudes tècniques actives.',
+  'exp.ad.section.retired':        'Retirades',
+  'exp.ad.section.retired.empty':  'Sense ajudes tècniques retirades.',
+  'exp.ad.prescribedAt':           'Assignada el',
+  'exp.ad.retiredAt':              'Retirada el',
+  'exp.ad.ownedByCenter':          'Propietat del centre',
+  'exp.ad.ownedByResident':        'Propietat del resident',
+
+  // Formulari de nova ajuda tècnica
+  'exp.ad.form.title':           'Nova ajuda tècnica',
+  'exp.ad.form.type':            'Tipus',
+  'exp.ad.form.description':     'Descripció (opcional)',
+  'exp.ad.form.descriptionPh':   'p. ex. Invacare Action 3 NG, bipedestador Rifton',
+  'exp.ad.form.prescribedAt':    'Data d\'assignació',
+  'exp.ad.form.ownedByCenter':   'És propietat del centre?',
+  'exp.ad.form.notes':           'Notes (opcional)',
+  'exp.ad.form.notesPh':         'Instruccions d\'ús, estat del dispositiu…',
+  'exp.ad.form.submit':          'Desar ajuda tècnica',
+  'exp.ad.form.submitting':      'Desant…',
+  'exp.ad.form.saved':           'Ajuda tècnica registrada.',
+
+  // Acció de retirada
+  'exp.ad.retire.title':    'Retirar ajuda tècnica',
+  'exp.ad.retire.retiredAt': 'Data de retirada',
+  'exp.ad.retire.notes':    'Motiu / notes de retirada (opcional)',
+  'exp.ad.retire.notesPh':  'p. ex. El resident ja no la necessita després de la millora',
+  'exp.ad.retire.submit':   'Confirmar retirada',
+  'exp.ad.retire.done':     'Ajuda tècnica retirada.',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };

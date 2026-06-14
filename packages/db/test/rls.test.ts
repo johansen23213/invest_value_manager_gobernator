@@ -288,4 +288,123 @@ describe.skipIf(!hasDb)('RLS — aislamiento multitenant', () => {
     await dbAdmin.admissionRequest.delete({ where: { id: reqA.id } });
     await dbAdmin.center.deleteMany({ where: { id: { in: [centerA.id, centerB.id] } } });
   });
+
+  it('Diagnosis (con estado) — aislamiento RLS entre tenants', async () => {
+    const dbAdmin = asPlatformAdmin();
+    const dbA = forTenant({ tenantId: tenantAId });
+    const dbB = forTenant({ tenantId: tenantBId });
+
+    // Cada tenant necesita un centro y un residente.
+    const centerA = await dbA.center.create({
+      data: { tenantId: tenantAId, name: 'Centro Dx A', type: 'RESIDENCIA' },
+    });
+    const centerB = await dbB.center.create({
+      data: { tenantId: tenantBId, name: 'Centro Dx B', type: 'RESIDENCIA' },
+    });
+    const residentA = await dbA.resident.create({
+      data: { tenantId: tenantAId, centerId: centerA.id, firstName: 'Ana', lastName: `Dx-${stamp}` },
+    });
+    const residentB = await dbB.resident.create({
+      data: { tenantId: tenantBId, centerId: centerB.id, firstName: 'Bob', lastName: `Dx-${stamp}` },
+    });
+
+    // Tenant A crea un diagnóstico.
+    const dxA = await dbA.diagnosis.create({
+      data: {
+        tenantId:    tenantAId,
+        residentId:  residentA.id,
+        description: 'Hipertensión arterial esencial',
+        type:        'PRINCIPAL',
+        status:      'CRONICO',
+      },
+    });
+
+    // Tenant A ve su diagnóstico; sus diagnósticos tienen todos tenantId correcto.
+    const fromA = await dbA.diagnosis.findMany();
+    expect(fromA.some((d) => d.id === dxA.id)).toBe(true);
+    expect(fromA.every((d) => d.tenantId === tenantAId)).toBe(true);
+
+    // Tenant B no ve el diagnóstico de A ni forzando el where.
+    const fromB = await dbB.diagnosis.findMany({ where: { id: dxA.id } });
+    expect(fromB).toHaveLength(0);
+
+    // WITH CHECK: Tenant B no puede crear un diagnóstico para el tenant A.
+    await expect(
+      dbB.diagnosis.create({
+        data: {
+          tenantId:    tenantAId, // intento cross-tenant
+          residentId:  residentB.id,
+          description: 'Diagnóstico malicioso',
+          type:        'SECUNDARIO',
+          status:      'ACTIVO',
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Limpieza (orden: diagnóstico → residente → centro).
+    await dbAdmin.diagnosis.delete({ where: { id: dxA.id } });
+    await dbAdmin.resident.deleteMany({ where: { id: { in: [residentA.id, residentB.id] } } });
+    await dbAdmin.center.deleteMany({ where: { id: { in: [centerA.id, centerB.id] } } });
+  });
+
+  it('AssistiveDevice — aislamiento RLS entre tenants', async () => {
+    const dbAdmin = asPlatformAdmin();
+    const dbA = forTenant({ tenantId: tenantAId });
+    const dbB = forTenant({ tenantId: tenantBId });
+
+    // Cada tenant necesita un centro y un residente.
+    const centerA = await dbA.center.create({
+      data: { tenantId: tenantAId, name: 'Centro AD A', type: 'RESIDENCIA' },
+    });
+    const centerB = await dbB.center.create({
+      data: { tenantId: tenantBId, name: 'Centro AD B', type: 'RESIDENCIA' },
+    });
+    const residentA = await dbA.resident.create({
+      data: { tenantId: tenantAId, centerId: centerA.id, firstName: 'Ana', lastName: `AD-${stamp}` },
+    });
+    const residentB = await dbB.resident.create({
+      data: { tenantId: tenantBId, centerId: centerB.id, firstName: 'Bob', lastName: `AD-${stamp}` },
+    });
+
+    // Tenant A crea una ayuda técnica.
+    const deviceA = await dbA.assistiveDevice.create({
+      data: {
+        tenantId:     tenantAId,
+        residentId:   residentA.id,
+        type:         'SILLA_RUEDAS',
+        description:  'Invacare Action 3 NG',
+        prescribedAt: new Date('2026-01-10'),
+        status:       'ACTIVO',
+        ownedByCenter: false,
+      },
+    });
+
+    // Tenant A ve su ayuda técnica.
+    const fromA = await dbA.assistiveDevice.findMany();
+    expect(fromA.some((d) => d.id === deviceA.id)).toBe(true);
+    expect(fromA.every((d) => d.tenantId === tenantAId)).toBe(true);
+
+    // Tenant B no ve la ayuda técnica de A ni forzando el where.
+    const fromB = await dbB.assistiveDevice.findMany({ where: { id: deviceA.id } });
+    expect(fromB).toHaveLength(0);
+
+    // WITH CHECK: Tenant B no puede crear una ayuda técnica para el tenant A.
+    await expect(
+      dbB.assistiveDevice.create({
+        data: {
+          tenantId:     tenantAId, // intento cross-tenant
+          residentId:   residentB.id,
+          type:         'ANDADOR',
+          prescribedAt: new Date('2026-01-10'),
+          status:       'ACTIVO',
+          ownedByCenter: true,
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Limpieza.
+    await dbAdmin.assistiveDevice.delete({ where: { id: deviceA.id } });
+    await dbAdmin.resident.deleteMany({ where: { id: { in: [residentA.id, residentB.id] } } });
+    await dbAdmin.center.deleteMany({ where: { id: { in: [centerA.id, centerB.id] } } });
+  });
 });
