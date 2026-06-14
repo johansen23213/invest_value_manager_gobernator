@@ -72,7 +72,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 5;
+  version: 6;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -103,6 +103,9 @@ export interface ResidentExport {
   wellbeingProfile: unknown | null;
   // v5: Épica C — nutrición (registros de ingesta estructurados)
   intakeRecords: unknown[];
+  // v6: Facturación (RF-ECO-001..005) — datos económicos del interesado
+  billingProfile: unknown | null;
+  invoices: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -160,6 +163,8 @@ export async function exportResidentData(
     socialReports,
     wellbeingProfile,
     intakeRecords,
+    billingProfile,
+    invoices,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -228,11 +233,21 @@ export async function exportResidentData(
     db.wellbeingProfile.findUnique({ where: { residentId } }),
     // v5: Épica C — registros de ingesta estructurada (dato de salud nutricional).
     db.intakeRecord.findMany({ where: { residentId }, orderBy: { date: 'asc' } }),
+    // v6: Facturación (RF-ECO-001..005) — datos económicos del interesado art.15.
+    db.residentBillingProfile.findUnique({
+      where: { residentId },
+      include: { tariff: { select: { id: true, code: true, name: true } } },
+    }),
+    db.invoice.findMany({
+      where:   { residentId },
+      include: { lines: { orderBy: { sortOrder: 'asc' } } },
+      orderBy: { createdAt: 'asc' },
+    }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 5,
+    version: 6,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -259,6 +274,8 @@ export async function exportResidentData(
     socialReports,
     wellbeingProfile,
     intakeRecords,
+    billingProfile,
+    invoices,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -387,6 +404,20 @@ export async function anonymizeResident(
     // Épica C — registros de ingesta (v5, dato de salud nutricional):
     await db.intakeRecord.deleteMany({ where: { residentId } });
   }
+
+  // Facturación (v6, RF-ECO-001..005) — política 'scrub' SIEMPRE:
+  //   Las facturas se CONSERVAN por obligación legal contable/fiscal
+  //   (art. 30 Cód. Comercio: 6 años; art. 70.3 LGT: 4 años).
+  //   Base legal: art. 17.3.b RGPD. Solo se anonimiza el campo payerName
+  //   (PII del pagador) y sepaMandate (referencia de mandato).
+  await db.residentBillingProfile.updateMany({
+    where: { residentId },
+    data: { sepaMandate: null, payerName: null },
+  });
+  await db.invoice.updateMany({
+    where: { residentId },
+    data: { payerName: null },
+  });
 
   return {
     residentId,
