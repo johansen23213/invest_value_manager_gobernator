@@ -29,12 +29,6 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import {
-  AnnouncementAudience,
-  AnnouncementCategory,
-  MessageThreadCategory,
-  MessageThreadStatus,
-} from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
 import {
@@ -51,44 +45,35 @@ import { sendPushToUser } from '@/server/push';
 import { buildPushPayload } from '@/server/push/payload';
 
 // ---------------------------------------------------------------------------
-// Esquemas Zod reutilizables (exportados para validación en cliente)
+// Schemas Zod — importados desde el módulo CLIENT-SAFE (única fuente de verdad).
+// Re-exportados para compatibilidad con módulos de servidor que los importen
+// desde este router. Los ficheros CLIENTE deben importar directamente desde
+// '@/lib/schemas/comms'.
 // ---------------------------------------------------------------------------
 
-export const AnnouncementAudienceSchema = z.nativeEnum(AnnouncementAudience);
-export const AnnouncementCategorySchema = z.nativeEnum(AnnouncementCategory);
-export const MessageThreadCategorySchema = z.nativeEnum(MessageThreadCategory);
-export const MessageThreadStatusSchema = z.nativeEnum(MessageThreadStatus);
+import {
+  AnnouncementAudienceSchema,
+  AnnouncementCategorySchema,
+  MessageThreadCategorySchema,
+  MessageThreadStatusSchema,
+  PublishAnnouncementInput,
+  CreateThreadInput,
+  PostMessageInput,
+  ListThreadsInput,
+  AnnouncementAudience,
+  MessageThreadStatus,
+} from '@/lib/schemas/comms';
 
-export const PublishAnnouncementInput = z.object({
-  title:      z.string().trim().min(3).max(160),
-  body:       z.string().trim().min(10).max(10000),
-  category:   AnnouncementCategorySchema.default('GENERAL'),
-  audience:   AnnouncementAudienceSchema,
-  unitId:     z.string().min(1).optional().nullable(),
-  residentId: z.string().min(1).optional().nullable(),
-  requiresAck: z.boolean().default(false),
-  publishedAt: z.coerce.date().optional(), // permite programar la publicación
-});
-
-export const CreateThreadInput = z.object({
-  residentId: z.string().min(1),
-  subject:    z.string().trim().min(3).max(200),
-  category:   MessageThreadCategorySchema.default('GENERAL'),
-  body:       z.string().trim().min(1).max(5000), // primer mensaje
-});
-
-export const PostMessageInput = z.object({
-  threadId: z.string().min(1),
-  body:     z.string().trim().min(1).max(5000),
-  // NOTA Q-004: campo `attachments` intencionadamente ausente.
-  // Implementar cuando se resuelva Q-004 (object storage EU).
-});
-
-export const ListThreadsInput = z.object({
-  status:     MessageThreadStatusSchema.optional(),
-  category:   MessageThreadCategorySchema.optional(),
-  residentId: z.string().optional(),
-}).optional();
+export {
+  AnnouncementAudienceSchema,
+  AnnouncementCategorySchema,
+  MessageThreadCategorySchema,
+  MessageThreadStatusSchema,
+  PublishAnnouncementInput,
+  CreateThreadInput,
+  PostMessageInput,
+  ListThreadsInput,
+};
 
 // ---------------------------------------------------------------------------
 // Helpers privados

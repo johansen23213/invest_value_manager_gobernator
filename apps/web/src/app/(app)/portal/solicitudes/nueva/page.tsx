@@ -8,7 +8,7 @@ import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
 import { useZodForm } from '@/lib/form';
-import { CreateRequestInput } from '@/server/routers/requests';
+import { CreateRequestInput } from '@/lib/schemas/requests';
 import { SR_CATEGORY_LABELS, SR_PRIORITY_LABELS } from '@/lib/labels';
 import type { SRCategory, SRPriority } from '@/lib/service-requests';
 

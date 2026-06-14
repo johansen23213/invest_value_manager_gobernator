@@ -8,12 +8,11 @@ import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
 import { useZodForm } from '@/lib/form';
-import { PublishAnnouncementInput } from '@/server/routers/comms';
+import { PublishAnnouncementInput, type AnnouncementAudience } from '@/lib/schemas/comms';
 import {
   ANNOUNCEMENT_CATEGORY_LABELS,
   ANNOUNCEMENT_AUDIENCE_LABELS,
 } from '@/lib/labels';
-import type { AnnouncementAudience } from '@vetlla/db';
 
 const CATEGORIES = Object.keys(ANNOUNCEMENT_CATEGORY_LABELS);
 const AUDIENCES = Object.keys(ANNOUNCEMENT_AUDIENCE_LABELS) as AnnouncementAudience[];

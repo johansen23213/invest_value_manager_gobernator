@@ -18,7 +18,6 @@ import {
   SectionCard,
   Select,
 } from '@vetlla/ui';
-import { NursingNoteShift, NursingNoteCategory } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
@@ -32,7 +31,9 @@ import {
 import {
   CreateNursingNoteInput,
   NursingNoteShiftSchema,
-} from '@/server/routers/clinical-notes';
+  NursingNoteShift,
+  NursingNoteCategory,
+} from '@/lib/schemas/clinical-notes';
 
 // ---------------------------------------------------------------------------
 // Colores semánticos para chips de turno y categoría
