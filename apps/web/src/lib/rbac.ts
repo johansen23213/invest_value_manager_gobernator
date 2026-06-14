@@ -47,6 +47,12 @@ export const PERMISSIONS = [
   // que habilita al responsable del turno a documentar la atención).
   'shifts:read',      // ver cuadrante mensual, asignaciones, estado de cobertura
   'shifts:manage',    // planificar cuadrante, gestionar plantillas y ausencias/sustituciones
+  // Facturación (RF-ECO-001..005) — cuotas/tarifas, copagos, facturas, portal económico.
+  // billing:read   → ver tarifas, perfiles y facturas del tenant (DIRECTOR, SUPERADMIN).
+  // billing:manage → crear/emitir/anular facturas (DIRECTOR, SUPERADMIN).
+  // FAMILIAR usa assertFamilyAccess en listMine/getMine, sin necesitar estos permisos.
+  'billing:read',
+  'billing:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -78,6 +84,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'visits:manage',
     'shifts:read',
     'shifts:manage',
+    'billing:read',
+    'billing:manage',
   ],
   SANITARIO: [
     'tenant:read',
