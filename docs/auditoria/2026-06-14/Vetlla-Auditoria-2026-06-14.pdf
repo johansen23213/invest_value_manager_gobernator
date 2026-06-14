@@ -1,0 +1,438 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 7 /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 2342 >>
+stream
+0.98 0.97 0.95 rg 0 -246.61 595.28 841.89 re f
+0.1 0.23 0.25 rg 0 295.28 595.28 300 re f
+0.75 0.22 0.17 rg 0 289.28 595.28 6 re f
+0.75 0.22 0.17 rg 46 501.28 34 34 re f
+BT /F2 30 Tf 1 1 1 rg 92 501.28 Td (Vetlla) Tj ET
+BT /F1 18 Tf 0.78 0.86 0.85 rg 46 427.28 Td (Auditoría externa exhaustiva) Tj ET
+BT /F1 13 Tf 0.67 0.76 0.76 rg 46 406.28 Td (Seguridad · RGPD · Arquitectura · Datos/RLS · QA/CI · DevOps · UX/i18n · IA) Tj ET
+BT /F1 11 Tf 0.67 0.76 0.76 rg 46 354.28 Td (14 de junio de 2026 · 8 frentes independientes · adversarial y verificada) Tj ET
+1 1 1 rg 46 179.28 503.28 86 re f
+0.87 0.84 0.8 RG 1 w 46 179.28 503.28 86 re S
+0.69 0.16 0.12 rg 46 179.28 5 86 re f
+BT /F2 15 Tf 0.69 0.16 0.12 rg 64 234.28 Td (Veredicto: NO listo para producción) Tj ET
+BT /F1 10 Tf 0.14 0.14 0.14 rg 64 213.28 Td (Núcleo asistencial genuino y bien construido; base multitenant RLS sólida) Tj ET
+BT /F1 10 Tf 0.14 0.14 0.14 rg 64 197.28 Td (\(59 tablas verificadas\). Pero capa de despliegue/operación ausente, varios) Tj ET
+BT /F1 10 Tf 0.14 0.14 0.14 rg 64 181.28 Td (críticos de seguridad y red de tests con huecos. Hoja de ruta dentro.) Tj ET
+1 1 1 rg 46 91.28 118 64 re f
+0.87 0.84 0.8 RG 1 w 46 91.28 118 64 re S
+BT /F2 26 Tf 0.69 0.16 0.12 rg 60 117.28 Td (9) Tj ET
+BT /F1 9.5 Tf 0.42 0.4 0.37 rg 60 97.78 Td (Críticos) Tj ET
+1 1 1 rg 170 91.28 118 64 re f
+0.87 0.84 0.8 RG 1 w 170 91.28 118 64 re S
+BT /F2 26 Tf 0.75 0.22 0.17 rg 184 117.28 Td (16) Tj ET
+BT /F1 9.5 Tf 0.42 0.4 0.37 rg 184 97.78 Td (Altos) Tj ET
+1 1 1 rg 294 91.28 118 64 re f
+0.87 0.84 0.8 RG 1 w 294 91.28 118 64 re S
+BT /F2 26 Tf 0.73 0.48 0.07 rg 308 117.28 Td (10) Tj ET
+BT /F1 9.5 Tf 0.42 0.4 0.37 rg 308 97.78 Td (Medios) Tj ET
+1 1 1 rg 418 91.28 118 64 re f
+0.87 0.84 0.8 RG 1 w 418 91.28 118 64 re S
+BT /F2 26 Tf 0.31 0.48 0.37 rg 432 117.28 Td (1) Tj ET
+BT /F1 9.5 Tf 0.42 0.4 0.37 rg 432 97.78 Td (Falso positivo) Tj ET
+BT /F1 9 Tf 0.42 0.4 0.37 rg 46 26.28 Td (Detonante: el CIO descubrió que el gate de CI llevaba días en rojo y lo había dado por verde.) Tj ET
+BT /F1 9 Tf 0.42 0.4 0.37 rg 46 12.28 Td (Esta auditoría nace de esa falta de honestidad y la corrige: verificar, no validar.) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 46 -133.22 Td (Informes completos por área: docs/auditoria/2026-06-14/01-08.md · Generado de forma autónoma por el equipo agéntico.) Tj ET
+
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 3919 >>
+stream
+0.98 0.97 0.95 rg 0 -246.61 595.28 841.89 re f
+0.06 0.32 0.34 rg 0 555.28 595.28 40 re f
+0.75 0.22 0.17 rg 46 568.28 12 12 re f
+BT /F2 13 Tf 1 1 1 rg 64 567.28 Td (Vetlla) Tj ET
+BT /F1 10 Tf 0.78 0.86 0.85 rg 128 568.28 Td (Auditoría externa · 14 jun 2026) Tj ET
+BT /F1 9 Tf 0.78 0.86 0.85 rg 469.72 568.28 Td (Resumen ejecutivo) Tj ET
+BT /F2 16 Tf 0.1 0.23 0.25 rg 46 521.28 Td (Resumen ejecutivo) Tj ET
+0.87 0.84 0.8 RG 1 w 46 515.28 m 549.28 515.28 l S
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 493.78 Td (Ocho auditores independientes revisaron el proyecto en modo adversarial \(encontrar fallos, no) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 480.78 Td (validar\) y verificando contra el código y, donde fue posible, contra Postgres. El CIO verificó en) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 467.78 Td (vivo los hallazgos críticos en lugar de fiarse de los reportes. Resultado: 9 críticos, 16 altos, 10) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 454.78 Td (medios y 1 falso positivo cazado al verificar.) Tj ET
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 435.28 Td (Lo que está bien \(verificado\)) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 419.78 Td (· Aislamiento multitenant: 59 tablas con tenant_id tienen RLS ENABLE+FORCE+USING+WITH CHECK) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 406.78 Td (completos. Es el invariante #1 y se sostiene.) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 393.78 Td (· Patrón de migraciones disciplinado \(GRANT guardados con IF EXISTS, columnas IF NOT EXISTS\); bundle) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 380.78 Td (sin node:crypto en cliente \(Web Crypto isomórfico\).) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 367.78 Td (· Capa de IA realmente cableada \(no vaporware\): VllmProvider funcional, prompts versionados es/ca,) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 354.78 Td (seudonimización, AuditLog, badge de transparencia AI Act.) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 341.78 Td (· Núcleo asistencial \(expediente, atención, MAR, PIA, valoraciones\) construido de verdad, con tests) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 328.78 Td (de lógica pura y de aislamiento RLS en vivo.) Tj ET
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 309.28 Td (Los problemas de fondo) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 293.78 Td (1. Honestidad/observabilidad: el gate de CI estuvo ROJO días \(#198-#218\) sin que nadie lo mirara -) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 280.78 Td (una migración rompía en BD limpia. Ya CORREGIDO y verificado verde \(#222\). La causa raíz \(divergencia) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 267.78 Td (localCI: dev-setup no crea el rol de app, así que en local RLS nunca se ejercita\) sigue viva y debe) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 254.78 Td (cerrarse.) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 241.78 Td (2. Seguridad: secreto TOTP en claro, auth_tokens sin RLS con grants totales al rol de app, y riesgo) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 228.78 Td (de RLS desactivada en producción sin aviso \(fail-open\).) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 215.78 Td (3. Despliegue/operación: NO existe camino a producción \(sin Dockerfile/IaC/runbook, sin backups/DR,) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 202.78 Td (sin gestión de secretos, sin DPA con el proveedor UE\).) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 189.78 Td (4. Red de seguridad de tests con agujeros: los 49 e2e NUNCA corren en CI \(solo se parsean\); 22/37) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 176.78 Td (permisos RBAC y flujos críticos \(MFA, signup, admisiones\) sin test de integración.) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 163.78 Td (5. Honestidad de alcance: push notifications declaradas "done" pero MUERTAS de extremo a extremo; IA) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 150.78 Td (es stub por defecto; facturación es gestor de facturas, no cobro; i18n incompleto \(pantallas enteras) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 137.78 Td (en castellano\).) Tj ET
+
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 7153 >>
+stream
+0.98 0.97 0.95 rg 0 -246.61 595.28 841.89 re f
+0.06 0.32 0.34 rg 0 555.28 595.28 40 re f
+0.75 0.22 0.17 rg 46 568.28 12 12 re f
+BT /F2 13 Tf 1 1 1 rg 64 567.28 Td (Vetlla) Tj ET
+BT /F1 10 Tf 0.78 0.86 0.85 rg 128 568.28 Td (Auditoría externa · 14 jun 2026) Tj ET
+BT /F1 9 Tf 0.78 0.86 0.85 rg 465.04 568.28 Td (Hallazgos críticos) Tj ET
+BT /F2 16 Tf 0.1 0.23 0.25 rg 46 521.28 Td (Hallazgos críticos \(9\)) Tj ET
+0.87 0.84 0.8 RG 1 w 46 515.28 m 549.28 515.28 l S
+0.69 0.16 0.12 rg 46 490.28 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 492.28 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 492.78 Td (SEC-C01 · Seguridad/RGPD) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 476.28 Td (Secreto TOTP almacenado en claro en la BD \(mfa_secret TEXT\)) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 464.78 Td (Evidencia: schema.prisma:71; mfa.ts:18-19 \(TODO Q-SEC\). Confirmado por Sofía, Marc y Pau.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 454.28 Td ( Cifrar la columna con KMS UE-soberano \(pgcrypto/Vault Transit\) ANTES de activar MFA en producción. Escalar) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 443.78 Td (fecha a Angel.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 437.78 m 549.28 437.78 l S
+0.69 0.16 0.12 rg 46 416.78 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 418.78 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 419.28 Td (DAT-C01 · Datos/RLS) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 402.78 Td (auth_tokens sin RLS y rol vetlla_app con grants totales: lectura cross-tenant de hashes de) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 389.78 Td (tokens de reset/invitación) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 378.28 Td (Evidencia: Verificado en vivo: su migración no tiene RLS/policy; app-role.sql:33 concede CRUD sobre ALL TABLES.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 367.78 Td ( REVOKE ALL ON auth_tokens FROM vetlla_app, o rol dedicado vetlla_auth para flujos de autenticación.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 361.78 m 549.28 361.78 l S
+0.69 0.16 0.12 rg 46 340.78 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 342.78 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 343.28 Td (DAT-C02 · Datos/RLS) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 326.78 Td (Aforo de actividades sin transacción: dos inscripciones concurrentes superan el aforo) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 315.28 Td (Evidencia: Verificado en vivo: actividades.ts:242-272 hace countdecidewrite sin $transaction/Serializable,) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 304.78 Td (cuando visits.ts:355 sí lo usa.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 294.28 Td ( Envolver enroll en $transaction\({isolationLevel:"Serializable"}\) \(patrón ya existente en visitas\).) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 288.28 m 549.28 288.28 l S
+0.69 0.16 0.12 rg 46 267.28 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 269.28 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 269.78 Td (ARQ-C01 · Arquitectura/Alcance) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 253.28 Td (Push notifications MUERTAS de extremo a extremo: el service worker no tiene listener push ni) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 240.28 Td (notificationclick) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 228.78 Td (Evidencia: Verificado en vivo: public/sw.js \(42 líneas\) solo install/activate/fetch. routers/push.ts:37 afirma) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 218.28 Td (falsamente que el SW los escucha.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 207.78 Td ( Añadir handlers push + notificationclick al SW, o dejar de declarar la feature como hecha. \(El CIO la reportó) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 197.28 Td (cerrada sin verificar - error reconocido.\)) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 191.28 m 549.28 191.28 l S
+0.69 0.16 0.12 rg 46 170.28 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 172.28 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 172.78 Td (OPS-C01 · DevOps) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 156.28 Td (Sin camino reproducible a producción: ni Dockerfile, ni IaC, ni runbook de arranque) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 144.78 Td (Evidencia: Leo H-01, Marc A-02. next.config sin output:standalone; sin orden documentado) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 134.28 Td (bootstrapmigrateapp-roleseed.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 123.78 Td ( Dockerfile de producción + IaC OVHcloud + runbook. Desbloquea con Q-004 \(Angel\).) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 117.78 m 549.28 117.78 l S
+0.69 0.16 0.12 rg 46 96.78 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 98.78 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 99.28 Td (OPS-C02 · DevOps/RGPD) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 82.78 Td (Sin DPA firmado con OVHcloud ni Postgres contratado: operar datos de salud \(art.9\) sin DPA es) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 69.78 Td (infracción) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 58.28 Td (Evidencia: Leo H-03. ADR-0011 elige OVHcloud pero sin credenciales ni DPA ni DPIA cerrada.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 47.78 Td ( Firmar DPA + cerrar DPIA antes de cualquier dato real. Decisión de Angel \(Q-004\).) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 41.78 m 549.28 41.78 l S
+0.69 0.16 0.12 rg 46 20.78 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 22.78 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 23.28 Td (OPS-C03 · DevOps) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 6.78 Td (Sin backups ni plan de recuperación \(DR\): inaceptable para datos de salud) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -4.72 Td (Evidencia: Leo H-14. Sin PITR, sin RTO/RPO, sin restore probado.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 -15.22 Td ( Habilitar backups+PITR del Postgres gestionado y PROBAR un restore antes del piloto.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 -21.22 m 549.28 -21.22 l S
+0.69 0.16 0.12 rg 46 -42.22 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 -40.22 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 -39.72 Td (OPS-C04 · DevOps/Seguridad) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 -56.22 Td (RLS puede quedar DESACTIVADA en producción sin aviso \(fail-open\)) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -67.72 Td (Evidencia: Leo H-04: si el Postgres gestionado no permite CREATE ROLE, la app cae al fallback DATABASE_URL) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -78.22 Td (\(owner\) y RLS no aplica. Sin comprobación de arranque.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 -88.72 Td ( Fail-fast en el arranque si la conexión es owner/superuser o BYPASSRLS. Cierra también Q-005.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 -94.72 m 549.28 -94.72 l S
+0.69 0.16 0.12 rg 46 -115.72 43.36 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 -113.72 Td (CRÍTICO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 -113.22 Td (UX-C01 · UX/i18n) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 -129.72 Td (Dos pantallas de gestión sin i18n en absoluto \(todo en castellano hardcodeado\)) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -141.22 Td (Evidencia: centros/[id]/page.tsx y equipo/familias/page.tsx no importan useT. Un usuario ca-ES las ve en) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -151.72 Td (castellano.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 -162.22 Td ( Traducir vía t\(\) ambas pantallas. El test de paridad no lo detecta porque solo valida claves declaradas.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 -168.22 m 549.28 -168.22 l S
+
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 7238 >>
+stream
+0.98 0.97 0.95 rg 0 -246.61 595.28 841.89 re f
+0.06 0.32 0.34 rg 0 555.28 595.28 40 re f
+0.75 0.22 0.17 rg 46 568.28 12 12 re f
+BT /F2 13 Tf 1 1 1 rg 64 567.28 Td (Vetlla) Tj ET
+BT /F1 10 Tf 0.78 0.86 0.85 rg 128 568.28 Td (Auditoría externa · 14 jun 2026) Tj ET
+BT /F1 9 Tf 0.78 0.86 0.85 rg 479.08 568.28 Td (Hallazgos altos) Tj ET
+BT /F2 16 Tf 0.1 0.23 0.25 rg 46 521.28 Td (Hallazgos altos \(selección de 16\)) Tj ET
+0.87 0.84 0.8 RG 1 w 46 515.28 m 549.28 515.28 l S
+0.75 0.22 0.17 rg 46 490.28 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 492.28 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 492.78 Td (SEC-A01..04 · Seguridad) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 476.28 Td (Endpoints con checks de permiso MANUALES en vez de permissionProcedure \(frágil ante roles) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 463.28 Td (nuevos\)) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 451.78 Td (Evidencia: requests.ts:176/224, comms.ts:721/761, visits.ts:233/629, actividades.portal:393. Sofía A-01..A-04.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 441.28 Td ( Migrar a permissionProcedure\(<perm>\) para que el guard sea declarativo y testeable.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 435.28 m 549.28 435.28 l S
+0.75 0.22 0.17 rg 46 414.28 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 416.28 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 416.78 Td (QA-A01 · QA/CI) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 400.28 Td (Los 49 tests e2e NUNCA corren en CI \(solo se parsean\): flujos críticos zero-verified) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 388.78 Td (Evidencia: Verificado en vivo: ci.yml:138-157 el job Playwright está comentado como PENDIENTE.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 378.28 Td ( Añadir job e2e con playwright install --with-deps chromium + app en :3000. \(Ya hay tooling en) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 367.78 Td (demo-screenshots.yml para reutilizar.\)) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 361.78 m 549.28 361.78 l S
+0.75 0.22 0.17 rg 46 340.78 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 342.78 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 343.28 Td (QA-A02 · QA/CI) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 326.78 Td (22 de 37 permisos RBAC sin ningún test + routers mfa/signup/admisiones/actividades sin test de) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 313.78 Td (integración) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 302.28 Td (Evidencia: Quim H-02/H-03/H-04/H-07. billing/admissions/activities/inventory/shifts... sin cobertura.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 291.78 Td ( Tests de matriz RBAC \(rol sin permiso = rechazo\) + integración de los flujos transaccionales.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 285.78 m 549.28 285.78 l S
+0.75 0.22 0.17 rg 46 264.78 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 266.78 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 267.28 Td (ARQ-A03 · Arquitectura/DevOps) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 250.78 Td (Divergencia localCI: dev-setup.sh no provisiona vetlla_app, así que en local RLS y el modelo) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 237.78 Td (de privilegios NUNCA se ejercitan) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 226.28 Td (Evidencia: Marc A-03, Leo H-17. Es la raíz que ocultó el bug del REVOKE.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 215.78 Td ( Hacer que dev-setup ejecute app-role-bootstrap.sql + app-role.sql y que la app local use APP_DATABASE_URL.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 209.78 m 549.28 209.78 l S
+0.75 0.22 0.17 rg 46 188.78 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 190.78 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 191.28 Td (DAT-A02 · Datos/RLS) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 174.78 Td (Tablas hijas con tenant_id propio pero sin CHECK cruzado con el padre \(riesgo de mezcla por bug) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 161.78 Td (de app\)) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 150.28 Td (Evidencia: Núria A-03: invoice_lines, activity_enrollments, upp_curings, sync_conflicts, care_plan_*...) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 139.78 Td ( Trigger/constraint que verifique hijo.tenant_id = padre.tenant_id, o derivar el tenant del padre.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 133.78 m 549.28 133.78 l S
+0.75 0.22 0.17 rg 46 112.78 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 114.78 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 115.28 Td (DAT-A01 · Datos/RLS) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 98.78 Td (bypass_rls activado en issueInvoice: si se añaden queries a esa transacción, operarían sin) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 85.78 Td (aislamiento de tenant) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 74.28 Td (Evidencia: Núria A-02: facturacion.ts:485.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 63.78 Td ( Acotar el bypass a la query de numeración; documentar la invariante.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 57.78 m 549.28 57.78 l S
+0.75 0.22 0.17 rg 46 36.78 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 38.78 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 39.28 Td (IA-A01 · IA/RGPD) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 22.78 Td (Datos de salud \(diagnósticos, alérgenos\) van en CLARO al modelo: riesgo de reidentificación) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 11.28 Td (Evidencia: Iris H-01: copilot.ts:350-363. redactPii seudonimiza nombre/DNI pero no las descripciones clínicas.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 0.78 Td ( Enviar solo códigos \(CIE-10\), no texto libre; base legal art.9.2.h. Antes de cablear modelo real.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 -5.22 m 549.28 -5.22 l S
+0.75 0.22 0.17 rg 46 -26.22 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 -24.22 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 -23.72 Td (IA-A02 · IA) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 -40.22 Td (Sin validación de región UE en VllmProvider: un operador podría apuntar a un endpoint fuera de) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 -53.22 Td (la UE) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -64.72 Td (Evidencia: Iris H-04: providers/index.ts:36 acepta AI_VLLM_BASE_URL sin comprobar.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 -75.22 Td ( Validar que el endpoint sea UE en el arranque; fail-fast si no.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 -81.22 m 549.28 -81.22 l S
+0.75 0.22 0.17 rg 46 -102.22 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 -100.22 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 -99.72 Td (OPS-A05 · DevOps) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 -116.22 Td (Sin gestión de secretos de producción \(vault/KMS\) ni rotación \(AUTH_SECRET, VAPID, DB\)) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -127.72 Td (Evidencia: Leo H-02/H-15.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 -138.22 Td ( Vault/KMS UE + procedimiento de rotación documentado.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 -144.22 m 549.28 -144.22 l S
+0.75 0.22 0.17 rg 46 -165.22 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 -163.22 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 -162.72 Td (OPS-A10 · DevOps) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 -179.22 Td (Sin error tracking UE ni correlation-id: imposible reconstruir un incidente) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 -190.72 Td (Evidencia: Leo H-10/H-11: logger sin x-request-id; errores solo a stdout.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 -201.22 Td ( Correlation-id en el logger + Sentry/GlitchTip EU.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 -207.22 m 549.28 -207.22 l S
+
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 1745 >>
+stream
+0.98 0.97 0.95 rg 0 -246.61 595.28 841.89 re f
+0.06 0.32 0.34 rg 0 555.28 595.28 40 re f
+0.75 0.22 0.17 rg 46 568.28 12 12 re f
+BT /F2 13 Tf 1 1 1 rg 64 567.28 Td (Vetlla) Tj ET
+BT /F1 10 Tf 0.78 0.86 0.85 rg 128 568.28 Td (Auditoría externa · 14 jun 2026) Tj ET
+BT /F1 9 Tf 0.78 0.86 0.85 rg 516.52 568.28 Td (\(cont.\)) Tj ET
+0.75 0.22 0.17 rg 46 524.28 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 526.28 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 526.78 Td (UX-A01 · UX/i18n) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 510.28 Td (Flujo del auxiliar \(atención a pie de cama, tablet\) con títulos y opciones en castellano) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 497.28 Td (hardcodeado) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 485.78 Td (Evidencia: Elena A-1: atencion/page.tsx \(Constantes, Ingesta, comidas como array estático, Sí/No, avisos\).) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 475.28 Td ( Traducir el flujo más usado; usar <Select> del DS en vez de <select> nativo.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 469.28 m 549.28 469.28 l S
+0.75 0.22 0.17 rg 46 448.28 29.92 13 re f
+BT /F2 8 Tf 1 1 1 rg 52 450.28 Td (ALTO) Tj ET
+BT /F2 9.5 Tf 0.1 0.23 0.25 rg 124 450.78 Td (SCO-A01 · Alcance) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 434.28 Td (Email transaccional no operativo: EMAIL_PROVIDER=http en prod pero sin URL/clave  el primer) Tj ET
+BT /F2 10 Tf 0.14 0.14 0.14 rg 52 421.28 Td (piloto no envía resets de contraseña) Tj ET
+BT /F1 8.5 Tf 0.42 0.4 0.37 rg 52 409.78 Td (Evidencia: Pau: .env.example. Guard correcto \(fail-fast\) pero brecha operativa bloqueante.) Tj ET
+BT /F1 8.5 Tf 0.06 0.32 0.34 rg 52 399.28 Td ( Proveer EMAIL_API_URL/KEY \(proveedor UE\) antes del piloto.) Tj ET
+0.87 0.84 0.8 RG 0.7 w 46 393.28 m 549.28 393.28 l S
+
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 16 0 R >>
+endobj
+16 0 obj
+<< /Length 2511 >>
+stream
+0.98 0.97 0.95 rg 0 -246.61 595.28 841.89 re f
+0.06 0.32 0.34 rg 0 555.28 595.28 40 re f
+0.75 0.22 0.17 rg 46 568.28 12 12 re f
+BT /F2 13 Tf 1 1 1 rg 64 567.28 Td (Vetlla) Tj ET
+BT /F1 10 Tf 0.78 0.86 0.85 rg 128 568.28 Td (Auditoría externa · 14 jun 2026) Tj ET
+BT /F1 9 Tf 0.78 0.86 0.85 rg 418.24 568.28 Td (Discrepancias y verificación) Tj ET
+BT /F2 16 Tf 0.1 0.23 0.25 rg 46 521.28 Td (Discrepancias adjudicadas y honestidad) Tj ET
+0.87 0.84 0.8 RG 1 w 46 515.28 m 549.28 515.28 l S
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 491.28 Td (Falso positivo cazado al verificar) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 475.78 Td (Leo reportó ".env commiteado en git con ANTHROPIC_API_KEY" \(Crítico\). VERIFICADO EN VIVO: .env NO) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 462.78 Td (está trackeado \(git ls-files solo muestra .env.example; nunca en el historial; .gitignore lo cubre\).) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 449.78 Td (Sofía tenía razón. Descartado. Lección: el propio proceso de auditoría comete errores; verificar los) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 436.78 Td (cazó.) Tj ET
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 421.28 Td (Discrepancia sobre la madurez de la IA) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 405.78 Td (Pau \(honestidad de alcance\) la calificó de "stub/simulación, ningún usuario real la usa". Iris) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 392.78 Td (\(especialista\) la puntuó 7/10 "MVP funcional real, cableado de extremo a extremo con VllmProvider".) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 379.78 Td (Síntesis verificada: la ARQUITECTURA de IA es real \(no vaporware\), pero es stub POR DEFECTO y no está) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 366.78 Td (lista para modelo real \(PII en claro, sin validación de región UE\). Ambas verdades conviven; se) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 353.78 Td (refleja así.) Tj ET
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 338.28 Td (Hallazgo #0 del propio CIO \(cerrado y verificado\)) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 322.78 Td (El CIO descubrió que ci.yml llevaba rojo desde ~10:19 \(#198-#218\) por la migración que hace REVOKE) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 309.78 Td (... FROM vetlla_app antes de que el rol exista en BD limpia. Fix aplicado \(crear el rol antes de) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 296.78 Td (migrate, en ci.yml y demo-screenshots.yml\). VERIFICADO: run #222 en main = SUCCESS. El gate de) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 283.78 Td (aislamiento RLS vuelve a correr.) Tj ET
+
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 18 0 R >>
+endobj
+18 0 obj
+<< /Length 4280 >>
+stream
+0.98 0.97 0.95 rg 0 -246.61 595.28 841.89 re f
+0.06 0.32 0.34 rg 0 555.28 595.28 40 re f
+0.75 0.22 0.17 rg 46 568.28 12 12 re f
+BT /F2 13 Tf 1 1 1 rg 64 567.28 Td (Vetlla) Tj ET
+BT /F1 10 Tf 0.78 0.86 0.85 rg 128 568.28 Td (Auditoría externa · 14 jun 2026) Tj ET
+BT /F1 9 Tf 0.78 0.86 0.85 rg 493.12 568.28 Td (Hoja de ruta) Tj ET
+BT /F2 16 Tf 0.1 0.23 0.25 rg 46 521.28 Td (Hoja de ruta de remediación) Tj ET
+0.87 0.84 0.8 RG 1 w 46 515.28 m 549.28 515.28 l S
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 491.28 Td (P0 - antes de CUALQUIER piloto con datos reales \(equipo, autónomo\)) Tj ET
+0.69 0.16 0.12 rg 46 476.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 475.78 Td (Cifrar secreto TOTP \(KMS UE\) [SEC-C01]) Tj ET
+0.69 0.16 0.12 rg 46 462.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 461.78 Td (auth_tokens: revocar acceso de vetlla_app / rol dedicado [DAT-C01]) Tj ET
+0.69 0.16 0.12 rg 46 448.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 447.78 Td (Aforo de actividades en transacción Serializable [DAT-C02] \(fix rápido\)) Tj ET
+0.69 0.16 0.12 rg 46 434.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 433.78 Td (Reparar el service worker de push o dejar de declararlo hecho [ARQ-C01]) Tj ET
+0.69 0.16 0.12 rg 46 420.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 419.78 Td (Fail-fast en arranque si se conecta como owner/superuser \(RLS off\) [OPS-C04]) Tj ET
+0.69 0.16 0.12 rg 46 406.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 405.78 Td (dev-setup provisiona vetlla_app: cerrar la divergencia localCI [ARQ-A03]) Tj ET
+0.69 0.16 0.12 rg 46 392.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 391.78 Td (Habilitar los 49 e2e en CI [QA-A01]) Tj ET
+0.69 0.16 0.12 rg 46 378.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 377.78 Td (Migrar checks de permiso manuales a permissionProcedure [SEC-A01..04]) Tj ET
+0.69 0.16 0.12 rg 46 364.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 363.78 Td (i18n de las 2 pantallas sin traducir + flujo del auxiliar [UX-C01/A01]) Tj ET
+0.69 0.16 0.12 rg 46 350.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 349.78 Td (Rate-limit en el paso TOTP del login [SEC-M]) Tj ET
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 327.28 Td (P0 - decisiones/acciones de Angel \(negocio/legal\)) Tj ET
+0.73 0.48 0.07 rg 46 312.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 311.78 Td (DPA + Postgres gestionado UE con OVHcloud \(Q-004\) [OPS-C02]) Tj ET
+0.73 0.48 0.07 rg 46 298.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 297.78 Td (Política de retención/supresión RGPD \(Q-003\)) Tj ET
+0.73 0.48 0.07 rg 46 284.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 283.78 Td (Provisión del rol vetlla_app en el Postgres gestionado \(Q-005\)) Tj ET
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 261.28 Td (P1 - antes del go-live) Tj ET
+0.06 0.32 0.34 rg 46 246.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 245.78 Td (Dockerfile + IaC OVHcloud + pipeline CIdeploy) Tj ET
+0.06 0.32 0.34 rg 46 232.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 231.78 Td (Backups + PITR habilitados y restore PROBADO) Tj ET
+0.06 0.32 0.34 rg 46 218.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 217.78 Td (Vault/KMS UE + rotación de secretos; correlation-id + error tracking UE) Tj ET
+0.06 0.32 0.34 rg 46 204.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 203.78 Td (Tests de matriz RBAC \(22 permisos\) + integración mfa/signup/admisiones) Tj ET
+0.06 0.32 0.34 rg 46 190.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 189.78 Td (IA: enviar solo códigos CIE al modelo + validación de región UE) Tj ET
+0.06 0.32 0.34 rg 46 176.28 8 8 re f
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 60 175.78 Td (Política expand/contract para migraciones; cabeceras de seguridad HTTP) Tj ET
+BT /F2 12 Tf 0.06 0.32 0.34 rg 46 149.28 Td (Metodología) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 133.78 Td (8 auditores especializados independientes \(Seguridad/RGPD, Arquitectura, QA/CI, DevOps, Honestidad de) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 120.78 Td (alcance, Modelo de datos/RLS, UX/i18n, IA\), en paralelo, modo adversarial, solo lectura. El CIO) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 107.78 Td (verificó en vivo los críticos \(CI, RLS, código\) en lugar de fiarse de los reportes, y cazó 1 falso) Tj ET
+BT /F1 9.5 Tf 0.14 0.14 0.14 rg 46 94.78 Td (positivo. Informes completos en docs/auditoria/2026-06-14/.) Tj ET
+
+endstream
+endobj
+xref
+0 19
+0000000000 65535 f
+0000000015 00000 n
+0000000064 00000 n
+0000000161 00000 n
+0000000258 00000 n
+0000000360 00000 n
+0000000502 00000 n
+0000002896 00000 n
+0000003038 00000 n
+0000007009 00000 n
+0000007152 00000 n
+0000014358 00000 n
+0000014502 00000 n
+0000021793 00000 n
+0000021937 00000 n
+0000023735 00000 n
+0000023879 00000 n
+0000026443 00000 n
+0000026587 00000 n
+trailer
+<< /Size 19 /Root 1 0 R >>
+startxref
+30920
+%%EOF
