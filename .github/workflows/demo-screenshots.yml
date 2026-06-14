@@ -8,6 +8,8 @@ on:
 jobs:
   demo-pdf:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     # -----------------------------------------------------------------------
     # Servicio Postgres 16 — idéntico al job build-test de ci.yml para
@@ -147,6 +149,22 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Run demo screenshots script
         run: node scripts/demo-screenshots.mjs
+
+      # Publica el PDF en la rama demo-pdf-latest para poder entregarlo en chat
+      # (el almacenamiento de artefactos de GitHub no es accesible desde el sandbox
+      # del CIO, pero el remoto git sí). Solo se commitea el PDF, sobre HEAD.
+      - name: Publish PDF to delivery branch
+        if: success()
+        run: |
+          git config user.name "vetlla-ci"
+          git config user.email "ci@vetlla.local"
+          mkdir -p _delivery
+          cp artifacts/Vetlla-Demo-Real.pdf _delivery/Vetlla-Demo-Real.pdf
+          git add -f _delivery/Vetlla-Demo-Real.pdf
+          git commit -m "chore(demo): PDF de capturas reales [skip ci]"
+          git push -f \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            HEAD:demo-pdf-latest
 
       # -----------------------------------------------------------------------
       # 12. Subir artefactos: PDF + PNGs individuales
