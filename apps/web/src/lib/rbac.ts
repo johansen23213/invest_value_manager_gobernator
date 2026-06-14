@@ -80,6 +80,22 @@ export const PERMISSIONS = [
   //               directamente — usa portal:read + assertFamilyAccess)
   'activities:read',
   'activities:manage',
+  // Indicadores de calidad asistencial — panel de cohorte del centro.
+  // quality:read → leer el dashboard de indicadores (UPP, caídas, valoraciones, sujeciones).
+  //
+  // Matriz RBAC:
+  //   SUPERADMIN → quality:read (plataforma)
+  //   DIRECTOR   → quality:read (responsable de calidad y gestión del centro)
+  //   SANITARIO  → quality:read (interés clínico; los indicadores orientan la atención)
+  //   AUXILIAR   → sin acceso (los indicadores de cohorte son datos de gestión, no operativos)
+  //   FAMILIAR   → sin acceso (datos del centro, no del residente vinculado)
+  //
+  // Decisión: permiso propio porque los indicadores de calidad son un dominio
+  // diferente de residents:read (que da acceso al expediente individual) y de
+  // care:read (que da acceso a los registros de atención). Un permiso propio
+  // permite revocar el acceso al panel de calidad sin tocar otros permisos, y
+  // permite que en el futuro se añada quality:write para gestionar umbrales.
+  'quality:read',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -117,6 +133,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'admissions:manage',
     'activities:read',
     'activities:manage',
+    'quality:read',
   ],
   SANITARIO: [
     'tenant:read',
@@ -154,6 +171,10 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     // residente en actividades (dato clínico relevante para el bienestar).
     // No puede gestionar el catálogo ni inscribir (activities:manage es DIRECTOR+AUXILIAR).
     'activities:read',
+    // SANITARIO tiene quality:read: los indicadores de calidad asistencial (UPP,
+    // caídas, valoraciones) son relevantes para la práctica clínica y la mejora
+    // de la atención. El panel de calidad complementa el expediente individual.
+    'quality:read',
   ],
   // El auxiliar registra atención directa y administra medicación (MAR).
   // En muchos centros el auxiliar hace las funciones de recepción (check-in/out).
