@@ -515,7 +515,7 @@ export function MfaCard() {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>Seguridad — Verificación en dos pasos</CardTitle>
+          <CardTitle>{t('cuenta.seguridad.title')}</CardTitle>
           {statusQ.isLoading ? null : isEnabled ? (
             <Badge tone="green">{t('mfa.status.enabled')}</Badge>
           ) : (
@@ -526,7 +526,7 @@ export function MfaCard() {
 
       <CardContent>
         {statusQ.isLoading ? (
-          <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+          <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
         ) : !isEnabled ? (
           /* ── Estado: MFA desactivado ────────────────────────────────────── */
           activePanel === 'setup' ? (
@@ -537,9 +537,7 @@ export function MfaCard() {
           ) : (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-[#1A3A3F]/70">
-                La verificación en dos pasos añade una capa extra de seguridad a tu cuenta.
-                Necesitarás una aplicación de autenticación (Google Authenticator, Authy, etc.)
-                para obtener un código de acceso de 6 dígitos cada vez que inicies sesión.
+                {t('mfa.description')}
               </p>
               <Button
                 variant="primary"
@@ -548,7 +546,7 @@ export function MfaCard() {
                 onClick={() => setActivePanel('setup')}
                 type="button"
               >
-                Activar
+                {t('mfa.activate')}
               </Button>
             </div>
           )
@@ -565,7 +563,7 @@ export function MfaCard() {
                 </p>
                 {(status?.remainingRecoveryCodes ?? 0) <= 3 && (
                   <p role="alert" className="text-sm font-medium text-amber-700">
-                    Tienes pocos códigos de recuperación disponibles. Considera regenerarlos.
+                    {t('mfa.codesLow')}
                   </p>
                 )}
 

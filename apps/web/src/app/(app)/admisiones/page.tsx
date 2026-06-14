@@ -555,7 +555,7 @@ function ForecastChart({
         <caption>{ariaLabel}</caption>
         <thead>
           <tr>
-            <th scope="col">Fecha</th>
+            <th scope="col">{t('admissions.forecast.date')}</th>
             <th scope="col">{t('admissions.forecast.free')}</th>
             <th scope="col">{t('admissions.forecast.occupied')}</th>
             <th scope="col">{t('admissions.forecast.rate')}</th>
@@ -985,7 +985,7 @@ function NewAdmissionDialog({
                 aria-invalid={Boolean(form.errors.centerId)}
                 aria-describedby={form.errors.centerId ? 'adm-center-err' : undefined}
               >
-                <option value="">Selecciona un centro…</option>
+                <option value="">{t('admissions.form.center.ph')}</option>
                 {(centers.data ?? []).map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -1002,7 +1002,7 @@ function NewAdmissionDialog({
                   onChange={(e) => set('unitId', e.target.value)}
                   disabled={centerDetail.isLoading}
                 >
-                  <option value="">Sin preferencia de unidad</option>
+                  <option value="">{t('admissions.form.unit.none')}</option>
                   {(centerDetail.data?.units ?? []).map((u) => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
@@ -1389,7 +1389,7 @@ export default function AdmisionesPage() {
 
       <Tabs defaultValue="pipeline" className="flex flex-col gap-2">
         <TabsList>
-          <TabsTrigger value="pipeline">Lista de espera / Pipeline</TabsTrigger>
+          <TabsTrigger value="pipeline">{t('admissions.tab.pipeline')}</TabsTrigger>
           <TabsTrigger value="forecast">{t('admissions.forecast.title')}</TabsTrigger>
         </TabsList>
 

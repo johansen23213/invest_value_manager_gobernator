@@ -267,7 +267,7 @@ export function AssistiveDevicesTab({
         }
       >
         {isLoading ? (
-          <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+          <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
         ) : activeDevices.length === 0 ? (
           <p className="text-sm text-[#1A3A3F]/60">{t('exp.ad.section.active.empty')}</p>
         ) : (
@@ -290,7 +290,7 @@ export function AssistiveDevicesTab({
       {/* Sección: Retiradas */}
       <SectionCard title={t('exp.ad.section.retired')}>
         {isLoading ? (
-          <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+          <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
         ) : retiredDevices.length === 0 ? (
           <p className="text-sm text-[#1A3A3F]/60">{t('exp.ad.section.retired.empty')}</p>
         ) : (

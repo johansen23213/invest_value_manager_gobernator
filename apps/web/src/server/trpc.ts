@@ -4,14 +4,23 @@ import { ZodError } from 'zod';
 import { forTenant, logAudit, type AuditEntry } from '@vetlla/db';
 import { auth } from '@/auth';
 import { hasPermission, type Permission } from '@/lib/rbac';
-import { logger } from '@/server/logger';
+import { logger, requestLogger } from '@/server/logger';
 
 export type AuditInput = Omit<AuditEntry, 'tenantId' | 'actorId' | 'actorEmail'>;
 
-// Contexto de cada request: incluye la sesión de Auth.js.
+/**
+ * Contexto de cada request tRPC: incluye la sesión de Auth.js y el logger
+ * con correlation ID (x-request-id) propagado desde el middleware.
+ * El requestId nunca contiene PII — es un UUID opaco generado por el middleware.
+ */
 export async function createTRPCContext(opts: { headers: Headers }) {
   const session = await auth();
-  return { session, headers: opts.headers };
+  // El middleware inyecta x-request-id en cada request (genera UUID si el
+  // cliente no lo envía). Lo propagamos al logger de contexto para que todas
+  // las líneas de log de esta petición compartan el mismo ID (OPS-A10).
+  const requestId = opts.headers.get('x-request-id') ?? undefined;
+  const log = requestId != null ? requestLogger(requestId) : logger;
+  return { session, headers: opts.headers, requestId, log };
 }
 
 type Context = Awaited<ReturnType<typeof createTRPCContext>>;
@@ -34,12 +43,13 @@ export const createTRPCRouter = t.router;
 // INC-6 — Observabilidad: duración de cada procedure como log JSON sin PII
 // (ruta, ok, ms). Umbral para no ensuciar: solo las lentas (>500 ms); los
 // errores ya los traza el onError del route handler.
-const timingMiddleware = t.middleware(async ({ path, next }) => {
+// OPS-A10: se usa ctx.log (con requestId) para correlacionar con otros logs.
+const timingMiddleware = t.middleware(async ({ path, ctx, next }) => {
   const start = Date.now();
   const result = await next();
   const durationMs = Date.now() - start;
   if (durationMs > 500) {
-    logger.warn('trpc.slow', { path, ok: result.ok, durationMs });
+    ctx.log.warn('trpc.slow', { path, ok: result.ok, durationMs });
   }
   return result;
 });
@@ -81,6 +91,26 @@ export function permissionProcedure(permission: Permission) {
   return tenantProcedure.use(({ ctx, next }) => {
     if (!hasPermission(ctx.session.user.role, permission)) {
       throw new TRPCError({ code: 'FORBIDDEN', message: `Falta el permiso "${permission}".` });
+    }
+    return next({ ctx });
+  });
+}
+
+/**
+ * Como `tenantProcedure` pero exige que el rol tenga AL MENOS UNO de los permisos
+ * indicados (OR lógico). Útil cuando un mismo endpoint sirve a dos roles con permisos
+ * distintos (p. ej. `requests:create` para FAMILIAR y `requests:manage` para staff).
+ * SEC-A01: reemplaza el patrón `tenantProcedure` + `if (!hasPermission(...))` manual.
+ */
+export function anyPermissionProcedure(permissions: readonly Permission[]) {
+  return tenantProcedure.use(({ ctx, next }) => {
+    const role = ctx.session.user.role;
+    const hasAny = permissions.some((p) => hasPermission(role, p));
+    if (!hasAny) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: `Falta alguno de los permisos: ${permissions.join(', ')}.`,
+      });
     }
     return next({ ctx });
   });

@@ -143,7 +143,9 @@ export default function PortalActividadesPage() {
   const residents = portalQ.data ?? [];
   const residentId = residents[0]?.id ?? '';
 
-  const participationQ = api.actividades.portal.participationForResident.useQuery(
+  // El portal de familia usa el endpoint familiar (portal:read + assertFamilyAccess);
+  // participationForResident quedó como staff-only (activities:read) tras SEC-A04.
+  const participationQ = api.actividades.portal.participationForResidentFamiliar.useQuery(
     { residentId },
     { enabled: Boolean(residentId) },
   );

@@ -38,7 +38,8 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { ActivityCategory, ActivitySessionStatus } from '@vetlla/db';
-import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
+import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
+import { prisma as basePrisma } from '@vetlla/db';
 import { assertFamilyAccess } from '@/server/family-access';
 import {
   canEnroll,
@@ -236,7 +237,8 @@ const enrollmentsRouter = createTRPCRouter({
   }),
 
   enroll: permissionProcedure('activities:manage').input(enrollSchema).mutation(async ({ ctx, input }) => {
-    // 1. Verificar que la sesión existe y está en estado enrollable
+    // 1. Verificar que la sesión existe y está en estado enrollable (lectura previa,
+    //    fuera de la transacción: solo queremos el estado y el aforo máximo).
     const session = await ctx.db.activitySession.findUnique({
       where:   { id: input.sessionId },
       include: { activity: { select: { maxCapacity: true } } },
@@ -249,47 +251,93 @@ const enrollmentsRouter = createTRPCRouter({
       });
     }
 
-    // 2. Verificar que el residente no está ya inscrito (idempotencia)
-    const existing = await ctx.db.activityEnrollment.findUnique({
+    // 2. Verificar que el residente no está ya inscrito (idempotencia, pre-check).
+    //    Se vuelve a comprobar dentro de la transacción para ser estrictos.
+    const existingPre = await ctx.db.activityEnrollment.findUnique({
       where: { sessionId_residentId: { sessionId: input.sessionId, residentId: input.residentId } },
     });
-    if (existing && existing.status !== 'CANCELADO') {
+    if (existingPre && existingPre.status !== 'CANCELADO') {
       throw new TRPCError({ code: 'CONFLICT', message: 'El residente ya está inscrito en esta sesión.' });
     }
 
-    // 3. Determinar estado (INSCRITO / LISTA_ESPERA) por aforo
-    const inscripciones = await ctx.db.activityEnrollment.findMany({
-      where: { sessionId: input.sessionId },
-    });
-    const inscripcionesInfo: InscripcionInfo[] = inscripciones.map((i) => ({
-      id:         i.id,
-      residentId: i.residentId,
-      status:     i.status,
-      enrolledAt: i.enrolledAt,
-    }));
+    // 3. Determinar estado (INSCRITO / LISTA_ESPERA) y crear la inscripción dentro de
+    //    una transacción SERIALIZABLE (DAT-C02). Sin serialización, dos peticiones
+    //    concurrentes leerían el mismo aforo libre y ambas se inscribirían como
+    //    INSCRITO superando maxCapacity. Con Serializable, Postgres detecta el conflicto
+    //    de lectura (SSI) y aborta una de las dos (P2034 / código 40001). Patrón
+    //    idéntico al de visits.ts:355.
+    //
+    //    Usamos basePrisma para poder pasar isolationLevel; dentro de la transacción
+    //    el GUC app.tenant_id ya fue fijado por forTenant antes de llegar aquí, pero
+    //    basePrisma opera como vetlla_app con RLS activa. Fijamos el GUC
+    //    explícitamente dentro de la transacción para que las queries al modelo
+    //    Prisma queden filtradas por RLS igualmente.
+    const maxCapacity = session.activity.maxCapacity;
+    const tenantId    = ctx.tenantId;
 
-    const estado = estadoInscripcion(
-      { maxCapacity: session.activity.maxCapacity },
-      inscripcionesInfo,
-    );
+    async function runEnroll() {
+      return basePrisma.$transaction(
+        async (tx) => {
+          // Fijar el GUC de tenant dentro de la transacción (RLS activa para vetlla_app)
+          await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, TRUE)`;
 
-    // 4. Crear o restaurar inscripción
-    if (existing) {
-      // Reactivar inscripción cancelada
-      return ctx.db.activityEnrollment.update({
-        where: { id: existing.id },
-        data:  { status: estado, attended: null, observation: null, enrolledAt: new Date() },
-      });
+          // Re-comprobar idempotencia dentro de la transacción
+          const existing = await tx.activityEnrollment.findUnique({
+            where: { sessionId_residentId: { sessionId: input.sessionId, residentId: input.residentId } },
+          });
+          if (existing && existing.status !== 'CANCELADO') {
+            throw new TRPCError({ code: 'CONFLICT', message: 'El residente ya está inscrito en esta sesión.' });
+          }
+
+          // Re-contar inscripciones activas dentro de la transacción (lectura serializable)
+          const inscripciones = await tx.activityEnrollment.findMany({
+            where: { sessionId: input.sessionId },
+          });
+          const inscripcionesInfo: InscripcionInfo[] = inscripciones.map((i) => ({
+            id:         i.id,
+            residentId: i.residentId,
+            status:     i.status,
+            enrolledAt: i.enrolledAt,
+          }));
+
+          const estado = estadoInscripcion({ maxCapacity }, inscripcionesInfo);
+
+          // 4. Crear o restaurar inscripción
+          if (existing) {
+            return tx.activityEnrollment.update({
+              where: { id: existing.id },
+              data:  { status: estado, attended: null, observation: null, enrolledAt: new Date() },
+            });
+          }
+
+          return tx.activityEnrollment.create({
+            data: {
+              tenantId:   tenantId,
+              sessionId:  input.sessionId,
+              residentId: input.residentId,
+              status:     estado,
+            },
+          });
+        },
+        { isolationLevel: 'Serializable' },
+      );
     }
 
-    return ctx.db.activityEnrollment.create({
-      data: {
-        tenantId:   ctx.tenantId,
-        sessionId:  input.sessionId,
-        residentId: input.residentId,
-        status:     estado,
-      },
-    });
+    try {
+      return await runEnroll();
+    } catch (err) {
+      // Reintento ante error de serialización de Postgres (código P2034 en Prisma
+      // o el código Postgres 40001 serialization_failure). Mismo patrón que visits.ts.
+      const isSerializationError =
+        err instanceof Error &&
+        (err.message.includes('P2034') ||
+          err.message.includes('40001') ||
+          err.message.includes('serializ'));
+      if (isSerializationError) {
+        return await runEnroll();
+      }
+      throw err;
+    }
   }),
 
   cancel: permissionProcedure('activities:manage').input(z.object({
@@ -390,15 +438,37 @@ const attendanceRouter = createTRPCRouter({
 // ---------------------------------------------------------------------------
 
 const portalRouter = createTRPCRouter({
-  participationForResident: tenantProcedure.input(z.object({
+  // SEC-A04: el endpoint exige explícitamente uno de los dos permisos válidos:
+  //   • activities:read → staff (DIRECTOR, AUXILIAR, SANITARIO, SUPERADMIN)
+  //   • portal:read     → FAMILIAR (solo su residente vinculado, via assertFamilyAccess)
+  // Cualquier rol sin ninguno de los dos recibe FORBIDDEN antes de llegar a la BD.
+  participationForResident: permissionProcedure('activities:read').input(z.object({
     residentId: z.string(),
   })).query(async ({ ctx, input }) => {
-    // El FAMILIAR necesita portal:read + estar vinculado al residente.
-    // Otros roles (DIRECTOR, AUXILIAR, SANITARIO) pueden acceder sin FamilyLink.
-    const role = ctx.session.user.role;
-    if (role === 'FAMILIAR') {
-      await assertFamilyAccess(ctx.db, ctx.session.user.id, input.residentId);
-    }
+    return ctx.db.activityEnrollment.findMany({
+      where: {
+        residentId: input.residentId,
+        status:     { not: 'CANCELADO' },
+      },
+      include: {
+        session: {
+          include: {
+            activity: { select: { id: true, name: true, category: true, location: true } },
+          },
+        },
+      },
+      orderBy: { session: { startsAt: 'desc' } },
+    });
+  }),
+
+  // Endpoint exclusivo para el FAMILIAR: portal:read + assertFamilyAccess.
+  // Se separa del endpoint de staff para mantener el contrato de permissionProcedure
+  // sin check manual. SEC-A04: el FAMILIAR usa este endpoint; el staff usa el de arriba.
+  participationForResidentFamiliar: permissionProcedure('portal:read').input(z.object({
+    residentId: z.string(),
+  })).query(async ({ ctx, input }) => {
+    // Verificar vínculo: el FAMILIAR solo puede ver el residente vinculado (aislamiento doble)
+    await assertFamilyAccess(ctx.db, ctx.session.user.id, input.residentId);
 
     return ctx.db.activityEnrollment.findMany({
       where: {

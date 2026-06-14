@@ -55,6 +55,23 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      # OPS-H06: garantizar psql disponible de forma determinista.
+      # ubuntu-latest ya incluye postgresql-client (psql 16); el paso solo
+      # instala si por algún motivo falta (imagen personalizada, runner propio).
+      # Se usa --no-install-recommends para minimizar dependencias descargadas
+      # y se falla con un mensaje claro en lugar de dejar el pipeline colgado.
+      - name: Ensure psql client is available
+        run: |
+          if command -v psql >/dev/null 2>&1; then
+            echo "psql ya presente: $(psql --version)"
+          else
+            echo "psql no encontrado en PATH; instalando postgresql-client…"
+            sudo apt-get update -qq \
+              && sudo apt-get install -y -qq --no-install-recommends postgresql-client \
+              || { echo "ERROR: no se pudo instalar postgresql-client. Revisa el runner."; exit 1; }
+            echo "psql instalado: $(psql --version)"
+          fi
+
       # Las migraciones referencian el rol vetlla_app (GRANT/REVOKE). En una BD
       # nueva el rol no existe todavía, así que hay que crearlo ANTES de migrate
       # (los grants sobre tablas van después, en app-role.sql). Sin esto,
@@ -67,9 +84,6 @@ jobs:
           PGPASSWORD: vetlla_dev_password
           PGDATABASE: vetlla
         run: |
-          if ! command -v psql >/dev/null 2>&1; then
-            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-          fi
           psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
             -f packages/db/prisma/sql/app-role-bootstrap.sql
 
@@ -88,9 +102,6 @@ jobs:
           PGPASSWORD: vetlla_dev_password
           PGDATABASE: vetlla
         run: |
-          if ! command -v psql >/dev/null 2>&1; then
-            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-          fi
           psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
             -f packages/db/prisma/sql/app-role.sql
 
@@ -134,29 +145,144 @@ jobs:
       - name: Unit tests (all packages)
         run: pnpm test
 
-      # -----------------------------------------------------------------------
-      # INC-1 (PENDIENTE): E2E Playwright
-      #
-      # Los tests de Playwright (apps/web/e2e/) cubren flujos críticos de
-      # punta a punta (login, MAR, prescripción, equipo/RBAC, auditoría,
-      # copiloto) con navegador real (Chromium).
-      #
-      # Por qué no está activo aquí todavía:
-      #   - Requiere `playwright install chromium` (~300 MB) y la app
-      #     construida corriendo en :3000 (next start) + seed de demo.
-      #   - El tiempo de startup encarece el job y no se ha decidido aún
-      #     si merece su propio job paralelo o va en este.
-      #   - El Playwright config ya soporta PW_CHROMIUM para inyectar un
-      #     binario propio si se usa una action de caché.
-      #
-      # Para habilitarlo (leo-devops), añadir un job 'e2e' con:
-      #   1. Mismo servicio postgres y env.
-      #   2. pnpm --filter @vetlla/web exec playwright install --with-deps chromium
-      #   3. pnpm --filter @vetlla/db seed   (seed de demo)
-      #   4. pnpm --filter @vetlla/web build
-      #   5. pnpm --filter @vetlla/web test:e2e
-      #
-      # Riesgo mientras no está en CI: los flujos de login, MAR offline,
-      # copiloto y familia solo se verifican manualmente. Ver mapa de cobertura
-      # en project_state.yaml (INC-1).
-      # -----------------------------------------------------------------------
+      # E2E Playwright: ver job 'e2e' más abajo (paralelo a build-test).
+
+  # ---------------------------------------------------------------------------
+  # QA-A01 / ARQ-A04 — E2E Playwright (flujos críticos con navegador real)
+  #
+  # Por qué job separado:
+  #   - playwright install chromium (~300 MB) + next build + next start tienen
+  #     un coste de startup que no debe penalizar el gate de RLS.
+  #   - Permite reruns independientes (un flaky E2E no reorre las migraciones).
+  #
+  # Orden de pasos (crítico — espeja el orden correcto de producción):
+  #   1. Bootstrap del rol vetlla_app ANTES de migrate (las migraciones lo
+  #      referencian). Ver app-role-bootstrap.sql y ADR-0014.
+  #   2. migrate:deploy (con el rol ya existente).
+  #   3. app-role.sql: concede CRUD sobre las tablas creadas.
+  #   4. seed de demo.
+  #   5. build de producción (Next.js standalone).
+  #   6. pnpm --filter web start & + wait-on :3000.
+  #   7. playwright install --with-deps chromium.
+  #   8. test:e2e — falla de verdad si un spec falla (sin || true).
+  # ---------------------------------------------------------------------------
+  e2e:
+    runs-on: ubuntu-latest
+    # Los E2E solo corren sobre ramas de PR y main para no gastar minutos en
+    # cada push a ramas de feature largas. Ajustar si el equipo prefiere siempre.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vetlla
+          POSTGRES_PASSWORD: vetlla_dev_password
+          POSTGRES_DB: vetlla
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vetlla -d vetlla"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://vetlla:vetlla_dev_password@localhost:5432/vetlla?schema=public
+      APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
+      AUTH_SECRET: ci-secret-not-for-production
+      # Email y AI en modo consola/stub — sin dependencias externas en E2E.
+      EMAIL_PROVIDER: console
+      AI_PROVIDER: stub
+      # Playwright necesita la URL base.
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      # OPS-H06: psql garantizado de forma determinista (igual que build-test).
+      - name: Ensure psql client is available
+        run: |
+          if command -v psql >/dev/null 2>&1; then
+            echo "psql ya presente: $(psql --version)"
+          else
+            echo "psql no encontrado; instalando postgresql-client…"
+            sudo apt-get update -qq \
+              && sudo apt-get install -y -qq --no-install-recommends postgresql-client \
+              || { echo "ERROR: no se pudo instalar postgresql-client."; exit 1; }
+          fi
+
+      # --- Paso 1: Bootstrap del rol ANTES de migrate ---
+      - name: Bootstrap app role (before migrations reference it)
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: vetlla
+          PGPASSWORD: vetlla_dev_password
+          PGDATABASE: vetlla
+        run: |
+          psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
+            -f packages/db/prisma/sql/app-role-bootstrap.sql
+
+      # --- Paso 2: Migraciones ---
+      - name: Apply migrations
+        run: pnpm --filter @vetlla/db migrate:deploy
+
+      # --- Paso 3: Grants de app (después de que las tablas existan) ---
+      - name: Create non-owner app role grants (ADR-0014)
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: vetlla
+          PGPASSWORD: vetlla_dev_password
+          PGDATABASE: vetlla
+        run: |
+          psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
+            -f packages/db/prisma/sql/app-role.sql
+
+      # --- Paso 4: Seed de demo ---
+      - name: Seed demo data
+        run: pnpm --filter @vetlla/db run seed
+
+      # --- Paso 5: Build de producción ---
+      - name: Build Next.js app
+        run: pnpm --filter web build
+
+      # --- Paso 6: Arrancar app y esperar ---
+      - name: Start Next.js app (background)
+        run: pnpm --filter web start &
+
+      - name: Wait for app on :3000
+        run: npx --yes wait-on http://localhost:3000 --timeout 120000
+
+      # --- Paso 7: Instalar Chromium ---
+      - name: Install Playwright Chromium
+        run: pnpm --filter @vetlla/web exec playwright install --with-deps chromium
+
+      # --- Paso 8: E2E — falla de verdad si un spec falla ---
+      - name: Run E2E tests
+        run: pnpm --filter @vetlla/web test:e2e
+
+      # Artefactos de Playwright en caso de fallo (trazas, capturas)
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: apps/web/test-results/
+          retention-days: 7

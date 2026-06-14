@@ -23,7 +23,7 @@ import {
   ServiceRequestStatus,
   ServiceRequestPriority,
 } from '@vetlla/db';
-import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
+import { createTRPCRouter, permissionProcedure, anyPermissionProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
 import { slaDueAt, canTransition, type SRCategory, type SRPriority, type SRStatus } from '@/lib/service-requests';
 import { requestStatusChangedEmail } from '@/server/account/emails';
@@ -171,18 +171,14 @@ export const requestsRouter = createTRPCRouter({
 
   // -------------------------------------------------------------------------
   // GET — detalle + comentarios (familiar: solo sus residentes; staff: todos)
+  // SEC-A01: anyPermissionProcedure reemplaza el check manual en tenantProcedure.
   // -------------------------------------------------------------------------
 
-  get: tenantProcedure
+  get: anyPermissionProcedure(['requests:create', 'requests:manage'] as const)
     .input(z.object({ requestId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const role = ctx.session.user.role;
       const isFamiliar = !hasPermission(role, 'requests:manage');
-
-      // Verificar que tiene al menos uno de los dos permisos
-      if (!hasPermission(role, 'requests:create') && !hasPermission(role, 'requests:manage')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso al módulo de solicitudes.' });
-      }
 
       const req = await ctx.db.serviceRequest.findUnique({
         where: { id: input.requestId },
@@ -219,17 +215,14 @@ export const requestsRouter = createTRPCRouter({
 
   // -------------------------------------------------------------------------
   // ADD_COMMENT — familiar en sus solicitudes; staff en cualquiera
+  // SEC-A01: anyPermissionProcedure reemplaza el check manual en tenantProcedure.
   // -------------------------------------------------------------------------
 
-  addComment: tenantProcedure
+  addComment: anyPermissionProcedure(['requests:create', 'requests:manage'] as const)
     .input(AddCommentInput)
     .mutation(async ({ ctx, input }) => {
       const role = ctx.session.user.role;
       const isFamiliar = !hasPermission(role, 'requests:manage');
-
-      if (!hasPermission(role, 'requests:create') && !hasPermission(role, 'requests:manage')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso al módulo de solicitudes.' });
-      }
 
       const req = await ctx.db.serviceRequest.findUnique({
         where: { id: input.requestId },
@@ -400,17 +393,14 @@ export const requestsRouter = createTRPCRouter({
 
   // -------------------------------------------------------------------------
   // REOPEN — familiar (sus solicitudes) o staff (cualquiera)
+  // SEC-A01: anyPermissionProcedure reemplaza el check manual en tenantProcedure.
   // -------------------------------------------------------------------------
 
-  reopen: tenantProcedure
+  reopen: anyPermissionProcedure(['requests:create', 'requests:manage'] as const)
     .input(z.object({ requestId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const role = ctx.session.user.role;
       const isFamiliar = !hasPermission(role, 'requests:manage');
-
-      if (!hasPermission(role, 'requests:create') && !hasPermission(role, 'requests:manage')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso al módulo de solicitudes.' });
-      }
 
       const req = await ctx.db.serviceRequest.findUnique({
         where: { id: input.requestId },
