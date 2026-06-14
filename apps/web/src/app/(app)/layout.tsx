@@ -155,6 +155,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     ...(hasPermission(user.role, 'billing:read')
       ? [{ href: '/facturacion', label: t('nav.facturacion'), active: isItemActive(pathname, '/facturacion') }]
       : []),
+    ...(hasPermission(user.role, 'admissions:read')
+      ? [{ href: '/admisiones', label: t('nav.admissions'), active: isItemActive(pathname, '/admisiones') }]
+      : []),
   ];
 
   const asistencialActive = asistencialItems.some((i) => i.active);
