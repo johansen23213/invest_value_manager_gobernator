@@ -10,6 +10,7 @@
 import { PageHeader } from '@vetlla/ui';
 import { useT } from '@/i18n/provider';
 import { MfaCard } from './mfa-card';
+import { PushCard } from './push-card';
 
 export default function CuentaSeguridadPage() {
   const { t } = useT();
@@ -22,6 +23,7 @@ export default function CuentaSeguridadPage() {
       />
 
       <MfaCard />
+      <PushCard />
     </div>
   );
 }
