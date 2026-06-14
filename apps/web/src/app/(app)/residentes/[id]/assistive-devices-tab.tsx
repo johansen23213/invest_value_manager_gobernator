@@ -30,7 +30,6 @@ import {
   SectionCard,
   Select,
 } from '@vetlla/ui';
-import { AssistiveDeviceType, AssistiveDeviceStatus } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
@@ -40,7 +39,9 @@ import {
   createAssistiveDeviceSchema,
   updateAssistiveDeviceSchema,
   retireAssistiveDeviceSchema,
-} from '@/server/routers/diagnosticos';
+  AssistiveDeviceType,
+  AssistiveDeviceStatus,
+} from '@/lib/schemas/diagnosticos';
 
 // ---------------------------------------------------------------------------
 // Tipos locales

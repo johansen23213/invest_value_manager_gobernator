@@ -22,14 +22,13 @@ import {
   SectionCard,
   Select,
 } from '@vetlla/ui';
-import { MedicalNoteType } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
 import { useToast } from '@/components/toast';
 import { useZodForm } from '@/lib/form';
 import { MEDICAL_NOTE_TYPE_LABELS } from '@/lib/labels';
-import { CreateMedicalNoteInput } from '@/server/routers/clinical-notes';
+import { CreateMedicalNoteInput, MedicalNoteType } from '@/lib/schemas/clinical-notes';
 
 // ---------------------------------------------------------------------------
 // Colores semánticos para chips de tipo de evolutivo

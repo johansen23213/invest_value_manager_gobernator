@@ -42,7 +42,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@vetlla/ui';
-import { ActivityCategory } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
@@ -52,7 +51,8 @@ import { formatDateTime } from '@/lib/format';
 import {
   activityCreateSchema,
   sessionCreateSchema,
-} from '@/server/routers/actividades';
+  ActivityCategory,
+} from '@/lib/schemas/actividades';
 
 // ---------------------------------------------------------------------------
 // Helpers de tipo

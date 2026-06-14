@@ -30,7 +30,7 @@ import { useConfirm } from '@/components/confirm';
 import { formatDate } from '@/lib/format';
 import { AllergenList } from '@/components/allergen-chip';
 import { DIET_TYPE_LABELS, LIQUID_TEXTURE_LABELS } from '@/lib/labels';
-import type { AllergenValue } from '@/server/routers/nutrition';
+import type { AllergenValue } from '@/lib/schemas/nutrition';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 

@@ -27,46 +27,33 @@
  * al portal de familias (family.ts) bajo ningún permiso accesible al FAMILIAR.
  */
 
-import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { DischargeType, Prisma, type TenantPrisma } from '@vetlla/db';
+import { Prisma, type TenantPrisma } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 
 // ---------------------------------------------------------------------------
-// Esquemas Zod exportados (el cliente los reutiliza para validar igual)
+// Schemas Zod — importados desde el módulo CLIENT-SAFE (única fuente de verdad).
+// Re-exportados para compatibilidad con módulos de servidor que los importen
+// desde este router. Los ficheros CLIENTE deben importar directamente desde
+// '@/lib/schemas/discharge'.
 // ---------------------------------------------------------------------------
 
-export const DischargeTypeSchema = z.nativeEnum(DischargeType);
+import {
+  DischargeTypeSchema,
+  RegisterDischargeInput,
+  ListDischargesByResidentInput,
+} from '@/lib/schemas/discharge';
 
-/** Input para registrar una baja. Exportado para el formulario de confirmación. */
-export const RegisterDischargeInput = z.object({
-  residentId: z.string().min(1),
-  type: DischargeTypeSchema,
-  dischargedAt: z.coerce.date(),
-  reason: z.string().trim().max(2000).optional(),
-  /**
-   * Solo para DEFUNCION: nombre del médico certificante.
-   * NO es la causa de muerte (esa información no se guarda en el audit summary).
-   */
-  certifiedBy: z.string().trim().max(200).optional(),
-  /** Para TRASLADO_CENTRO / TRASLADO_HOSPITAL: nombre del destino. */
-  destination: z.string().trim().max(300).optional(),
-  familyNotifiedAt: z.coerce.date().optional(),
-  belongingsReturned: z.boolean().optional().default(false),
-  /**
-   * Checklist extendida en JSON. Cada centro puede definir sus propios campos
-   * de protocolo sin necesitar una migración nueva.
-   * Ej: { "documentacion_entregada": true, "llaves_devueltas": true }
-   */
-  checklist: z.record(z.unknown()).optional(),
-  notes: z.string().trim().max(5000).optional(),
-});
-export type RegisterDischargeInput = z.infer<typeof RegisterDischargeInput>;
+export {
+  DischargeTypeSchema,
+  RegisterDischargeInput,
+  ListDischargesByResidentInput,
+};
 
-export const ListDischargesByResidentInput = z.object({
-  residentId: z.string().min(1),
-});
-export type ListDischargesByResidentInput = z.infer<typeof ListDischargesByResidentInput>;
+export type {
+  RegisterDischargeInput as RegisterDischargeInputType,
+  ListDischargesByResidentInput as ListDischargesByResidentInputType,
+} from '@/lib/schemas/discharge';
 
 // ---------------------------------------------------------------------------
 // Helpers

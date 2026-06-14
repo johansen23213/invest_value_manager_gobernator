@@ -18,11 +18,6 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import {
-  ServiceRequestCategory,
-  ServiceRequestStatus,
-  ServiceRequestPriority,
-} from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure, anyPermissionProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
 import { slaDueAt, canTransition, type SRCategory, type SRPriority, type SRStatus } from '@/lib/service-requests';
@@ -33,26 +28,28 @@ import { sendPushToUser } from '@/server/push';
 import { buildPushPayload } from '@/server/push/payload';
 
 // ---------------------------------------------------------------------------
-// Esquemas Zod reutilizables (reutilizables en el cliente para validación igual)
+// Schemas Zod — importados desde el módulo CLIENT-SAFE (única fuente de verdad).
+// Re-exportados para compatibilidad con módulos de servidor que los importen
+// desde este router. Los ficheros CLIENTE deben importar directamente desde
+// '@/lib/schemas/requests'.
 // ---------------------------------------------------------------------------
 
-export const ServiceRequestCategorySchema = z.nativeEnum(ServiceRequestCategory);
-export const ServiceRequestStatusSchema = z.nativeEnum(ServiceRequestStatus);
-export const ServiceRequestPrioritySchema = z.nativeEnum(ServiceRequestPriority);
+import {
+  ServiceRequestCategorySchema,
+  ServiceRequestStatusSchema,
+  ServiceRequestPrioritySchema,
+  CreateRequestInput,
+  AddCommentInput,
+  ServiceRequestStatus,
+} from '@/lib/schemas/requests';
 
-export const CreateRequestInput = z.object({
-  residentId:  z.string().min(1),
-  category:    ServiceRequestCategorySchema,
-  priority:    ServiceRequestPrioritySchema.default('NORMAL'),
-  title:       z.string().trim().min(3).max(120),
-  description: z.string().trim().min(10).max(2000),
-});
-
-export const AddCommentInput = z.object({
-  requestId: z.string().min(1),
-  body:      z.string().trim().min(1).max(5000),
-  internal:  z.boolean().default(false), // solo staff puede poner true; familiar siempre false
-});
+export {
+  ServiceRequestCategorySchema,
+  ServiceRequestStatusSchema,
+  ServiceRequestPrioritySchema,
+  CreateRequestInput,
+  AddCommentInput,
+};
 
 // ---------------------------------------------------------------------------
 // Router

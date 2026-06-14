@@ -40,12 +40,6 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import {
-  AdmissionOrigin,
-  AdmissionStatus,
-  DependencyGrade,
-  PlaceRegime,
-} from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import {
   canTransition,
@@ -56,44 +50,26 @@ import {
 } from '@/lib/ocupacion-forecast';
 
 // ---------------------------------------------------------------------------
-// Schemas Zod (reutilizables en el frontend para validación cliente)
+// Schemas Zod — importados desde el módulo CLIENT-SAFE (única fuente de verdad).
+// Re-exportados para compatibilidad con módulos de servidor que los importen
+// desde este router. Los ficheros CLIENTE deben importar directamente desde
+// '@/lib/schemas/admisiones'.
 // ---------------------------------------------------------------------------
 
-export const admissionRequestCreateSchema = z.object({
-  centerId:        z.string(),
-  unitId:          z.string().optional(),
-  firstName:       z.string().min(1).max(80),
-  lastName:        z.string().min(1).max(120),
-  birthDate:       z.coerce.date().optional(),
-  contactPhone:    z.string().max(30).optional(),
-  contactEmail:    z.string().email().optional().or(z.literal('')),
-  contactName:     z.string().max(120).optional(),
-  dependencyGrade: z.nativeEnum(DependencyGrade).optional(),
-  placeRegime:     z.nativeEnum(PlaceRegime).optional(),
-  origin:          z.nativeEnum(AdmissionOrigin).optional(),
-  // priority: 1=alta, 2=media, 3=baja (matching the schema Int default 2)
-  priority:        z.number().int().min(1).max(3).default(2),
-  expectedAdmissionDate: z.coerce.date().optional(),
-  notes:           z.string().max(2000).optional(),
-});
+import {
+  admissionRequestCreateSchema,
+  admissionRequestUpdateSchema,
+  admissionTransitionSchema,
+  admissionCloseSchema,
+  AdmissionStatus,
+} from '@/lib/schemas/admisiones';
 
-export const admissionRequestUpdateSchema = admissionRequestCreateSchema.partial().extend({
-  id: z.string(),
-});
-
-export const admissionTransitionSchema = z.object({
-  id:            z.string(),
-  to:            z.nativeEnum(AdmissionStatus),
-  notes:         z.string().max(2000).optional(),
-  // Solo para ADMITTED: fecha de ingreso efectivo
-  admissionDate: z.coerce.date().optional(),
-});
-
-export const admissionCloseSchema = z.object({
-  id:           z.string(),
-  status:       z.enum(['REJECTED', 'WITHDRAWN']),
-  outcomeReason: z.string().max(2000).optional(),
-});
+export {
+  admissionRequestCreateSchema,
+  admissionRequestUpdateSchema,
+  admissionTransitionSchema,
+  admissionCloseSchema,
+};
 
 // ---------------------------------------------------------------------------
 // Router

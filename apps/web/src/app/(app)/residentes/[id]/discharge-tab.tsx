@@ -24,14 +24,13 @@ import {
   SectionCard,
   Select,
 } from '@vetlla/ui';
-import type { DischargeType } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
 import { useZodForm } from '@/lib/form';
 import { formatDate } from '@/lib/format';
-import { RegisterDischargeInput } from '@/server/routers/discharge';
+import { RegisterDischargeInput, type DischargeType } from '@/lib/schemas/discharge';
 import { DISCHARGE_TYPE_LABELS } from '@/lib/labels';
 
 // ---------------------------------------------------------------------------
