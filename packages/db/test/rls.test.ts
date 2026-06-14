@@ -158,6 +158,88 @@ describe.skipIf(!hasDb)('RLS — aislamiento multitenant', () => {
     await dbAdmin.pushSubscription.delete({ where: { id: subA.id } });
   });
 
+  it('ActivityEnrollment — aislamiento RLS entre tenants', async () => {
+    const dbAdmin = asPlatformAdmin();
+    const dbA = forTenant({ tenantId: tenantAId });
+    const dbB = forTenant({ tenantId: tenantBId });
+
+    // Cada tenant necesita un centro y un residente.
+    const centerA = await dbA.center.create({
+      data: { tenantId: tenantAId, name: 'Centro Act A', type: 'RESIDENCIA' },
+    });
+    const centerB = await dbB.center.create({
+      data: { tenantId: tenantBId, name: 'Centro Act B', type: 'RESIDENCIA' },
+    });
+    const residentA = await dbA.resident.create({
+      data: { tenantId: tenantAId, centerId: centerA.id, firstName: 'Resident', lastName: 'A-Act' },
+    });
+    const residentB = await dbB.resident.create({
+      data: { tenantId: tenantBId, centerId: centerB.id, firstName: 'Resident', lastName: 'B-Act' },
+    });
+
+    // Cada tenant crea una actividad y una sesión.
+    const activityA = await dbA.activity.create({
+      data: { tenantId: tenantAId, name: 'Taller memoria A', maxCapacity: 10, durationMin: 60 },
+    });
+    const activityB = await dbB.activity.create({
+      data: { tenantId: tenantBId, name: 'Taller memoria B', maxCapacity: 10, durationMin: 60 },
+    });
+    const sessionA = await dbA.activitySession.create({
+      data: {
+        tenantId:   tenantAId,
+        activityId: activityA.id,
+        startsAt:   new Date('2026-07-01T10:00:00Z'),
+        endsAt:     new Date('2026-07-01T11:00:00Z'),
+      },
+    });
+    const sessionB = await dbB.activitySession.create({
+      data: {
+        tenantId:   tenantBId,
+        activityId: activityB.id,
+        startsAt:   new Date('2026-07-01T10:00:00Z'),
+        endsAt:     new Date('2026-07-01T11:00:00Z'),
+      },
+    });
+
+    // Tenant A crea una inscripción para su residente.
+    const enrollmentA = await dbA.activityEnrollment.create({
+      data: {
+        tenantId:   tenantAId,
+        sessionId:  sessionA.id,
+        residentId: residentA.id,
+        status:     'INSCRITO',
+      },
+    });
+
+    // Tenant A ve su inscripción.
+    const fromA = await dbA.activityEnrollment.findMany();
+    expect(fromA.every((e) => e.tenantId === tenantAId)).toBe(true);
+    expect(fromA.some((e) => e.id === enrollmentA.id)).toBe(true);
+
+    // Tenant B no ve la inscripción de A (ni forzando el where).
+    const fromB = await dbB.activityEnrollment.findMany({ where: { id: enrollmentA.id } });
+    expect(fromB).toHaveLength(0);
+
+    // WITH CHECK: Tenant B no puede crear una inscripción para el tenant A.
+    await expect(
+      dbB.activityEnrollment.create({
+        data: {
+          tenantId:   tenantAId, // intento cross-tenant
+          sessionId:  sessionB.id,
+          residentId: residentB.id,
+          status:     'INSCRITO',
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Limpieza.
+    await dbAdmin.activityEnrollment.delete({ where: { id: enrollmentA.id } });
+    await dbAdmin.activitySession.deleteMany({ where: { id: { in: [sessionA.id, sessionB.id] } } });
+    await dbAdmin.activity.deleteMany({ where: { id: { in: [activityA.id, activityB.id] } } });
+    await dbAdmin.resident.deleteMany({ where: { id: { in: [residentA.id, residentB.id] } } });
+    await dbAdmin.center.deleteMany({ where: { id: { in: [centerA.id, centerB.id] } } });
+  });
+
   it('AdmissionRequest — aislamiento RLS entre tenants', async () => {
     const dbAdmin = asPlatformAdmin();
     const dbA = forTenant({ tenantId: tenantAId });

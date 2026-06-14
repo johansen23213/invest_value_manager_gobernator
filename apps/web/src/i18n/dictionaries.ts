@@ -405,6 +405,8 @@ const es: Record<string, string> = {
   'rbac.perm.billing:manage': 'Crear tarifas, emitir, anular y registrar el cobro de facturas',
   'rbac.perm.admissions:read': 'Ver solicitudes de admisión, lista de espera y proyección de ocupación',
   'rbac.perm.admissions:manage': 'Crear y gestionar solicitudes de admisión, transicionar estados y registrar ingresos',
+  'rbac.perm.activities:read': 'Ver el catálogo de actividades, sesiones e inscripciones de residentes',
+  'rbac.perm.activities:manage': 'Gestionar el catálogo de actividades, programar sesiones, inscribir residentes y registrar asistencia',
 
   // Visión 360 del residente (R-360)
   'r360.title': 'Visión 360',
@@ -1646,6 +1648,95 @@ const es: Record<string, string> = {
   'admissions.forecast.admissions':  'Ingresos previstos',
   'admissions.forecast.empty':       'Sin datos de proyección.',
   'admissions.forecast.calculate':   'Calcular',
+
+  // ---------------------------------------------------------------------------
+  // Actividades — animación sociocultural / terapia ocupacional (ACT-001..ACT-010)
+  // ---------------------------------------------------------------------------
+  'nav.activities': 'Actividades',
+
+  // Categorías de actividad
+  'activity.category.COGNITIVA':  'Cognitiva',
+  'activity.category.FISICA':     'Física',
+  'activity.category.SOCIAL':     'Social',
+  'activity.category.CREATIVA':   'Creativa',
+  'activity.category.SALIDA':     'Salida',
+  'activity.category.OTRA':       'Otra',
+
+  // Estados de sesión
+  'activity.session.status.PROGRAMADA': 'Programada',
+  'activity.session.status.REALIZADA':  'Realizada',
+  'activity.session.status.CANCELADA':  'Cancelada',
+
+  // Estados de inscripción
+  'activity.enrollment.status.INSCRITO':      'Inscrito',
+  'activity.enrollment.status.LISTA_ESPERA':  'Lista de espera',
+  'activity.enrollment.status.CANCELADO':     'Cancelado',
+
+  // Catálogo de actividades
+  'activities.catalog.title':       'Catálogo de actividades',
+  'activities.catalog.new':         'Nueva actividad',
+  'activities.catalog.empty.title': 'Sin actividades',
+  'activities.catalog.empty.desc':  'Crea la primera actividad del catálogo.',
+  'activities.catalog.archive':     'Archivar',
+  'activities.catalog.archived':    'Actividad archivada.',
+  'activities.catalog.active':      'Activa',
+  'activities.catalog.inactive':    'Inactiva',
+
+  // Formulario de actividad
+  'activities.form.name':           'Nombre de la actividad',
+  'activities.form.namePh':         'p. ej. Taller de memoria',
+  'activities.form.description':    'Descripción',
+  'activities.form.category':       'Categoría',
+  'activities.form.location':       'Lugar',
+  'activities.form.locationPh':     'p. ej. Sala polivalente',
+  'activities.form.maxCapacity':    'Aforo máximo',
+  'activities.form.durationMin':    'Duración (minutos)',
+  'activities.form.responsible':    'Responsable',
+  'activities.form.submit':         'Crear actividad',
+  'activities.form.submitting':     'Creando…',
+  'activities.form.success':        'Actividad creada.',
+  'activities.form.updated':        'Actividad actualizada.',
+
+  // Sesiones
+  'activities.sessions.title':       'Sesiones',
+  'activities.sessions.new':         'Programar sesión',
+  'activities.sessions.empty.title': 'Sin sesiones programadas',
+  'activities.sessions.empty.desc':  'Programa la primera sesión.',
+  'activities.sessions.cancel':      'Cancelar sesión',
+  'activities.sessions.cancelled':   'Sesión cancelada.',
+  'activities.sessions.startsAt':    'Inicio',
+  'activities.sessions.endsAt':      'Fin',
+  'activities.sessions.notes':       'Notas',
+
+  // Inscripciones
+  'activities.enrollments.title':     'Inscripciones',
+  'activities.enrollments.enroll':    'Inscribir residente',
+  'activities.enrollments.cancel':    'Cancelar inscripción',
+  'activities.enrollments.cancelled': 'Inscripción cancelada.',
+  'activities.enrollments.enrolled':  'Residente inscrito.',
+  'activities.enrollments.waiting':   'Apuntado a la lista de espera.',
+  'activities.enrollments.promoted':  'Residente promovido de la lista de espera a inscrito.',
+  'activities.enrollments.capacity':  '{enrolled}/{max} plazas',
+  'activities.enrollments.full':      'Sin plazas disponibles',
+  'activities.enrollments.waiting.count': '{count} en lista de espera',
+
+  // Asistencia
+  'activities.attendance.title':     'Asistencia',
+  'activities.attendance.record':    'Registrar asistencia',
+  'activities.attendance.saved':     'Asistencia registrada.',
+  'activities.attendance.attended':  'Asistió',
+  'activities.attendance.notAttended': 'No asistió',
+  'activities.attendance.observation': 'Observación',
+  'activities.attendance.observationPh': 'p. ej. Participó con entusiasmo',
+
+  // Portal de familias — participación del residente
+  'activities.portal.title':       'Actividades',
+  'activities.portal.intro':       'Actividades en las que participa tu familiar.',
+  'activities.portal.empty.title': 'Sin actividades registradas',
+  'activities.portal.empty.desc':  'El centro aún no ha registrado actividades para tu familiar.',
+  'activities.portal.attended':    'Asistió',
+  'activities.portal.notAttended': 'No asistió',
+  'activities.portal.pending':     'Pendiente',
 };
 
 const ca: Record<string, string> = {
@@ -2050,6 +2141,8 @@ const ca: Record<string, string> = {
   'rbac.perm.billing:manage': 'Crear tarifes, emetre, anul·lar i registrar el cobrament de factures',
   'rbac.perm.admissions:read': "Veure sol·licituds d'admissió, llista d'espera i projecció d'ocupació",
   'rbac.perm.admissions:manage': "Crear i gestionar sol·licituds d'admissió, transitar estats i registrar ingressos",
+  'rbac.perm.activities:read': "Veure el catàleg d'activitats, sessions i inscripcions de residents",
+  'rbac.perm.activities:manage': "Gestionar el catàleg d'activitats, programar sessions, inscriure residents i registrar assistència",
 
   // Visió 360 del resident (R-360)
   'r360.title': 'Visió 360',
@@ -3282,6 +3375,95 @@ const ca: Record<string, string> = {
   'admissions.forecast.admissions':  'Ingressos previstos',
   'admissions.forecast.empty':       'Sense dades de projecció.',
   'admissions.forecast.calculate':   'Calcular',
+
+  // ---------------------------------------------------------------------------
+  // Activitats — animació sociocultural / teràpia ocupacional (ACT-001..ACT-010)
+  // ---------------------------------------------------------------------------
+  'nav.activities': 'Activitats',
+
+  // Categories d'activitat
+  'activity.category.COGNITIVA':  'Cognitiva',
+  'activity.category.FISICA':     'Física',
+  'activity.category.SOCIAL':     'Social',
+  'activity.category.CREATIVA':   'Creativa',
+  'activity.category.SALIDA':     'Sortida',
+  'activity.category.OTRA':       'Altra',
+
+  // Estats de sessió
+  'activity.session.status.PROGRAMADA': 'Programada',
+  'activity.session.status.REALIZADA':  'Realitzada',
+  'activity.session.status.CANCELADA':  'Cancel·lada',
+
+  // Estats d'inscripció
+  'activity.enrollment.status.INSCRITO':      'Inscrit',
+  'activity.enrollment.status.LISTA_ESPERA':  'Llista d\'espera',
+  'activity.enrollment.status.CANCELADO':     'Cancel·lat',
+
+  // Catàleg d'activitats
+  'activities.catalog.title':       "Catàleg d'activitats",
+  'activities.catalog.new':         'Nova activitat',
+  'activities.catalog.empty.title': 'Sense activitats',
+  'activities.catalog.empty.desc':  'Crea la primera activitat del catàleg.',
+  'activities.catalog.archive':     'Arxivar',
+  'activities.catalog.archived':    'Activitat arxivada.',
+  'activities.catalog.active':      'Activa',
+  'activities.catalog.inactive':    'Inactiva',
+
+  // Formulari d'activitat
+  'activities.form.name':           "Nom de l'activitat",
+  'activities.form.namePh':         'p. ex. Taller de memòria',
+  'activities.form.description':    'Descripció',
+  'activities.form.category':       'Categoria',
+  'activities.form.location':       'Lloc',
+  'activities.form.locationPh':     'p. ex. Sala polivalent',
+  'activities.form.maxCapacity':    'Aforament màxim',
+  'activities.form.durationMin':    'Durada (minuts)',
+  'activities.form.responsible':    'Responsable',
+  'activities.form.submit':         'Crear activitat',
+  'activities.form.submitting':     'Creant…',
+  'activities.form.success':        'Activitat creada.',
+  'activities.form.updated':        'Activitat actualitzada.',
+
+  // Sessions
+  'activities.sessions.title':       'Sessions',
+  'activities.sessions.new':         'Programar sessió',
+  'activities.sessions.empty.title': 'Sense sessions programades',
+  'activities.sessions.empty.desc':  'Programa la primera sessió.',
+  'activities.sessions.cancel':      'Cancel·lar sessió',
+  'activities.sessions.cancelled':   'Sessió cancel·lada.',
+  'activities.sessions.startsAt':    'Inici',
+  'activities.sessions.endsAt':      'Fi',
+  'activities.sessions.notes':       'Notes',
+
+  // Inscripcions
+  'activities.enrollments.title':     'Inscripcions',
+  'activities.enrollments.enroll':    'Inscriure resident',
+  'activities.enrollments.cancel':    "Cancel·lar inscripció",
+  'activities.enrollments.cancelled': 'Inscripció cancel·lada.',
+  'activities.enrollments.enrolled':  'Resident inscrit.',
+  'activities.enrollments.waiting':   "Apuntat a la llista d'espera.",
+  'activities.enrollments.promoted':  "Resident promocionat de la llista d'espera a inscrit.",
+  'activities.enrollments.capacity':  '{enrolled}/{max} places',
+  'activities.enrollments.full':      'Sense places disponibles',
+  'activities.enrollments.waiting.count': '{count} en llista d\'espera',
+
+  // Assistència
+  'activities.attendance.title':     'Assistència',
+  'activities.attendance.record':    "Registrar assistència",
+  'activities.attendance.saved':     'Assistència registrada.',
+  'activities.attendance.attended':  'Va assistir',
+  'activities.attendance.notAttended': 'No va assistir',
+  'activities.attendance.observation': 'Observació',
+  'activities.attendance.observationPh': 'p. ex. Va participar amb entusiasme',
+
+  // Portal de famílies — participació del resident
+  'activities.portal.title':       'Activitats',
+  'activities.portal.intro':       'Activitats en les quals participa el teu familiar.',
+  'activities.portal.empty.title': 'Sense activitats registrades',
+  'activities.portal.empty.desc':  'El centre encara no ha registrat activitats per al teu familiar.',
+  'activities.portal.attended':    'Va assistir',
+  'activities.portal.notAttended': 'No va assistir',
+  'activities.portal.pending':     'Pendent',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };

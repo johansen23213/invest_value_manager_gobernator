@@ -42,6 +42,9 @@
 //    ingreso/preadmisión). export:true, anonymize:'scrub' (PII del candidato limpiada,
 //    fila conservada para trazabilidad del proceso).
 //    La versión del JSON sube de 6 a 7.
+//  - v8 (2026-06-14, Actividades): añadida ActivityEnrollment (inscripción y asistencia
+//    a actividades). export:true, anonymize:'delete' (dato personal: participación,
+//    observación del estado de ánimo). La versión del JSON sube de 7 a 8.
 
 import type { TenantPrisma } from './rls';
 
@@ -76,7 +79,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 7;
+  version: 8;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -112,6 +115,8 @@ export interface ResidentExport {
   invoices: unknown[];
   // v7: Admisión/Preadmisión (RF-ADM-001..010) — historial del proceso de admisión
   admissionRequests: unknown[];
+  // v8: Actividades (animación sociocultural / terapia ocupacional)
+  activityEnrollments: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -172,6 +177,7 @@ export async function exportResidentData(
     billingProfile,
     invoices,
     admissionRequests,
+    activityEnrollments,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -257,11 +263,18 @@ export async function exportResidentData(
       where:   { residentId },
       orderBy: { requestedAt: 'asc' },
     }),
+    // v8: Actividades — inscripciones y asistencia del residente.
+    // Participación en actividades y estado de ánimo son datos personales (art. 15).
+    db.activityEnrollment.findMany({
+      where:   { residentId },
+      include: { session: { select: { id: true, startsAt: true, endsAt: true, activityId: true } } },
+      orderBy: { enrolledAt: 'asc' },
+    }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 7,
+    version: 8,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -291,6 +304,7 @@ export async function exportResidentData(
     billingProfile,
     invoices,
     admissionRequests,
+    activityEnrollments,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -418,6 +432,8 @@ export async function anonymizeResident(
     await db.wellbeingProfile.deleteMany({ where: { residentId } });
     // Épica C — registros de ingesta (v5, dato de salud nutricional):
     await db.intakeRecord.deleteMany({ where: { residentId } });
+    // Actividades (v8, animación sociocultural / terapia ocupacional):
+    await db.activityEnrollment.deleteMany({ where: { residentId } });
   }
 
   // Admisión/Preadmisión (v7, RF-ADM-001..010) — política 'scrub' SIEMPRE:

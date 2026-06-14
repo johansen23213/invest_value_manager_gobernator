@@ -145,6 +145,7 @@ describe('DSAR coverage — cobertura estructural por tabla con residentId (sin 
     expect(sorted.length).toBeGreaterThan(0);
     // Verificar que están los modelos conocidos del MVP
     const expectedKnown = [
+      'ActivityEnrollment',
       'AdmissionRequest',
       'Allergy',
       'Announcement',
