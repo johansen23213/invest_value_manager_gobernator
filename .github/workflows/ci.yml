@@ -275,8 +275,11 @@ jobs:
         run: pnpm --filter @vetlla/web exec playwright install --with-deps chromium
 
       # --- Paso 8: E2E — falla de verdad si un spec falla ---
+      # Playwright directo (no el script test:e2e, que usa `dotenv -e ../../.env`
+      # y .env NO existe en CI). Las variables ya están en el env del job; la app
+      # ya corre en :3000 (reuseExistingServer:true en playwright.config).
       - name: Run E2E tests
-        run: pnpm --filter @vetlla/web test:e2e
+        run: pnpm --filter @vetlla/web exec playwright test
 
       # Artefactos de Playwright en caso de fallo (trazas, capturas)
       - name: Upload Playwright traces on failure
