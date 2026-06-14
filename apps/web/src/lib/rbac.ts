@@ -96,6 +96,32 @@ export const PERMISSIONS = [
   // permite revocar el acceso al panel de calidad sin tocar otros permisos, y
   // permite que en el futuro se añada quality:write para gestionar umbrales.
   'quality:read',
+  // Inventario / Almacén / Lavandería / Pertenencias del residente
+  //
+  // inventory:read   → ver stock del centro, movimientos y pertenencias de residentes.
+  // inventory:manage → gestionar artículos (alta, modificación, archivo), registrar
+  //                    entradas/salidas/ajustes de stock y gestionar pertenencias.
+  //
+  // Matriz RBAC:
+  //   SUPERADMIN → manage + read (todos los permisos)
+  //   DIRECTOR   → manage + read (responsable de la gestión del centro y su inventario)
+  //   AUXILIAR   → manage + read (los auxiliares usan el inventario a diario: registran
+  //                consumos de absorbentes, higiene, material de curas; gestionan la
+  //                ropa en lavandería y las pertenencias a pie de cama)
+  //   SANITARIO  → read (puede consultar stock de material de curas y pertenencias)
+  //   FAMILIAR   → sin permiso aquí; accede solo-lectura a las pertenencias de SU
+  //                residente vía belongings.listMine con assertFamilyAccess (no usa
+  //                estos permisos — mismo patrón que portal:read + assertFamilyAccess
+  //                en visitas, solicitudes y mensajería)
+  //
+  // Decisión de dominio propio (no reutilizar care:write):
+  //   El inventario es ortogonal a la atención directa. Un auxiliar puede registrar
+  //   salidas de absorbentes sin tener permisos clínicos; un sanitario puede leer
+  //   el stock sin poder modificarlo. El permiso propio permite escalar el acceso
+  //   de forma independiente y evita que el módulo quede bloqueado si en el futuro
+  //   se añade un perfil de logística que no tiene care:write.
+  'inventory:read',
+  'inventory:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -134,6 +160,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'activities:read',
     'activities:manage',
     'quality:read',
+    'inventory:read',
+    'inventory:manage',
   ],
   SANITARIO: [
     'tenant:read',
@@ -175,6 +203,10 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     // caídas, valoraciones) son relevantes para la práctica clínica y la mejora
     // de la atención. El panel de calidad complementa el expediente individual.
     'quality:read',
+    // SANITARIO tiene inventory:read: puede consultar el stock de material de
+    // curas y las pertenencias del residente (útil para la práctica clínica).
+    // No puede gestionar el inventario (inventory:manage es DIRECTOR + AUXILIAR).
+    'inventory:read',
   ],
   // El auxiliar registra atención directa y administra medicación (MAR).
   // En muchos centros el auxiliar hace las funciones de recepción (check-in/out).
@@ -197,6 +229,11 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     // programación de sesiones, inscripción de residentes y registro de asistencia.
     'activities:read',
     'activities:manage',
+    // AUXILIAR gestiona el inventario a diario: registra consumos (absorbentes,
+    // higiene, material de curas), gestiona la ropa en lavandería y las
+    // pertenencias del residente. Es el perfil que más lo usa operativamente.
+    'inventory:read',
+    'inventory:manage',
   ],
   FAMILIAR: [
     'tenant:read',

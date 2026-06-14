@@ -306,6 +306,40 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
   },
 
   // ---------------------------------------------------------------------------
+  // Inventario / Almacén / Lavandería / Pertenencias del residente
+  //
+  // InventoryItem / InventoryMovement: son stock del CENTRO (sin residentId).
+  //   No se declaran aquí: no tienen datos personales del residente.
+  //
+  // ResidentBelonging: pertenencias personales del residente (ropa, calzado,
+  //   joyería, documentos…). La ropa marcada para lavandería también se modela
+  //   aquí (status = EN_LAVANDERIA).
+  //
+  //   Política DSAR:
+  //     export:true  — el interesado tiene derecho a ver el registro de sus
+  //                    pertenencias (art. 15 RGPD: datos que le conciernen).
+  //     anonymize:'delete' — las pertenencias personales NO son registro clínico.
+  //                    No existe obligación legal de conservación sanitaria para
+  //                    este dato. Al suprimir el residente, las pertenencias se
+  //                    devuelven a la familia o se registra la devolución en el
+  //                    expediente de baja (DischargeRecord.belongingsReturned).
+  //                    La fila en resident_belongings se borra: no hay interés
+  //                    legítimo de conservación del centro (art. 17.3.b RGPD no
+  //                    aplica — no es dato fiscal ni sanitario obligatorio).
+  //                    Razón para no usar 'scrub': no hay campos PII de terceros
+  //                    en esta tabla (description/label son del objeto, no de personas).
+  // ---------------------------------------------------------------------------
+  {
+    model:     'ResidentBelonging',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Pertenencias personales del residente (ropa, calzado, joyería, documentos, ropa en lavandería). ' +
+               'Dato personal del interesado: export art.15 (tiene derecho a ver el inventario de sus pertenencias). ' +
+               'En anonimización: delete (no es registro clínico ni sanitario; no hay obligación de conservación. ' +
+               'Las pertenencias se devuelven/documentan en DischargeRecord.belongingsReturned antes de la supresión).',
+  },
+
+  // ---------------------------------------------------------------------------
   // Admisión / Preadmisión (RF-ADM-001..010)
   //
   // Política DSAR de AdmissionRequest:

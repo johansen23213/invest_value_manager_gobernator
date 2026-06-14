@@ -409,6 +409,133 @@ const es: Record<string, string> = {
   'rbac.perm.activities:manage': 'Gestionar el catálogo de actividades, programar sesiones, inscribir residentes y registrar asistencia',
   // Indicadores de calidad asistencial (panel de cohorte)
   'rbac.perm.quality:read': 'Ver el panel de indicadores de calidad asistencial del centro (UPP, caídas, valoraciones de riesgo, sujeciones)',
+  // Inventario / almacén / lavandería / pertenencias
+  'rbac.perm.inventory:read': 'Ver el stock del centro, movimientos de inventario y pertenencias de los residentes',
+  'rbac.perm.inventory:manage': 'Gestionar artículos del inventario, registrar entradas/salidas/ajustes y gestionar pertenencias de residentes',
+
+  // ---------------------------------------------------------------------------
+  // Inventario / Almacén / Lavandería / Pertenencias (dominio inventory)
+  // ---------------------------------------------------------------------------
+  'nav.inventory': 'Inventario',
+
+  // Categorías de inventario (InventoryCategory)
+  'inv.category.CONSUMIBLE':    'Consumible',
+  'inv.category.ABSORBENTES':   'Absorbentes',
+  'inv.category.HIGIENE':       'Higiene',
+  'inv.category.MATERIAL_CURAS': 'Material de curas',
+  'inv.category.LENCERIA':      'Lencería',
+  'inv.category.OTRO':          'Otro',
+
+  // Tipos de movimiento (MovementType)
+  'inv.movement.ENTRADA': 'Entrada',
+  'inv.movement.SALIDA':  'Salida',
+  'inv.movement.AJUSTE':  'Ajuste de inventario',
+
+  // Categorías de pertenencia (BelongingCategory)
+  'inv.belonging.category.ROPA':       'Ropa',
+  'inv.belonging.category.CALZADO':    'Calzado',
+  'inv.belonging.category.ELECTRONICA': 'Electrónica',
+  'inv.belonging.category.JOYERIA':    'Joyería / complementos',
+  'inv.belonging.category.DOCUMENTO':  'Documento',
+  'inv.belonging.category.OTRO':       'Otro',
+
+  // Estados de pertenencia (BelongingStatus)
+  'inv.belonging.status.EN_USO':       'En uso',
+  'inv.belonging.status.ALMACENADO':   'Almacenado',
+  'inv.belonging.status.EN_LAVANDERIA': 'En lavandería',
+  'inv.belonging.status.DEVUELTO':     'Devuelto',
+  'inv.belonging.status.PERDIDO':      'Perdido',
+
+  // Cabeceras de lista — inventario
+  'inv.list.name':      'Artículo',
+  'inv.list.category':  'Categoría',
+  'inv.list.unit':      'Unidad',
+  'inv.list.stock':     'Stock',
+  'inv.list.stockMin':  'Mín.',
+  'inv.list.location':  'Ubicación',
+  'inv.list.status':    'Estado',
+  'inv.list.actions':   'Acciones',
+
+  // Cabeceras de lista — pertenencias
+  'inv.belonging.list.description': 'Descripción',
+  'inv.belonging.list.category':    'Categoría',
+  'inv.belonging.list.quantity':    'Cantidad',
+  'inv.belonging.list.label':       'Etiqueta',
+  'inv.belonging.list.status':      'Estado',
+  'inv.belonging.list.registeredAt': 'Registrada el',
+
+  // Acciones — inventario
+  'inv.action.create':    'Nuevo artículo',
+  'inv.action.edit':      'Editar',
+  'inv.action.archive':   'Archivar',
+  'inv.action.archived':  'Artículo archivado.',
+  'inv.action.record':    'Registrar movimiento',
+  'inv.action.recorded':  'Movimiento registrado.',
+
+  // Acciones — pertenencias
+  'inv.belonging.action.add':       'Añadir pertenencia',
+  'inv.belonging.action.edit':      'Editar',
+  'inv.belonging.action.setStatus': 'Cambiar estado',
+  'inv.belonging.action.statusSet': 'Estado actualizado.',
+
+  // Alertas
+  'inv.alert.lowStock':       'Stock bajo',
+  'inv.alert.lowStockDesc':   '{name}: quedan {stock} {unit} (mínimo {min}).',
+  'inv.alert.noLowStock':     'Sin artículos con stock bajo.',
+
+  // Formulario de artículo
+  'inv.form.item.title':        'Nuevo artículo',
+  'inv.form.item.titleEdit':    'Editar artículo',
+  'inv.form.item.name':         'Nombre',
+  'inv.form.item.namePh':       'p. ej. Absorbentes talla M',
+  'inv.form.item.category':     'Categoría',
+  'inv.form.item.unit':         'Unidad de medida',
+  'inv.form.item.unitPh':       'p. ej. unidad, caja, litro',
+  'inv.form.item.stockMin':     'Stock mínimo de alerta',
+  'inv.form.item.location':     'Ubicación',
+  'inv.form.item.locationPh':   'p. ej. Almacén 1, Planta 2',
+  'inv.form.item.submit':       'Guardar artículo',
+  'inv.form.item.submitting':   'Guardando…',
+  'inv.form.item.saved':        'Artículo guardado.',
+
+  // Formulario de movimiento
+  'inv.form.movement.title':      'Registrar movimiento',
+  'inv.form.movement.type':       'Tipo de movimiento',
+  'inv.form.movement.quantity':   'Cantidad',
+  'inv.form.movement.reason':     'Motivo (opcional)',
+  'inv.form.movement.reasonPh':   'p. ej. Reposición mensual, consumo UCI…',
+  'inv.form.movement.submit':     'Registrar',
+  'inv.form.movement.submitting': 'Registrando…',
+
+  // Formulario de pertenencia
+  'inv.form.belonging.title':        'Añadir pertenencia',
+  'inv.form.belonging.titleEdit':    'Editar pertenencia',
+  'inv.form.belonging.description':  'Descripción',
+  'inv.form.belonging.descriptionPh': 'p. ej. Chaqueta azul, Reloj Casio…',
+  'inv.form.belonging.category':     'Categoría',
+  'inv.form.belonging.quantity':     'Cantidad',
+  'inv.form.belonging.label':        'Etiqueta / código',
+  'inv.form.belonging.labelPh':      'p. ej. código de lavandería, nº de serie',
+  'inv.form.belonging.status':       'Estado inicial',
+  'inv.form.belonging.notes':        'Notas (opcional)',
+  'inv.form.belonging.notesPh':      'Observaciones sobre el estado de la prenda, valor estimado…',
+  'inv.form.belonging.submit':       'Guardar pertenencia',
+  'inv.form.belonging.submitting':   'Guardando…',
+  'inv.form.belonging.saved':        'Pertenencia registrada.',
+
+  // Lavandería
+  'inv.laundry.title':      'Lavandería',
+  'inv.laundry.inLaundry':  'En lavandería',
+  'inv.laundry.empty':      'Sin prendas en lavandería.',
+  'inv.laundry.sendLabel':  'Enviar a lavandería',
+  'inv.laundry.returnLabel': 'Registrar devolución',
+
+  // Visión 360 del residente — bloque pertenencias
+  'r360.belongings.title': 'Pertenencias',
+  'r360.belongings.empty': 'Sin pertenencias registradas.',
+
+  // Visión 360 del residente
+  // (r360.title ya existe en la sección R-360 más abajo)
 
   // Visión 360 del residente (R-360)
   'r360.title': 'Visión 360',
@@ -2357,6 +2484,130 @@ const ca: Record<string, string> = {
   'rbac.perm.activities:manage': "Gestionar el catàleg d'activitats, programar sessions, inscriure residents i registrar assistència",
   // Indicadors de qualitat assistencial (panell de cohort)
   'rbac.perm.quality:read': "Veure el panell d'indicadors de qualitat assistencial del centre (UPP, caigudes, valoracions de risc, subjecions)",
+  // Inventari / magatzem / bugaderia / pertinences
+  'rbac.perm.inventory:read': "Veure l'estoc del centre, moviments d'inventari i pertinences dels residents",
+  'rbac.perm.inventory:manage': "Gestionar articles de l'inventari, registrar entrades/sortides/ajustos i gestionar pertinences de residents",
+
+  // ---------------------------------------------------------------------------
+  // Inventari / Magatzem / Bugaderia / Pertinences (domini inventory)
+  // ---------------------------------------------------------------------------
+  'nav.inventory': 'Inventari',
+
+  // Categories d'inventari (InventoryCategory)
+  'inv.category.CONSUMIBLE':    'Consumible',
+  'inv.category.ABSORBENTES':   'Absorbents',
+  'inv.category.HIGIENE':       'Higiene',
+  'inv.category.MATERIAL_CURAS': 'Material de cures',
+  'inv.category.LENCERIA':      'Llenceria',
+  'inv.category.OTRO':          'Altre',
+
+  // Tipus de moviment (MovementType)
+  'inv.movement.ENTRADA': 'Entrada',
+  'inv.movement.SALIDA':  'Sortida',
+  'inv.movement.AJUSTE':  "Ajust d'inventari",
+
+  // Categories de pertinença (BelongingCategory)
+  'inv.belonging.category.ROPA':       'Roba',
+  'inv.belonging.category.CALZADO':    'Calçat',
+  'inv.belonging.category.ELECTRONICA': 'Electrònica',
+  'inv.belonging.category.JOYERIA':    'Joieria / complements',
+  'inv.belonging.category.DOCUMENTO':  'Document',
+  'inv.belonging.category.OTRO':       'Altre',
+
+  // Estats de pertinença (BelongingStatus)
+  'inv.belonging.status.EN_USO':       'En ús',
+  'inv.belonging.status.ALMACENADO':   'Emmagatzemat',
+  'inv.belonging.status.EN_LAVANDERIA': 'A la bugaderia',
+  'inv.belonging.status.DEVUELTO':     'Retornat',
+  'inv.belonging.status.PERDIDO':      'Perdut',
+
+  // Capçaleres de llista — inventari
+  'inv.list.name':      'Article',
+  'inv.list.category':  'Categoria',
+  'inv.list.unit':      'Unitat',
+  'inv.list.stock':     'Estoc',
+  'inv.list.stockMin':  'Mín.',
+  'inv.list.location':  'Ubicació',
+  'inv.list.status':    'Estat',
+  'inv.list.actions':   'Accions',
+
+  // Capçaleres de llista — pertinences
+  'inv.belonging.list.description': 'Descripció',
+  'inv.belonging.list.category':    'Categoria',
+  'inv.belonging.list.quantity':    'Quantitat',
+  'inv.belonging.list.label':       'Etiqueta',
+  'inv.belonging.list.status':      'Estat',
+  'inv.belonging.list.registeredAt': 'Registrada el',
+
+  // Accions — inventari
+  'inv.action.create':    'Nou article',
+  'inv.action.edit':      'Editar',
+  'inv.action.archive':   'Arxivar',
+  'inv.action.archived':  'Article arxivat.',
+  'inv.action.record':    'Registrar moviment',
+  'inv.action.recorded':  'Moviment registrat.',
+
+  // Accions — pertinences
+  'inv.belonging.action.add':       'Afegir pertinença',
+  'inv.belonging.action.edit':      'Editar',
+  'inv.belonging.action.setStatus': 'Canviar estat',
+  'inv.belonging.action.statusSet': 'Estat actualitzat.',
+
+  // Alertes
+  'inv.alert.lowStock':       'Estoc baix',
+  'inv.alert.lowStockDesc':   "{name}: queden {stock} {unit} (mínim {min}).",
+  'inv.alert.noLowStock':     "Sense articles amb estoc baix.",
+
+  // Formulari d'article
+  'inv.form.item.title':        'Nou article',
+  'inv.form.item.titleEdit':    'Editar article',
+  'inv.form.item.name':         'Nom',
+  'inv.form.item.namePh':       'p. ex. Absorbents talla M',
+  'inv.form.item.category':     'Categoria',
+  'inv.form.item.unit':         'Unitat de mesura',
+  'inv.form.item.unitPh':       'p. ex. unitat, capsa, litre',
+  'inv.form.item.stockMin':     "Estoc mínim d'alerta",
+  'inv.form.item.location':     'Ubicació',
+  'inv.form.item.locationPh':   'p. ex. Magatzem 1, Planta 2',
+  'inv.form.item.submit':       'Desar article',
+  'inv.form.item.submitting':   'Desant…',
+  'inv.form.item.saved':        'Article desat.',
+
+  // Formulari de moviment
+  'inv.form.movement.title':      'Registrar moviment',
+  'inv.form.movement.type':       'Tipus de moviment',
+  'inv.form.movement.quantity':   'Quantitat',
+  'inv.form.movement.reason':     'Motiu (opcional)',
+  'inv.form.movement.reasonPh':   'p. ex. Reposició mensual, consum UCI…',
+  'inv.form.movement.submit':     'Registrar',
+  'inv.form.movement.submitting': 'Registrant…',
+
+  // Formulari de pertinença
+  'inv.form.belonging.title':        'Afegir pertinença',
+  'inv.form.belonging.titleEdit':    'Editar pertinença',
+  'inv.form.belonging.description':  'Descripció',
+  'inv.form.belonging.descriptionPh': 'p. ex. Jaqueta blava, Rellotge Casio…',
+  'inv.form.belonging.category':     'Categoria',
+  'inv.form.belonging.quantity':     'Quantitat',
+  'inv.form.belonging.label':        'Etiqueta / codi',
+  'inv.form.belonging.labelPh':      'p. ex. codi de bugaderia, nº de sèrie',
+  'inv.form.belonging.status':       'Estat inicial',
+  'inv.form.belonging.notes':        'Notes (opcional)',
+  'inv.form.belonging.notesPh':      "Observacions sobre l'estat de la peça, valor estimat…",
+  'inv.form.belonging.submit':       'Desar pertinença',
+  'inv.form.belonging.submitting':   'Desant…',
+  'inv.form.belonging.saved':        'Pertinença registrada.',
+
+  // Bugaderia
+  'inv.laundry.title':      'Bugaderia',
+  'inv.laundry.inLaundry':  'A la bugaderia',
+  'inv.laundry.empty':      'Sense peces a la bugaderia.',
+  'inv.laundry.sendLabel':  'Enviar a la bugaderia',
+  'inv.laundry.returnLabel': 'Registrar retorn',
+
+  // Visió 360 del resident — bloc pertinences
+  'r360.belongings.title': 'Pertinences',
+  'r360.belongings.empty': 'Sense pertinences registrades.',
 
   // Visió 360 del resident (R-360)
   'r360.title': 'Visió 360',
