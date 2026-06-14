@@ -407,6 +407,8 @@ const es: Record<string, string> = {
   'rbac.perm.admissions:manage': 'Crear y gestionar solicitudes de admisión, transicionar estados y registrar ingresos',
   'rbac.perm.activities:read': 'Ver el catálogo de actividades, sesiones e inscripciones de residentes',
   'rbac.perm.activities:manage': 'Gestionar el catálogo de actividades, programar sesiones, inscribir residentes y registrar asistencia',
+  // Indicadores de calidad asistencial (panel de cohorte)
+  'rbac.perm.quality:read': 'Ver el panel de indicadores de calidad asistencial del centro (UPP, caídas, valoraciones de riesgo, sujeciones)',
 
   // Visión 360 del residente (R-360)
   'r360.title': 'Visión 360',
@@ -2143,6 +2145,8 @@ const ca: Record<string, string> = {
   'rbac.perm.admissions:manage': "Crear i gestionar sol·licituds d'admissió, transitar estats i registrar ingressos",
   'rbac.perm.activities:read': "Veure el catàleg d'activitats, sessions i inscripcions de residents",
   'rbac.perm.activities:manage': "Gestionar el catàleg d'activitats, programar sessions, inscriure residents i registrar assistència",
+  // Indicadors de qualitat assistencial (panell de cohort)
+  'rbac.perm.quality:read': "Veure el panell d'indicadors de qualitat assistencial del centre (UPP, caigudes, valoracions de risc, subjecions)",
 
   // Visió 360 del resident (R-360)
   'r360.title': 'Visió 360',
