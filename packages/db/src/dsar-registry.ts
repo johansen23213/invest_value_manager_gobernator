@@ -269,6 +269,27 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
   },
 
   // ---------------------------------------------------------------------------
+  // Diagnósticos con estado (extensión del modelo Diagnosis existente)
+  //
+  // El modelo Diagnosis ya estaba declarado arriba (expediente clínico base).
+  // No se añade una entrada duplicada: los campos nuevos (type, status,
+  // resolvedAt, prescribedById, notes) son parte del mismo modelo.
+  // La política existente (export:true, anonymize:'delete') ya los cubre.
+  //
+  // AssistiveDevice: ayuda técnica / producto de apoyo del residente.
+  //   Dato de salud (necesidades funcionales — art. 9 RGPD): export art.15.
+  //   En anonimización: delete si !keepClinicalRecords (es historial clínico).
+  // ---------------------------------------------------------------------------
+  {
+    model:     'AssistiveDevice',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Ayuda técnica del residente (silla de ruedas, andador, grúa…): ' +
+               'dato de salud funcional (art. 9 RGPD). Se exporta en DSAR art.15. ' +
+               'Se borra en anonimización si !keepClinicalRecords.',
+  },
+
+  // ---------------------------------------------------------------------------
   // Actividades (animación sociocultural / terapia ocupacional)
   //
   // ActivityEnrollment: inscripción y asistencia de un residente a una sesión.

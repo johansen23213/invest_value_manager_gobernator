@@ -45,6 +45,11 @@
 //  - v8 (2026-06-14, Actividades): añadida ActivityEnrollment (inscripción y asistencia
 //    a actividades). export:true, anonymize:'delete' (dato personal: participación,
 //    observación del estado de ánimo). La versión del JSON sube de 7 a 8.
+//  - v9 (2026-06-14, Diagnósticos+AyudasTécnicas): añadida AssistiveDevice (ayuda
+//    técnica / producto de apoyo). export:true, anonymize:'delete' si !keepClinical.
+//    El modelo Diagnosis ya estaba declarado; sus campos nuevos (type, status,
+//    resolvedAt, notes) no necesitan cambio en el export (ya se serializa el objeto
+//    completo). La versión del JSON sube de 8 a 9.
 
 import type { TenantPrisma } from './rls';
 
@@ -79,7 +84,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 8;
+  version: 9;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -117,6 +122,11 @@ export interface ResidentExport {
   admissionRequests: unknown[];
   // v8: Actividades (animación sociocultural / terapia ocupacional)
   activityEnrollments: unknown[];
+  // v9: Diagnósticos con estado + Ayudas técnicas (productos de apoyo)
+  // Nota: diagnoses ya estaba en v1 (expediente clínico base); sus nuevos
+  // campos (type, status, resolvedAt, notes) se serializan automáticamente
+  // porque el include trae el objeto completo.
+  assistiveDevices: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -178,6 +188,7 @@ export async function exportResidentData(
     invoices,
     admissionRequests,
     activityEnrollments,
+    assistiveDevices,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -270,11 +281,13 @@ export async function exportResidentData(
       include: { session: { select: { id: true, startsAt: true, endsAt: true, activityId: true } } },
       orderBy: { enrolledAt: 'asc' },
     }),
+    // v9: Ayudas técnicas (productos de apoyo). Datos de salud funcional (art. 9).
+    db.assistiveDevice.findMany({ where: { residentId }, orderBy: { prescribedAt: 'asc' } }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 8,
+    version: 9,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -305,6 +318,7 @@ export async function exportResidentData(
     invoices,
     admissionRequests,
     activityEnrollments,
+    assistiveDevices,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -434,6 +448,8 @@ export async function anonymizeResident(
     await db.intakeRecord.deleteMany({ where: { residentId } });
     // Actividades (v8, animación sociocultural / terapia ocupacional):
     await db.activityEnrollment.deleteMany({ where: { residentId } });
+    // Ayudas técnicas (v9, productos de apoyo):
+    await db.assistiveDevice.deleteMany({ where: { residentId } });
   }
 
   // Admisión/Preadmisión (v7, RF-ADM-001..010) — política 'scrub' SIEMPRE:

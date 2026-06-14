@@ -1088,3 +1088,166 @@ describe('paridad es/ca — Indicadors de qualitat assistencial (quality:read)',
     }
   });
 });
+
+describe('paridad es/ca — Diagnòstics amb estat + Ajudes tècniques', () => {
+  const diagnosticosKeys = [
+    // Tipus de diagnòstic
+    'dx.type.PRINCIPAL',
+    'dx.type.SECUNDARIO',
+    // Estats de diagnòstic
+    'dx.status.ACTIVO',
+    'dx.status.CRONICO',
+    'dx.status.RESUELTO',
+    // Pantalla expedient — diagnòstics
+    'exp.dx.title',
+    'exp.dx.subtitle',
+    'exp.dx.empty',
+    'exp.dx.add',
+    'exp.dx.section.active',
+    'exp.dx.section.resolved',
+    'exp.dx.section.resolved.empty',
+    'exp.dx.badge.ACTIVO',
+    'exp.dx.badge.CRONICO',
+    'exp.dx.badge.RESUELTO',
+    'exp.dx.badge.PRINCIPAL',
+    'exp.dx.badge.SECUNDARIO',
+    'exp.dx.code',
+    'exp.dx.codePh',
+    'exp.dx.resolvedAt',
+    // Formulari diagnòstic
+    'exp.dx.form.title',
+    'exp.dx.form.edit',
+    'exp.dx.form.code',
+    'exp.dx.form.description',
+    'exp.dx.form.descriptionPh',
+    'exp.dx.form.type',
+    'exp.dx.form.status',
+    'exp.dx.form.diagnosedAt',
+    'exp.dx.form.notes',
+    'exp.dx.form.notesPh',
+    'exp.dx.form.submit',
+    'exp.dx.form.submitting',
+    'exp.dx.form.saved',
+    // Transició d'estat
+    'exp.dx.transition.title',
+    'exp.dx.transition.next',
+    'exp.dx.transition.resolvedAt',
+    'exp.dx.transition.submit',
+    'exp.dx.transition.submitting',
+    'exp.dx.transition.done',
+    'exp.dx.resolve.title',
+    'exp.dx.resolve.resolvedAt',
+    'exp.dx.resolve.submit',
+    'exp.dx.resolve.done',
+    // Resum 360
+    'r360.dx.status',
+    'r360.dx.viewAll',
+  ];
+
+  const ayudasKeys = [
+    // Tipus
+    'ad.type.SILLA_RUEDAS',
+    'ad.type.ANDADOR',
+    'ad.type.GRUA',
+    'ad.type.CAMA_ARTICULADA',
+    'ad.type.AUDIFONO',
+    'ad.type.OXIGENO',
+    'ad.type.MULETAS',
+    'ad.type.ORTESIS',
+    'ad.type.SILLA_DUCHA',
+    'ad.type.COLCHON_ANTIESCARAS',
+    'ad.type.OTRO',
+    // Estats
+    'ad.status.ACTIVO',
+    'ad.status.RETIRADO',
+    // Propietat
+    'ad.ownership.center',
+    'ad.ownership.resident',
+    // Pantalla expedient — ajudes tècniques
+    'exp.ad.title',
+    'exp.ad.subtitle',
+    'exp.ad.empty',
+    'exp.ad.add',
+    'exp.ad.section.active',
+    'exp.ad.section.active.empty',
+    'exp.ad.section.retired',
+    'exp.ad.section.retired.empty',
+    'exp.ad.prescribedAt',
+    'exp.ad.retiredAt',
+    'exp.ad.ownedByCenter',
+    'exp.ad.ownedByResident',
+    // Formulari ajuda tècnica
+    'exp.ad.form.title',
+    'exp.ad.form.type',
+    'exp.ad.form.description',
+    'exp.ad.form.descriptionPh',
+    'exp.ad.form.prescribedAt',
+    'exp.ad.form.ownedByCenter',
+    'exp.ad.form.notes',
+    'exp.ad.form.notesPh',
+    'exp.ad.form.submit',
+    'exp.ad.form.submitting',
+    'exp.ad.form.saved',
+    // Acció retirada
+    'exp.ad.retire.title',
+    'exp.ad.retire.retiredAt',
+    'exp.ad.retire.notes',
+    'exp.ad.retire.notesPh',
+    'exp.ad.retire.submit',
+    'exp.ad.retire.done',
+  ];
+
+  const allKeys = [...diagnosticosKeys, ...ayudasKeys];
+
+  it('todas las claves de diagnósticos existen en es', () => {
+    for (const key of diagnosticosKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de diagnósticos existen en ca', () => {
+    for (const key of diagnosticosKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de ayudas técnicas existen en es', () => {
+    for (const key of ayudasKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de ayudas técnicas existen en ca', () => {
+    for (const key of ayudasKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de diagnósticos/ayudas difieren entre es y ca (paridad real)', () => {
+    // Verificamos claves con texto narrativo largo donde el catalán debe diferir del castellano
+    const narrativeKeys = [
+      'exp.dx.subtitle',
+      'exp.dx.form.descriptionPh',
+      'exp.dx.transition.done',
+      'exp.ad.subtitle',
+      'exp.ad.form.descriptionPh',
+      'exp.ad.retire.done',
+      'r360.dx.status',
+      'dx.status.CRONICO',
+      'ad.type.SILLA_RUEDAS',
+      'ad.type.MULETAS',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave narrativa "${key}"`).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: falta clave narrativa "${key}"`).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+
+  it('no hay claves sin traducción (sin undefined en ca)', () => {
+    const missing = allKeys.filter((k) => DICTIONARIES.ca[k] === undefined);
+    expect(missing, `ca: claves sin traducir: ${missing.join(', ')}`).toHaveLength(0);
+  });
+});

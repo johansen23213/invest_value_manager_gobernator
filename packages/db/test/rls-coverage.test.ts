@@ -263,6 +263,7 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
       'activity_sessions',
       'admission_requests',
       'allergies',
+      'assistive_devices',
       'announcement_receipts',
       'announcements',
       'assessments',
