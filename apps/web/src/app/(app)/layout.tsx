@@ -161,6 +161,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     ...(hasPermission(user.role, 'admissions:read')
       ? [{ href: '/admisiones', label: t('nav.admissions'), active: isItemActive(pathname, '/admisiones') }]
       : []),
+    ...(hasPermission(user.role, 'quality:read')
+      ? [{ href: '/calidad', label: t('nav.calidad'), active: isItemActive(pathname, '/calidad') }]
+      : []),
   ];
 
   const asistencialActive = asistencialItems.some((i) => i.active);
