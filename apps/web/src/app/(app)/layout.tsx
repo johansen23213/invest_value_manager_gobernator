@@ -111,7 +111,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         ]
       : []),
     ...(hasPermission(user.role, 'residents:read')
-      ? [{ href: '/acp', label: t('nav.acp'), active: isItemActive(pathname, '/acp') }]
+      ? [
+          { href: '/valoraciones', label: t('nav.valoraciones'), active: isItemActive(pathname, '/valoraciones') },
+          { href: '/acp', label: t('nav.acp'), active: isItemActive(pathname, '/acp') },
+        ]
       : []),
   ];
 

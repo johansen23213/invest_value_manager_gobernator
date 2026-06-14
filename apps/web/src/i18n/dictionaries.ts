@@ -401,6 +401,8 @@ const es: Record<string, string> = {
   'rbac.perm.visits:manage': 'Gestionar la agenda de visitas del centro (aprobar, rechazar, check-in/out)',
   'rbac.perm.shifts:read': 'Ver el cuadrante de turnos y las asignaciones del personal',
   'rbac.perm.shifts:manage': 'Planificar el cuadrante, gestionar plantillas de turno, ausencias y sustituciones',
+  'rbac.perm.billing:read': 'Ver tarifas, perfiles de facturación y facturas del centro',
+  'rbac.perm.billing:manage': 'Crear tarifas, emitir, anular y registrar el cobro de facturas',
 
   // Visión 360 del residente (R-360)
   'r360.title': 'Visión 360',
@@ -1482,6 +1484,67 @@ const es: Record<string, string> = {
   'scale.PAINAD':       'PAINAD (dolor en demencia)',
   'scale.DOWNTON':      'Downton (riesgo caídas)',
   'scale.LAWTON_BRODY': 'Lawton-Brody (AIVD)',
+
+  // ---------------------------------------------------------------------------
+  // Facturación (RF-ECO-001..005) — claves i18n es-ES
+  // ---------------------------------------------------------------------------
+  'nav.facturacion': 'Facturación',
+
+  'billing.unit.MENSUAL':  'Mensual',
+  'billing.unit.DIARIO':   'Diario',
+  'billing.unit.UNICO':    'Único',
+
+  'invoice.status.DRAFT':  'Borrador',
+  'invoice.status.ISSUED': 'Emitida',
+  'invoice.status.PAID':   'Cobrada',
+  'invoice.status.VOID':   'Anulada',
+
+  'payer.type.RESIDENTE':      'Residente',
+  'payer.type.FAMILIAR':       'Familiar',
+  'payer.type.ADMINISTRACION': 'Administración',
+
+  'billing.tariffs.title':              'Tarifas',
+  'billing.tariffs.empty':              'Sin tarifas definidas.',
+  'billing.tariffs.code':               'Código',
+  'billing.tariffs.name':               'Nombre del concepto',
+  'billing.tariffs.baseAmount':         'Importe base',
+  'billing.tariffs.unit':               'Unidad',
+  'billing.tariffs.vatExempt':          'Exento de IVA',
+  'billing.tariffs.active':             'Activa',
+  'billing.tariffs.create':             'Nueva tarifa',
+  'billing.tariffs.archive':            'Archivar',
+  'billing.tariffs.archived':           'Tarifa archivada.',
+
+  'billing.profile.title':              'Perfil de facturación',
+  'billing.profile.tariff':             'Tarifa aplicable',
+  'billing.profile.publicCopayPct':     '% aportación pública',
+  'billing.profile.privatePct':         '% aportación privada',
+  'billing.profile.payerType':          'Pagador',
+  'billing.profile.payerName':          'Nombre del pagador',
+  'billing.profile.sepaMandate':        'Ref. mandato SEPA',
+  'billing.profile.save':               'Guardar perfil',
+  'billing.profile.saved':              'Perfil de facturación guardado.',
+
+  'billing.invoices.title':             'Facturas',
+  'billing.invoices.empty':             'Sin facturas.',
+  'billing.invoices.number':            'Nº factura',
+  'billing.invoices.period':            'Periodo',
+  'billing.invoices.issuedAt':          'Fecha emisión',
+  'billing.invoices.dueAt':             'Vencimiento',
+  'billing.invoices.total':             'Total',
+  'billing.invoices.status':            'Estado',
+  'billing.invoices.createDraft':       'Crear borrador',
+  'billing.invoices.issue':             'Emitir',
+  'billing.invoices.markPaid':          'Marcar como cobrada',
+  'billing.invoices.void':              'Anular',
+  'billing.invoices.voidReason':        'Motivo de anulación',
+  'billing.invoices.draft.created':     'Borrador de factura creado.',
+  'billing.invoices.issued':            'Factura emitida correctamente.',
+  'billing.invoices.paid':              'Factura marcada como cobrada.',
+  'billing.invoices.voided':            'Factura anulada.',
+
+  'billing.portal.myInvoices':          'Mis facturas',
+  'billing.portal.empty':               'Sin facturas disponibles.',
 };
 
 const ca: Record<string, string> = {
@@ -1882,6 +1945,8 @@ const ca: Record<string, string> = {
   'rbac.perm.visits:manage': "Gestionar l'agenda de visites del centre (aprovar, rebutjar, check-in/out)",
   'rbac.perm.shifts:read': 'Veure el quadrant de torns i les assignacions del personal',
   'rbac.perm.shifts:manage': 'Planificar el quadrant, gestionar plantilles de torn, absències i substitucions',
+  'rbac.perm.billing:read': 'Veure tarifes, perfils de facturació i factures del centre',
+  'rbac.perm.billing:manage': 'Crear tarifes, emetre, anul·lar i registrar el cobrament de factures',
 
   // Visió 360 del resident (R-360)
   'r360.title': 'Visió 360',
@@ -2954,6 +3019,67 @@ const ca: Record<string, string> = {
   'scale.PAINAD':       'PAINAD (dolor en demència)',
   'scale.DOWNTON':      'Downton (risc caigudes)',
   'scale.LAWTON_BRODY': 'Lawton-Brody (AIVD)',
+
+  // ---------------------------------------------------------------------------
+  // Facturación (RF-ECO-001..005) — claves i18n ca-ES
+  // ---------------------------------------------------------------------------
+  'nav.facturacion': 'Facturació',
+
+  'billing.unit.MENSUAL':  'Mensual',
+  'billing.unit.DIARIO':   'Diari',
+  'billing.unit.UNICO':    'Únic',
+
+  'invoice.status.DRAFT':  'Esborrany',
+  'invoice.status.ISSUED': 'Emesa',
+  'invoice.status.PAID':   'Cobrada',
+  'invoice.status.VOID':   'Anul·lada',
+
+  'payer.type.RESIDENTE':      'Resident',
+  'payer.type.FAMILIAR':       'Familiar',
+  'payer.type.ADMINISTRACION': 'Administració',
+
+  'billing.tariffs.title':              'Tarifes',
+  'billing.tariffs.empty':              'Sense tarifes definides.',
+  'billing.tariffs.code':               'Codi',
+  'billing.tariffs.name':               'Nom del concepte',
+  'billing.tariffs.baseAmount':         'Import base',
+  'billing.tariffs.unit':               'Unitat',
+  'billing.tariffs.vatExempt':          'Exempt d\'IVA',
+  'billing.tariffs.active':             'Activa',
+  'billing.tariffs.create':             'Nova tarifa',
+  'billing.tariffs.archive':            'Arxivar',
+  'billing.tariffs.archived':           'Tarifa arxivada.',
+
+  'billing.profile.title':              'Perfil de facturació',
+  'billing.profile.tariff':             'Tarifa aplicable',
+  'billing.profile.publicCopayPct':     '% aportació pública',
+  'billing.profile.privatePct':         '% aportació privada',
+  'billing.profile.payerType':          'Pagador',
+  'billing.profile.payerName':          'Nom del pagador',
+  'billing.profile.sepaMandate':        'Ref. mandat SEPA',
+  'billing.profile.save':               'Desar perfil',
+  'billing.profile.saved':              'Perfil de facturació desat.',
+
+  'billing.invoices.title':             'Factures',
+  'billing.invoices.empty':             'Sense factures.',
+  'billing.invoices.number':            'Nº factura',
+  'billing.invoices.period':            'Període',
+  'billing.invoices.issuedAt':          'Data emissió',
+  'billing.invoices.dueAt':             'Venciment',
+  'billing.invoices.total':             'Total',
+  'billing.invoices.status':            'Estat',
+  'billing.invoices.createDraft':       'Crear esborrany',
+  'billing.invoices.issue':             'Emetre',
+  'billing.invoices.markPaid':          'Marcar com a cobrada',
+  'billing.invoices.void':              'Anul·lar',
+  'billing.invoices.voidReason':        'Motiu d\'anul·lació',
+  'billing.invoices.draft.created':     'Esborrany de factura creat.',
+  'billing.invoices.issued':            'Factura emesa correctament.',
+  'billing.invoices.paid':              'Factura marcada com a cobrada.',
+  'billing.invoices.voided':            'Factura anul·lada.',
+
+  'billing.portal.myInvoices':          'Les meves factures',
+  'billing.portal.empty':               'Sense factures disponibles.',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };
