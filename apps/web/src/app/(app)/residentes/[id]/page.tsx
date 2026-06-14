@@ -46,6 +46,7 @@ import { MedicalNotesTab } from './medical-notes-tab';
 import { DischargeTab } from './discharge-tab';
 import { SocialTab } from './social-tab';
 import { WellbeingTab } from './wellbeing-tab';
+import { ScaleEvolutionChart } from './scale-evolution-chart';
 
 // ---------------------------------------------------------------------------
 // Esquemas de validación (reutilizan / complementan los del backend)
@@ -648,81 +649,91 @@ export default function ResidentDetailPage() {
 
       {/* ── ESCALAS ──────────────────────────────────────────────────────── */}
       <TabsContent value="escalas">
-        <SectionCard title="Escalas de valoración">
-            {r.assessments.length === 0 ? (
-              <p className="text-sm text-[#1A3A3F]/60">Sin valoraciones.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {r.assessments.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2 text-sm">
-                    <span>
-                      <span className="font-medium">{ASSESSMENT_TYPE_LABELS[a.type] ?? a.type}</span>:{' '}
-                      {a.score}/{SCALE_RANGES[a.type as ScaleType]?.max ?? '?'}
-                    </span>
-                    <span className="text-[#1A3A3F]/40">{fmtDate(a.assessedAt)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {canClinical && (
-              <form
-                className="mt-3 flex flex-wrap items-start gap-3"
-                noValidate
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const data = assessmentForm.validate({ score: assessment.score });
-                  if (!data) return;
-                  handleAddAssessment(data.score as number);
-                }}
-              >
-                <div>
-                  <Label htmlFor="aType">Escala</Label>
-                  <Select
-                    id="aType"
-                    value={assessment.type}
-                    onChange={(e) => {
-                      setAssessment({ type: e.target.value as ScaleType, score: '' });
-                      assessmentForm.clearErrors();
-                    }}
-                  >
-                    {ALL_SCALE_TYPES.map((st) => (
-                      <option key={st} value={st}>
-                        {ASSESSMENT_TYPE_LABELS[st] ?? st} ({SCALE_RANGES[st].min}–{SCALE_RANGES[st].max})
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="aScore">Puntuación</Label>
-                  <Input
-                    id="aScore"
-                    type="number"
-                    inputMode="numeric"
-                    min={assessmentMin}
-                    max={assessmentMax}
-                    aria-invalid={Boolean(assessmentForm.errors.score)}
-                    aria-describedby={assessmentForm.errors.score ? 'aScore-err' : undefined}
-                    value={assessment.score}
-                    onChange={(e) => setAssessment((s) => ({ ...s, score: e.target.value }))}
-                  />
-                  <FieldError id="aScore-err">{assessmentForm.errors.score}</FieldError>
-                  {isUppScale && (
-                    <p className="mt-1 text-xs text-amber-700">
-                      {assessment.type === 'NORTON' ? 'Norton ≤14 = riesgo alto UPP' : 'Braden ≤18 = riesgo UPP'}
-                    </p>
-                  )}
-                </div>
-                <div className="self-end">
-                  <Button
-                    type="submit"
-                    disabled={addAssessment.isPending || addAssessmentWithAlert.isPending}
-                  >
-                    Registrar valoración
-                  </Button>
-                </div>
-              </form>
-            )}
-        </SectionCard>
+        <div className="flex flex-col gap-4">
+          {/* Registrar nueva valoración */}
+          <SectionCard title="Escalas de valoración">
+              {r.assessments.length === 0 ? (
+                <p className="text-sm text-[#1A3A3F]/60">Sin valoraciones.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {r.assessments.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2 text-sm">
+                      <span>
+                        <span className="font-medium">{ASSESSMENT_TYPE_LABELS[a.type] ?? a.type}</span>:{' '}
+                        {a.score}/{SCALE_RANGES[a.type as ScaleType]?.max ?? '?'}
+                      </span>
+                      <span className="text-[#1A3A3F]/40">{fmtDate(a.assessedAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {canClinical && (
+                <form
+                  className="mt-3 flex flex-wrap items-start gap-3"
+                  noValidate
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const data = assessmentForm.validate({ score: assessment.score });
+                    if (!data) return;
+                    handleAddAssessment(data.score as number);
+                  }}
+                >
+                  <div>
+                    <Label htmlFor="aType">Escala</Label>
+                    <Select
+                      id="aType"
+                      value={assessment.type}
+                      onChange={(e) => {
+                        setAssessment({ type: e.target.value as ScaleType, score: '' });
+                        assessmentForm.clearErrors();
+                      }}
+                    >
+                      {ALL_SCALE_TYPES.map((st) => (
+                        <option key={st} value={st}>
+                          {ASSESSMENT_TYPE_LABELS[st] ?? st} ({SCALE_RANGES[st].min}–{SCALE_RANGES[st].max})
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="aScore">Puntuación</Label>
+                    <Input
+                      id="aScore"
+                      type="number"
+                      inputMode="numeric"
+                      min={assessmentMin}
+                      max={assessmentMax}
+                      aria-invalid={Boolean(assessmentForm.errors.score)}
+                      aria-describedby={assessmentForm.errors.score ? 'aScore-err' : undefined}
+                      value={assessment.score}
+                      onChange={(e) => setAssessment((s) => ({ ...s, score: e.target.value }))}
+                    />
+                    <FieldError id="aScore-err">{assessmentForm.errors.score}</FieldError>
+                    {isUppScale && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        {assessment.type === 'NORTON' ? 'Norton ≤14 = riesgo alto UPP' : 'Braden ≤18 = riesgo UPP'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="self-end">
+                    <Button
+                      type="submit"
+                      disabled={addAssessment.isPending || addAssessmentWithAlert.isPending}
+                    >
+                      Registrar valoración
+                    </Button>
+                  </div>
+                </form>
+              )}
+          </SectionCard>
+
+          {/* Gráfico de evolución temporal — requiere residents:read */}
+          {canResidentsRead && (
+            <SectionCard title="Evolución de escalas">
+              <ScaleEvolutionChart residentId={residentId} />
+            </SectionCard>
+          )}
+        </div>
       </TabsContent>
 
       {/* ── CONTACTOS ────────────────────────────────────────────────────── */}
