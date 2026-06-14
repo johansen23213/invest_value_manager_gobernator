@@ -141,6 +141,18 @@ async function loginContext(ctx, user) {
     // Espera que salga de /login
     await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 });
     await waitReady(page);
+
+    // Verifica que la sesión PERSISTE: navega a "/" y confirma que no rebota a
+    // /login. Sin esto, un login que "navega" pero no fija una cookie de sesión
+    // válida (Secure sobre http, host no confiable, AUTH_SECRET ausente) generaría
+    // un PDF lleno de /login SIN avisar. Preferimos fallar ruidosamente (exit 1).
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
+    if (page.url().includes('/login')) {
+      throw new Error(
+        `[LOGIN] La sesión no persistió para ${user.email}: "/" redirige a /login. ` +
+        'Revisa AUTH_URL / trustHost / cookies / AUTH_SECRET en el entorno de la app.',
+      );
+    }
   } finally {
     await page.close();
   }
