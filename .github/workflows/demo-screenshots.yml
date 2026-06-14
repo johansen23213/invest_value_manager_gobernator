@@ -161,10 +161,12 @@ jobs:
         run: |
           git config user.name "vetlla-ci"
           git config user.email "ci@vetlla.local"
-          mkdir -p _delivery
+          rm -rf _delivery
+          mkdir -p _delivery/shots
           cp artifacts/Vetlla-Demo-Real.pdf _delivery/Vetlla-Demo-Real.pdf
-          git add -f _delivery/Vetlla-Demo-Real.pdf
-          git commit -m "chore(demo): PDF de capturas reales [skip ci]"
+          cp artifacts/shots/*.png _delivery/shots/ || true
+          git add -f _delivery
+          git commit -m "chore(demo): PDF + PNGs de capturas reales [skip ci]"
           git push -f \
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
             HEAD:demo-pdf-latest
