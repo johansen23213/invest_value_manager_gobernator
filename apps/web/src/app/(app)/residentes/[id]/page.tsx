@@ -48,6 +48,8 @@ import { SocialTab } from './social-tab';
 import { WellbeingTab } from './wellbeing-tab';
 import { ScaleEvolutionChart } from './scale-evolution-chart';
 import { BillingTab } from './billing-tab';
+import { DiagnosesTab } from './diagnoses-tab';
+import { AssistiveDevicesTab } from './assistive-devices-tab';
 
 // ---------------------------------------------------------------------------
 // Esquemas de validación (reutilizan / complementan los del backend)
@@ -66,9 +68,7 @@ const allergySchema = z.object({
   substance: z.string().trim().min(1, 'Indica la sustancia.').max(120),
 });
 
-const diagnosisSchema = z.object({
-  description: z.string().trim().min(1, 'Indica la descripción.').max(300),
-});
+// diagnosisSchema removed — diagnoses are managed in DiagnosesTab
 
 const deviceSchema = z.object({
   description: z.string().max(300).optional(),
@@ -259,18 +259,7 @@ export default function ResidentDetailPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  // ── DIAGNÓSTICOS ──────────────────────────────────────────────────────────
-  const [diagnosis, setDiagnosis] = useState({ description: '', code: '' });
-  const diagnosisForm = useZodForm(diagnosisSchema);
-  const addDiagnosis = api.residents.addDiagnosis.useMutation({
-    onSuccess: async () => {
-      setDiagnosis({ description: '', code: '' });
-      diagnosisForm.clearErrors();
-      await refresh();
-      toast.success('Diagnóstico añadido.');
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  // diagnoses state removed — managed by DiagnosesTab component
 
   // ── ESCALAS ───────────────────────────────────────────────────────────────
   const ALL_SCALE_TYPES = Object.keys(SCALE_RANGES) as ScaleType[];
@@ -597,7 +586,8 @@ export default function ResidentDetailPage() {
         <TabsTrigger value="escalas">Escalas</TabsTrigger>
         <TabsTrigger value="contactos">Contactos</TabsTrigger>
         <TabsTrigger value="alergias">Alergias</TabsTrigger>
-        <TabsTrigger value="diagnosticos">Diagnósticos</TabsTrigger>
+        <TabsTrigger value="diagnosticos">{t('exp.dx.title')}</TabsTrigger>
+        <TabsTrigger value="ayudas">{t('exp.ad.title')}</TabsTrigger>
         <TabsTrigger value="cuidados">{t('exp.care.title')}</TabsTrigger>
         <TabsTrigger value="clinico">{t('exp.clinical.title')}</TabsTrigger>
         {canCareRead && <TabsTrigger value="enfermeria">{t('exp.nursing.title')}</TabsTrigger>}
@@ -871,53 +861,12 @@ export default function ResidentDetailPage() {
 
       {/* ── DIAGNÓSTICOS ─────────────────────────────────────────────────── */}
       <TabsContent value="diagnosticos">
-        <SectionCard title="Diagnósticos">
-            {r.diagnoses.length === 0 ? (
-              <p className="text-sm text-[#1A3A3F]/60">Sin diagnósticos.</p>
-            ) : (
-              <ul className="flex flex-col gap-1 text-sm">
-                {r.diagnoses.map((d) => (
-                  <li key={d.id}>
-                    {d.code ? <span className="text-[#1A3A3F]/40">[{d.code}] </span> : null}
-                    {d.description} <span className="text-[#1A3A3F]/40">· {fmtDate(d.diagnosedAt)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {canClinical && (
-              <form
-                className="mt-3 flex flex-wrap items-start gap-2"
-                noValidate
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const data = diagnosisForm.validate({ description: diagnosis.description });
-                  if (!data) return;
-                  addDiagnosis.mutate({ residentId, description: data.description, code: diagnosis.code || undefined });
-                }}
-              >
-                <div className="flex-1">
-                  <Input
-                    placeholder="Descripción"
-                    aria-label="Descripción"
-                    aria-invalid={Boolean(diagnosisForm.errors.description)}
-                    value={diagnosis.description}
-                    onChange={(e) => setDiagnosis((s) => ({ ...s, description: e.target.value }))}
-                  />
-                  <FieldError>{diagnosisForm.errors.description}</FieldError>
-                </div>
-                <Input
-                  placeholder="CIE-10"
-                  aria-label="Código CIE-10"
-                  value={diagnosis.code}
-                  onChange={(e) => setDiagnosis((s) => ({ ...s, code: e.target.value }))}
-                  className="max-w-[120px]"
-                />
-                <Button type="submit" size="sm" disabled={addDiagnosis.isPending}>
-                  Añadir
-                </Button>
-              </form>
-            )}
-        </SectionCard>
+        <DiagnosesTab residentId={residentId} canClinical={canClinical} />
+      </TabsContent>
+
+      {/* ── AYUDAS TÉCNICAS ──────────────────────────────────────────────── */}
+      <TabsContent value="ayudas">
+        <AssistiveDevicesTab residentId={residentId} canClinical={canClinical} />
       </TabsContent>
 
       {/* ── CUIDADOS ─────────────────────────────────────────────────────── */}

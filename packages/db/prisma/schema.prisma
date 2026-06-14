@@ -505,6 +505,9 @@ model Resident {
   // --- Actividades (animación sociocultural / terapia ocupacional) ---
   activityEnrollments ActivityEnrollment[]
 
+  // --- Inventario / Lavandería / Pertenencias ---
+  belongings ResidentBelonging[]
+
   @@index([tenantId])
   @@index([centerId])
   @@map("residents")
@@ -2391,4 +2394,105 @@ model ActivityEnrollment {
   @@index([tenantId, sessionId])
   @@index([tenantId, residentId])
   @@map("activity_enrollments")
+}
+
+// ---------------------------------------------------------------------------
+// Inventario / Almacén (stock del centro)
+// ---------------------------------------------------------------------------
+
+enum InventoryCategory {
+  CONSUMIBLE
+  ABSORBENTES
+  HIGIENE
+  MATERIAL_CURAS
+  LENCERIA
+  OTRO
+}
+
+enum MovementType {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+enum BelongingCategory {
+  ROPA
+  CALZADO
+  ELECTRONICA
+  JOYERIA
+  DOCUMENTO
+  OTRO
+}
+
+enum BelongingStatus {
+  EN_USO
+  ALMACENADO
+  EN_LAVANDERIA
+  DEVUELTO
+  PERDIDO
+}
+
+model InventoryItem {
+  id           String            @id @default(cuid())
+  tenantId     String            @map("tenant_id")
+  name         String
+  category     InventoryCategory @default(OTRO)
+  unit         String            // "unidad", "caja", "litro"…
+  stock        Int               @default(0)
+  stockMin     Int               @default(0) @map("stock_min")
+  location     String?           // almacén, planta, armario…
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  movements    InventoryMovement[]
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, active])
+  @@map("inventory_items")
+}
+
+model InventoryMovement {
+  id        String       @id @default(cuid())
+  tenantId  String       @map("tenant_id")
+  itemId    String       @map("item_id")
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type      MovementType
+  quantity  Int          // positivo siempre; el tipo determina el sentido
+  reason    String?
+  movedAt   DateTime     @default(now()) @map("moved_at")
+  userId    String?      @map("user_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, itemId])
+  @@index([tenantId, movedAt])
+  @@map("inventory_movements")
+}
+
+// ---------------------------------------------------------------------------
+// Pertenencias personales del residente (ropa, objetos, documentos…)
+// La lavandería se modela con BelongingStatus.EN_LAVANDERIA + laundryCode.
+// ---------------------------------------------------------------------------
+
+model ResidentBelonging {
+  id           String            @id @default(cuid())
+  tenantId     String            @map("tenant_id")
+  residentId   String            @map("resident_id")
+  resident     Resident          @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  description  String
+  category     BelongingCategory @default(OTRO)
+  quantity     Int               @default(1)
+  label        String?           // marca o etiqueta identificativa / código de lavandería
+  status       BelongingStatus   @default(EN_USO)
+  registeredAt DateTime          @default(now()) @map("registered_at")
+  notes        String?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, residentId])
+  @@index([tenantId, status])
+  @@map("resident_belongings")
 }
