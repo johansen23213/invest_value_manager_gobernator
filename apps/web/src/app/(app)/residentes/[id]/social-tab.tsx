@@ -24,7 +24,7 @@ import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
 import { useZodForm } from '@/lib/form';
 import { formatDate } from '@/lib/format';
-import { UpsertSocialReportInput } from '@/server/routers/social';
+import { UpsertSocialReportInput } from '@/lib/schemas/social';
 
 // ---------------------------------------------------------------------------
 // Tipos de los campos del informe

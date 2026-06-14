@@ -37,7 +37,7 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { ActivityCategory, ActivitySessionStatus } from '@vetlla/db';
+import { ActivitySessionStatus } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import { prisma as basePrisma } from '@vetlla/db';
 import { assertFamilyAccess } from '@/server/family-access';
@@ -50,42 +50,29 @@ import {
 } from '@/lib/actividades';
 
 // ---------------------------------------------------------------------------
-// Schemas Zod (reutilizables en el frontend)
+// Schemas Zod — importados desde el módulo CLIENT-SAFE (única fuente de verdad).
+// Re-exportados para compatibilidad con módulos de servidor que los importen
+// desde este router. Los ficheros CLIENTE deben importar directamente desde
+// '@/lib/schemas/actividades'.
 // ---------------------------------------------------------------------------
 
-export const activityCreateSchema = z.object({
-  name:         z.string().min(1).max(120),
-  description:  z.string().max(2000).optional(),
-  category:     z.nativeEnum(ActivityCategory).default('OTRA'),
-  location:     z.string().max(120).optional(),
-  responsibleId: z.string().optional(),
-  maxCapacity:  z.number().int().min(1).max(500).default(20),
-  durationMin:  z.number().int().min(5).max(480).default(60),
-});
+import {
+  activityCreateSchema,
+  activityUpdateSchema,
+  sessionCreateSchema,
+  sessionUpdateSchema,
+  enrollSchema,
+  attendanceSchema,
+} from '@/lib/schemas/actividades';
 
-export const activityUpdateSchema = activityCreateSchema.partial();
-
-export const sessionCreateSchema = z.object({
-  activityId: z.string(),
-  centerId:   z.string().optional(),
-  unitId:     z.string().optional(),
-  startsAt:   z.coerce.date(),
-  endsAt:     z.coerce.date(),
-  notes:      z.string().max(2000).optional(),
-});
-
-export const sessionUpdateSchema = sessionCreateSchema.partial().omit({ activityId: true });
-
-export const enrollSchema = z.object({
-  sessionId:  z.string(),
-  residentId: z.string(),
-});
-
-export const attendanceSchema = z.object({
-  enrollmentId: z.string(),
-  attended:     z.boolean(),
-  observation:  z.string().max(2000).optional(),
-});
+export {
+  activityCreateSchema,
+  activityUpdateSchema,
+  sessionCreateSchema,
+  sessionUpdateSchema,
+  enrollSchema,
+  attendanceSchema,
+};
 
 // ---------------------------------------------------------------------------
 // Sub-routers

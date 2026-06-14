@@ -25,7 +25,7 @@ import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
 import { formatDate } from '@/lib/format';
-import { UpsertWellbeingProfileInput } from '@/server/routers/social';
+import { UpsertWellbeingProfileInput } from '@/lib/schemas/social';
 import { getReviewStatus, daysUntilReview, type ReviewStatus } from '@/lib/wellbeing';
 
 // ---------------------------------------------------------------------------

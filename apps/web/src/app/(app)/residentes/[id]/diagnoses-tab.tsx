@@ -29,7 +29,6 @@ import {
   SectionCard,
   Select,
 } from '@vetlla/ui';
-import { DiagnosisType, DiagnosisStatus } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
@@ -46,7 +45,9 @@ import {
   createDiagnosisSchema,
   updateDiagnosisSchema,
   transitionDiagnosisSchema,
-} from '@/server/routers/diagnosticos';
+  DiagnosisType,
+  DiagnosisStatus,
+} from '@/lib/schemas/diagnosticos';
 
 // ---------------------------------------------------------------------------
 // Tipos locales

@@ -44,9 +44,8 @@
  *   - intake.record: RECORD sobre IntakeRecord (dato de salud nutricional).
  */
 
-import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { MealType, type TenantPrisma } from '@vetlla/db';
+import { type TenantPrisma } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import { isLowIntakeRisk } from '@/lib/nutrition';
 
@@ -54,100 +53,46 @@ import { isLowIntakeRisk } from '@/lib/nutrition';
 // Constantes de umbrales documentadas (RF-NUT-007)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_INTAKE_WINDOW  = 14; // últimas N comidas para la media
 const DEFAULT_AVG_THRESHOLD  = 50; // media < 50% → riesgo
 const DEFAULT_CONSEC_LOW_THR = 25; // foodPct ≤ 25% cuenta como "muy baja"
 const DEFAULT_CONSEC_LOW_CNT = 3;  // 3 comidas consecutivas ≤ 25% → riesgo inmediato
 
 // ---------------------------------------------------------------------------
-// Zod — schemas exportados (el cliente los reutiliza para validar igual)
+// Schemas Zod — importados desde el módulo CLIENT-SAFE (única fuente de verdad).
+// Re-exportados para compatibilidad con módulos de servidor que los importen
+// desde este router. Los ficheros CLIENTE deben importar directamente desde
+// '@/lib/schemas/nutrition'.
 // ---------------------------------------------------------------------------
 
-export const MealTypeSchema = z.nativeEnum(MealType);
+import {
+  MealTypeSchema,
+  AllergenValueSchema,
+  UpsertMenuItemInput,
+  ListMenuInput,
+  DeleteMenuItemInput,
+  MenuForFamilyInput,
+  RecordIntakeInput,
+  ListIntakeByResidentInput,
+  LowIntakeAlertsInput,
+  DietListingInput,
+  MealListingInput,
+  type AllergenValue,
+} from '@/lib/schemas/nutrition';
 
-/** Alérgenos válidos. Se usa como valor de string porque Allergen no es un
- *  enum Prisma estándar en el cliente — está almacenado como JSON array. */
-export const AllergenValueSchema = z.enum([
-  'GLUTEN', 'CRUSTACEOS', 'HUEVOS', 'PESCADO', 'CACAHUETES', 'SOJA',
-  'LACTEOS', 'FRUTOS_CASCARA', 'APIO', 'MOSTAZA', 'SESAMO', 'SULFITOS',
-  'ALTRAMUCES', 'MOLUSCOS',
-]);
-export type AllergenValue = z.infer<typeof AllergenValueSchema>;
-
-/** Input para upsert de un ítem del menú (RF-NUT-003). */
-export const UpsertMenuItemInput = z.object({
-  /** Si se proporciona id, es un update; si no, es un create. */
-  id:            z.string().min(1).optional(),
-  centerId:      z.string().min(1),
-  date:          z.coerce.date(),
-  meal:          MealTypeSchema,
-  dishName:      z.string().trim().min(1).max(200),
-  description:   z.string().trim().max(1000).optional(),
-  allergens:     z.array(AllergenValueSchema).default([]),
-  isAlternative: z.boolean().default(false),
-});
-export type UpsertMenuItemInput = z.infer<typeof UpsertMenuItemInput>;
-
-/** Input para listar el menú de un centro en una fecha. */
-export const ListMenuInput = z.object({
-  centerId: z.string().min(1),
-  date:     z.coerce.date(),
-});
-export type ListMenuInput = z.infer<typeof ListMenuInput>;
-
-/** Input para borrar un ítem del menú. */
-export const DeleteMenuItemInput = z.object({
-  id: z.string().min(1),
-});
-export type DeleteMenuItemInput = z.infer<typeof DeleteMenuItemInput>;
-
-/** Input para que el familiar consulte el menú (RF-NUT-005). */
-export const MenuForFamilyInput = z.object({
-  residentId: z.string().min(1),
-  date:       z.coerce.date(),
-});
-export type MenuForFamilyInput = z.infer<typeof MenuForFamilyInput>;
-
-/** Input para registrar una ingesta (RF-NUT-006). */
-export const RecordIntakeInput = z.object({
-  residentId:  z.string().min(1),
-  date:        z.coerce.date(),
-  meal:        MealTypeSchema,
-  foodPct:     z.number().int().min(0).max(100),
-  hydrationMl: z.number().int().min(0).optional(),
-  notes:       z.string().trim().max(1000).optional(),
-});
-export type RecordIntakeInput = z.infer<typeof RecordIntakeInput>;
-
-/** Input para listar ingestas de un residente. */
-export const ListIntakeByResidentInput = z.object({
-  residentId: z.string().min(1),
-  dateFrom:   z.coerce.date().optional(),
-  dateTo:     z.coerce.date().optional(),
-});
-export type ListIntakeByResidentInput = z.infer<typeof ListIntakeByResidentInput>;
-
-/** Input para el listado de alertas de baja ingesta del centro. */
-export const LowIntakeAlertsInput = z.object({
-  centerId:   z.string().min(1),
-  windowSize: z.number().int().min(1).max(100).optional().default(DEFAULT_INTAKE_WINDOW),
-});
-export type LowIntakeAlertsInput = z.infer<typeof LowIntakeAlertsInput>;
-
-/** Input para el listado de dieta/cocina del centro (RF-NUT-008). */
-export const DietListingInput = z.object({
-  centerId: z.string().min(1),
-  date:     z.coerce.date().optional(),
-});
-export type DietListingInput = z.infer<typeof DietListingInput>;
-
-/** Input para el listado por comedor (RF-NUT-009). */
-export const MealListingInput = z.object({
-  centerId: z.string().min(1),
-  meal:     MealTypeSchema,
-  unitId:   z.string().min(1).optional(),
-});
-export type MealListingInput = z.infer<typeof MealListingInput>;
+export {
+  MealTypeSchema,
+  AllergenValueSchema,
+  UpsertMenuItemInput,
+  ListMenuInput,
+  DeleteMenuItemInput,
+  MenuForFamilyInput,
+  RecordIntakeInput,
+  ListIntakeByResidentInput,
+  LowIntakeAlertsInput,
+  DietListingInput,
+  MealListingInput,
+};
+export type { AllergenValue };
 
 // ---------------------------------------------------------------------------
 // Helpers

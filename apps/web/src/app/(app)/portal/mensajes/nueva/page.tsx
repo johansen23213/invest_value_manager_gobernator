@@ -7,7 +7,7 @@ import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
 import { useZodForm } from '@/lib/form';
-import { CreateThreadInput } from '@/server/routers/comms';
+import { CreateThreadInput } from '@/lib/schemas/comms';
 import { MESSAGE_THREAD_CATEGORY_LABELS } from '@/lib/labels';
 
 const CATEGORIES = Object.keys(MESSAGE_THREAD_CATEGORY_LABELS);
