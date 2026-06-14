@@ -24,7 +24,10 @@ export default defineConfig({
   webServer: {
     command: 'pnpm start',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    // El job e2e de CI arranca la app por separado (y espera a :3000) antes de
+    // lanzar Playwright; reutilizamos ese servidor siempre. Si no hay ninguno
+    // (uso local directo), Playwright lo arranca con `command`.
+    reuseExistingServer: true,
     timeout: 120_000,
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
