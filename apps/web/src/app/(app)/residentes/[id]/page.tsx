@@ -47,6 +47,7 @@ import { DischargeTab } from './discharge-tab';
 import { SocialTab } from './social-tab';
 import { WellbeingTab } from './wellbeing-tab';
 import { ScaleEvolutionChart } from './scale-evolution-chart';
+import { BillingTab } from './billing-tab';
 
 // ---------------------------------------------------------------------------
 // Esquemas de validación (reutilizan / complementan los del backend)
@@ -161,6 +162,7 @@ export default function ResidentDetailPage() {
   const canCareRead = me.data?.permissions.includes('care:read') ?? false;
   const canCareWrite = me.data?.permissions.includes('care:write') ?? false;
   const canResidentsRead = me.data?.permissions.includes('residents:read') ?? false;
+  const canBillingRead = me.data?.permissions.includes('billing:read') ?? false;
   const resident = api.residents.get.useQuery({ id: residentId });
 
   // Clínico+: datos adicionales
@@ -605,6 +607,7 @@ export default function ResidentDetailPage() {
         {canResidentsRead && <TabsTrigger value="bienestar">{t('exp.wellbeing.title')}</TabsTrigger>}
         {canWrite && <TabsTrigger value="bajas">{t('exp.discharge.title')}</TabsTrigger>}
         {canDsar && <TabsTrigger value="rgpd">RGPD</TabsTrigger>}
+        {canBillingRead && <TabsTrigger value="facturacion">{t('billing.profile.title')}</TabsTrigger>}
       </TabsList>
 
       {/* ── DATOS PERSONALES ─────────────────────────────────────────────── */}
@@ -2287,6 +2290,13 @@ export default function ResidentDetailPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ── FACTURACIÓN ───────────────────────────────────────────────────── */}
+      {canBillingRead && (
+        <TabsContent value="facturacion">
+          <BillingTab residentId={residentId} />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

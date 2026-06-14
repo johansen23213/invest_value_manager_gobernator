@@ -196,6 +196,29 @@ export default function PortalPage() {
             <p className="text-sm text-[#1A3A3F]/60">{t('portal.menu.quicklink.desc')}</p>
           </div>
         </div>
+
+        {/* Facturas — acceso rápido (RF-ECO-001) */}
+        <Link
+          href="/portal/facturas"
+          className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          aria-label={t('billing.portal.myInvoices')}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg shrink-0"
+              aria-hidden="true"
+            >
+              🧾
+            </span>
+            <div>
+              <p className="font-semibold text-[#1A3A3F]">{t('billing.portal.myInvoices')}</p>
+              <p className="text-sm text-[#1A3A3F]/60">{t('billing.portal.empty')}</p>
+            </div>
+          </div>
+          <span className="text-brand-700" aria-hidden="true">
+            →
+          </span>
+        </Link>
       </div>
 
       {residents.map((r) => (
