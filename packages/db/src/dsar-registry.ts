@@ -224,6 +224,30 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
                'MenuItem NO tiene residentId y no entra en este registro.',
   },
 
+  // Facturación (RF-ECO-001..005) — datos económicos del residente/pagador
+  {
+    model:     'ResidentBillingProfile',
+    export:    true,
+    anonymize: 'scrub',
+    reason:    'Perfil de facturación: tarifa asignada, copago público/privado, datos del pagador (payerName, sepaMandate). ' +
+               'Dato económico personal del interesado (art. 15 RGPD: derecho de acceso). ' +
+               'Se exporta. En anonimización: scrub de payerName → null y sepaMandate → null ' +
+               '(PII del pagador — puede ser tercero). La fila se conserva por ' +
+               'OBLIGACIÓN LEGAL CONTABLE/FISCAL: art. 30 Cód. Comercio (6 años) y ' +
+               'art. 70.3 LGT (4 años). Base: art. 17.3.b RGPD limita derecho de supresión.',
+  },
+  {
+    model:     'Invoice',
+    export:    true,
+    anonymize: 'scrub',
+    reason:    'Factura emitida por el centro al residente/pagador. ' +
+               'Dato económico personal (art. 15 RGPD). Se exporta (historial de facturación). ' +
+               'En anonimización: scrub de payerName → null (PII del pagador). ' +
+               'CONSERVAR POR OBLIGACIÓN LEGAL CONTABLE/FISCAL: art. 30 Cód. Comercio ' +
+               '(6 años) y art. 70.3 LGT (4 años). Base: art. 17.3.b RGPD. ' +
+               'Las líneas (InvoiceLine) heredan el cascade de Invoice.',
+  },
+
   // Épica B — Exitus/Baja, Informe Social, Perfil de Bienestar ACP
   {
     model:     'DischargeRecord',

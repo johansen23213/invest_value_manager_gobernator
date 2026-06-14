@@ -45,6 +45,7 @@ model Tenant {
   centers   Center[]
   residents Resident[]
   auditLogs AuditLog[]
+  tariffs   Tariff[]
 
   @@map("tenants")
 }
@@ -487,6 +488,10 @@ model Resident {
 
   // --- Épica C ---
   intakeRecords     IntakeRecord[]
+
+  // --- Facturación (RF-ECO-001..005) ---
+  billingProfile    ResidentBillingProfile?
+  invoices          Invoice[]
 
   @@index([tenantId])
   @@index([centerId])
@@ -1919,4 +1924,150 @@ model Message {
   @@index([tenantId])
   @@index([threadId])
   @@map("messages")
+}
+
+// ---------------------------------------------------------------------------
+// Facturación básica (RF-ECO-001..005) — cuotas, copagos y ciclo de factura
+// ---------------------------------------------------------------------------
+
+/// Unidad de facturación de una tarifa.
+enum BillingUnit {
+  MENSUAL
+  DIARIO
+  UNICO
+}
+
+/// Estado del ciclo de vida de una factura.
+enum InvoiceStatus {
+  DRAFT   // Borrador sin número asignado
+  ISSUED  // Emitida con número correlativo
+  PAID    // Cobrada
+  VOID    // Anulada
+}
+
+/// Tipo de pagador de una factura.
+enum PayerType {
+  RESIDENTE
+  FAMILIAR
+  ADMINISTRACION
+}
+
+/// Tarifa de plaza o módulo de servicio. Una tarifa puede asignarse a varios residentes.
+/// RF-ECO-001: gestión de cuotas y tarifas por plaza y módulo de servicio.
+model Tariff {
+  id          String      @id @default(cuid())
+  tenantId    String      @map("tenant_id")
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String      // Código interno libre (ej. "CUOTA-RESID", "MODULO-FISIO")
+  name        String
+  baseAmount  Decimal     @map("base_amount") @db.Decimal(12, 2)
+  unit        BillingUnit @default(MENSUAL)
+  vatPct      Decimal     @default(0) @map("vat_pct") @db.Decimal(5, 2)
+  vatExempt   Boolean     @default(true) @map("vat_exempt")
+  active      Boolean     @default(true)
+  validFrom   DateTime?   @map("valid_from")
+  validUntil  DateTime?   @map("valid_until")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  billingProfiles ResidentBillingProfile[]
+  invoiceLines    InvoiceLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("tariffs")
+}
+
+/// Perfil de facturación de un residente: tarifa asignada, porcentaje de copago público,
+/// tipo y datos del pagador principal.
+/// RF-ECO-002: copago público/privado.
+model ResidentBillingProfile {
+  id              String      @id @default(cuid())
+  tenantId        String      @map("tenant_id")
+  residentId      String      @unique @map("resident_id")
+  resident        Resident    @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  tariffId        String?     @map("tariff_id")
+  tariff          Tariff?     @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+  /// Porcentaje de la plaza financiado por la administración (0–100).
+  publicCopayPct  Decimal     @default(0) @map("public_copay_pct") @db.Decimal(5, 2)
+  /// Porcentaje que paga el privado (privado = 100 - público).
+  privatePct      Decimal     @default(100) @map("private_pct") @db.Decimal(5, 2)
+  payerType       PayerType   @default(FAMILIAR) @map("payer_type")
+  /// Nombre del pagador (familiar o representante). PII — sujeto a DSAR scrub.
+  payerName       String?     @map("payer_name")
+  /// Referencia de mandato SEPA (no contiene IBAN). TODO Q-007.
+  sepaMandate     String?     @map("sepa_mandate")
+  notes           String?
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("resident_billing_profiles")
+}
+
+/// Factura emitida por el centro a un residente o su pagador.
+/// RF-ECO-003: generación de facturas; RF-ECO-004: numeración correlativa.
+/// RETENCIÓN LEGAL: art. 30 Cód. Comercio (6 años) + art. 70.3 LGT (4 años).
+/// La factura NO se borra cuando se borra el residente (onDelete: Restrict).
+model Invoice {
+  id            String        @id @default(cuid())
+  tenantId      String        @map("tenant_id")
+  residentId    String        @map("resident_id")
+  resident      Resident      @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  /// Serie de numeración (por defecto 'A'). Permite separar series por ejercicio o tipo.
+  series        String        @default("A")
+  /// Número correlativo dentro de (tenantId, invoiceYear, series). Solo se asigna al ISSUED.
+  invoiceNumber Int?          @map("invoice_number")
+  /// Ejercicio fiscal del número correlativo.
+  invoiceYear   Int?          @map("invoice_year")
+  periodStart   DateTime      @map("period_start")
+  periodEnd     DateTime      @map("period_end")
+  status        InvoiceStatus @default(DRAFT)
+  issuedAt      DateTime?     @map("issued_at")
+  paidAt        DateTime?     @map("paid_at")
+  voidReason    String?       @map("void_reason")
+  payerType     PayerType     @map("payer_type")
+  /// Nombre del pagador en el momento de emisión. PII — sujeto a DSAR scrub.
+  payerName     String?       @map("payer_name")
+  baseAmount    Decimal       @map("base_amount") @db.Decimal(12, 2)
+  vatAmount     Decimal       @map("vat_amount") @db.Decimal(12, 2)
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(12, 2)
+  /// Fecha límite de pago (opcional, informativa). TODO Q-007: recordatorio SEPA.
+  dueAt         DateTime?     @map("due_at")
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  lines InvoiceLine[]
+
+  @@unique([tenantId, invoiceYear, series, invoiceNumber])
+  @@index([tenantId])
+  @@index([residentId])
+  @@index([status])
+  @@map("invoices")
+}
+
+/// Línea de detalle de una factura (concepto, cantidad, precio, IVA).
+/// RF-ECO-003: desglose de líneas en la factura.
+model InvoiceLine {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  invoiceId   String   @map("invoice_id")
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  tariffId    String?  @map("tariff_id")
+  tariff      Tariff?  @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+  description String
+  quantity    Decimal  @db.Decimal(10, 4)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(12, 2)
+  vatPct      Decimal  @map("vat_pct") @db.Decimal(5, 2)
+  vatExempt   Boolean  @default(true) @map("vat_exempt")
+  lineBase    Decimal  @map("line_base") @db.Decimal(12, 2)
+  lineVat     Decimal  @map("line_vat") @db.Decimal(12, 2)
+  lineTotal   Decimal  @map("line_total") @db.Decimal(12, 2)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@map("invoice_lines")
 }
