@@ -50,6 +50,12 @@
 //    El modelo Diagnosis ya estaba declarado; sus campos nuevos (type, status,
 //    resolvedAt, notes) no necesitan cambio en el export (ya se serializa el objeto
 //    completo). La versión del JSON sube de 8 a 9.
+//  - v10 (2026-06-14, Inventario/Lavandería/Pertenencias): añadida ResidentBelonging.
+//    export:true (el interesado tiene derecho a ver el registro de sus pertenencias,
+//    art. 15 RGPD). anonymize:'delete' (no es registro clínico, sin obligación de
+//    conservación sanitaria). InventoryItem / InventoryMovement no tienen residentId
+//    y no se exportan individualmente (son datos del centro).
+//    La versión del JSON sube de 9 a 10.
 
 import type { TenantPrisma } from './rls';
 
@@ -84,7 +90,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 9;
+  version: 10;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -127,6 +133,10 @@ export interface ResidentExport {
   // campos (type, status, resolvedAt, notes) se serializan automáticamente
   // porque el include trae el objeto completo.
   assistiveDevices: unknown[];
+  // v10: Inventario / Lavandería / Pertenencias del residente
+  // InventoryItem/InventoryMovement son datos del CENTRO y no se exportan aquí.
+  // ResidentBelonging: el interesado tiene derecho a ver el registro de sus pertenencias.
+  belongings: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -189,6 +199,7 @@ export async function exportResidentData(
     admissionRequests,
     activityEnrollments,
     assistiveDevices,
+    belongings,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -283,11 +294,14 @@ export async function exportResidentData(
     }),
     // v9: Ayudas técnicas (productos de apoyo). Datos de salud funcional (art. 9).
     db.assistiveDevice.findMany({ where: { residentId }, orderBy: { prescribedAt: 'asc' } }),
+    // v10: Pertenencias personales del residente (ropa, calzado, joyería, lavandería…).
+    // El interesado tiene derecho a ver el registro de sus pertenencias (art. 15 RGPD).
+    db.residentBelonging.findMany({ where: { residentId }, orderBy: { registeredAt: 'asc' } }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 9,
+    version: 10,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -319,6 +333,7 @@ export async function exportResidentData(
     admissionRequests,
     activityEnrollments,
     assistiveDevices,
+    belongings,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -450,6 +465,9 @@ export async function anonymizeResident(
     await db.activityEnrollment.deleteMany({ where: { residentId } });
     // Ayudas técnicas (v9, productos de apoyo):
     await db.assistiveDevice.deleteMany({ where: { residentId } });
+    // Pertenencias del residente (v10, inventario/lavandería):
+    // No es registro clínico; se borra siempre en purga total (no keepClinicalRecords).
+    await db.residentBelonging.deleteMany({ where: { residentId } });
   }
 
   // Admisión/Preadmisión (v7, RF-ADM-001..010) — política 'scrub' SIEMPRE:

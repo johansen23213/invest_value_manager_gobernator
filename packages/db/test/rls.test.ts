@@ -407,4 +407,108 @@ describe.skipIf(!hasDb)('RLS — aislamiento multitenant', () => {
     await dbAdmin.resident.deleteMany({ where: { id: { in: [residentA.id, residentB.id] } } });
     await dbAdmin.center.deleteMany({ where: { id: { in: [centerA.id, centerB.id] } } });
   });
+
+  it('ResidentBelonging — aislamiento RLS entre tenants', async () => {
+    const dbAdmin = asPlatformAdmin();
+    const dbA = forTenant({ tenantId: tenantAId });
+    const dbB = forTenant({ tenantId: tenantBId });
+
+    // Cada tenant necesita un centro y un residente.
+    const centerA = await dbA.center.create({
+      data: { tenantId: tenantAId, name: 'Centro Bel A', type: 'RESIDENCIA' },
+    });
+    const centerB = await dbB.center.create({
+      data: { tenantId: tenantBId, name: 'Centro Bel B', type: 'RESIDENCIA' },
+    });
+    const residentA = await dbA.resident.create({
+      data: { tenantId: tenantAId, centerId: centerA.id, firstName: 'Ana', lastName: `Bel-${stamp}` },
+    });
+    const residentB = await dbB.resident.create({
+      data: { tenantId: tenantBId, centerId: centerB.id, firstName: 'Bob', lastName: `Bel-${stamp}` },
+    });
+
+    // Tenant A registra una pertenencia para su residente.
+    const bA = await dbA.residentBelonging.create({
+      data: {
+        tenantId:    tenantAId,
+        residentId:  residentA.id,
+        description: 'Chaqueta azul marino',
+        category:    'ROPA',
+        quantity:    1,
+        status:      'EN_USO',
+      },
+    });
+
+    // Tenant A ve su pertenencia.
+    const fromA = await dbA.residentBelonging.findMany();
+    expect(fromA.some((b) => b.id === bA.id)).toBe(true);
+    expect(fromA.every((b) => b.tenantId === tenantAId)).toBe(true);
+
+    // Tenant B no ve la pertenencia de A ni forzando el where.
+    const fromB = await dbB.residentBelonging.findMany({ where: { id: bA.id } });
+    expect(fromB).toHaveLength(0);
+
+    // WITH CHECK: Tenant B no puede crear una pertenencia para el tenant A.
+    await expect(
+      dbB.residentBelonging.create({
+        data: {
+          tenantId:    tenantAId, // intento cross-tenant
+          residentId:  residentB.id,
+          description: 'Pertenencia maliciosa',
+          category:    'OTRO',
+          quantity:    1,
+          status:      'EN_USO',
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Limpieza.
+    await dbAdmin.residentBelonging.delete({ where: { id: bA.id } });
+    await dbAdmin.resident.deleteMany({ where: { id: { in: [residentA.id, residentB.id] } } });
+    await dbAdmin.center.deleteMany({ where: { id: { in: [centerA.id, centerB.id] } } });
+  });
+
+  it('InventoryItem — aislamiento RLS entre tenants', async () => {
+    const dbAdmin = asPlatformAdmin();
+    const dbA = forTenant({ tenantId: tenantAId });
+    const dbB = forTenant({ tenantId: tenantBId });
+
+    // Tenant A crea un artículo de inventario.
+    const itemA = await dbA.inventoryItem.create({
+      data: {
+        tenantId: tenantAId,
+        name:     `Absorbentes M-${stamp}`,
+        category: 'ABSORBENTES',
+        unit:     'unidad',
+        stock:    100,
+        stockMin: 20,
+      },
+    });
+
+    // Tenant A ve su artículo.
+    const fromA = await dbA.inventoryItem.findMany();
+    expect(fromA.some((i) => i.id === itemA.id)).toBe(true);
+    expect(fromA.every((i) => i.tenantId === tenantAId)).toBe(true);
+
+    // Tenant B no ve el artículo de A ni forzando el where.
+    const fromB = await dbB.inventoryItem.findMany({ where: { id: itemA.id } });
+    expect(fromB).toHaveLength(0);
+
+    // WITH CHECK: Tenant B no puede crear un artículo para el tenant A.
+    await expect(
+      dbB.inventoryItem.create({
+        data: {
+          tenantId: tenantAId, // intento cross-tenant
+          name:     'Artículo malicioso',
+          category: 'OTRO',
+          unit:     'unidad',
+          stock:    0,
+          stockMin: 0,
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Limpieza.
+    await dbAdmin.inventoryItem.delete({ where: { id: itemA.id } });
+  });
 });
