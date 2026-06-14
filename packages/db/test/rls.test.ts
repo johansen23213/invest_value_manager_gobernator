@@ -107,4 +107,54 @@ describe.skipIf(!hasDb)('RLS — aislamiento multitenant', () => {
     expect((await dbA.center.findMany()).length).toBeGreaterThan(0);
     expect((await dbA.resident.findMany()).length).toBeGreaterThan(0);
   });
+
+  it('PushSubscription — aislamiento RLS entre tenants', async () => {
+    // Buscar los usuarios creados en beforeAll
+    const dbAdmin = asPlatformAdmin();
+    const userA = await dbAdmin.user.findFirst({ where: { tenantId: tenantAId } });
+    const userB = await dbAdmin.user.findFirst({ where: { tenantId: tenantBId } });
+
+    if (!userA || !userB) throw new Error('Usuarios de test no encontrados');
+
+    const dbA = forTenant({ tenantId: tenantAId });
+    const dbB = forTenant({ tenantId: tenantBId });
+
+    // Tenant A crea una suscripción push
+    const subA = await dbA.pushSubscription.create({
+      data: {
+        tenantId: tenantAId,
+        userId:   userA.id,
+        endpoint: `https://push.example.com/rls-test-a-${stamp}`,
+        p256dh:   'dGVzdC1wMjU2ZGg=',
+        auth:     'dGVzdC1hdXRo',
+      },
+    });
+
+    // Tenant A solo ve sus propias suscripciones
+    const subsFromA = await dbA.pushSubscription.findMany();
+    expect(subsFromA.every((s) => s.tenantId === tenantAId)).toBe(true);
+    expect(subsFromA.some((s) => s.id === subA.id)).toBe(true);
+
+    // Tenant B no puede ver la suscripción del tenant A
+    const subsFromB = await dbB.pushSubscription.findMany({
+      where: { id: subA.id },
+    });
+    expect(subsFromB).toHaveLength(0);
+
+    // WITH CHECK: Tenant B no puede crear una suscripción para el tenant A
+    await expect(
+      dbB.pushSubscription.create({
+        data: {
+          tenantId: tenantAId, // intento de crear para otro tenant
+          userId:   userB.id,
+          endpoint: `https://push.example.com/rls-evil-${stamp}`,
+          p256dh:   'dGVzdC1wMjU2ZGg=',
+          auth:     'dGVzdC1hdXRo',
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Limpieza
+    await dbAdmin.pushSubscription.delete({ where: { id: subA.id } });
+  });
 });

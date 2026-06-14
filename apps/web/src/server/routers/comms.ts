@@ -47,6 +47,8 @@ import {
 import { newMessageEmail } from '@/server/account/emails';
 import { assertFamilyAccess } from '@/server/family-access';
 import { sendEmailSafe } from '@/server/email/safe';
+import { sendPushToUser } from '@/server/push';
+import { buildPushPayload } from '@/server/push/payload';
 
 // ---------------------------------------------------------------------------
 // Esquemas Zod reutilizables (exportados para validación en cliente)
@@ -182,6 +184,47 @@ export const commsRouter = createTRPCRouter({
 
       // TODO Q-005: encolar job para enviar email a los destinatarios calculados
       // por computeRecipients(). No se hace aquí para evitar latencia y timeouts.
+
+      // RF-NOT-002: notificación push a los familiares destinatarios del comunicado.
+      // Se ejecuta en background (void + catch) para no bloquear la respuesta al
+      // publicador. Un fallo de push NUNCA debe tumbar la publicación del comunicado.
+      void (async () => {
+        try {
+          // Calcular destinatarios (misma lógica que announcementStats)
+          const [allFamilyLinks, allResidents] = await Promise.all([
+            ctx.db.familyLink.findMany({ select: { userId: true, residentId: true } }),
+            ctx.db.resident.findMany({
+              select: { id: true, bedId: true, bed: { select: { unitId: true } } },
+            }),
+          ]);
+
+          const recipientUserIds = computeRecipients(
+            {
+              audience:   announcement.audience,
+              unitId:     announcement.unitId,
+              residentId: announcement.residentId,
+            },
+            allFamilyLinks as FamilyLinkMin[],
+            allResidents   as ResidentMin[],
+          );
+
+          const payload = buildPushPayload({
+            type:           'announcement',
+            title:          announcement.title,
+            body:           announcement.body,
+            announcementId: announcement.id,
+          });
+
+          // Enviar en paralelo a todos los destinatarios (fire-and-forget por usuario)
+          await Promise.all(
+            recipientUserIds.map((userId) =>
+              sendPushToUser(ctx.db, userId, payload).catch(() => {/* silenciado */}),
+            ),
+          );
+        } catch {
+          // El bloque completo falla silenciosamente: el comunicado ya está publicado.
+        }
+      })();
 
       return announcement;
     }),
