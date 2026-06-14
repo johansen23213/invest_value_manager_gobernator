@@ -414,7 +414,7 @@ function TransitionDialog({
               onChange={(e) => setToStatus(e.target.value as DomainStatus | '')}
               aria-required="true"
             >
-              <option value="">Selecciona el nuevo estado…</option>
+              <option value="">{t('admissions.actions.selectStatus')}</option>
               {nexts.map((s) => (
                 <option key={s} value={s}>{t(`admission.status.${s}`)}</option>
               ))}

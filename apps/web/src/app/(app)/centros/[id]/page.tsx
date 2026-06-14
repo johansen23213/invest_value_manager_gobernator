@@ -8,6 +8,7 @@ import { api } from '@/trpc/react';
 import { BED_STATUS_LABELS, CENTER_TYPE_LABELS } from '@/lib/labels';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm';
+import { useT } from '@/i18n/provider';
 
 export default function CenterDetailPage() {
   const params = useParams<{ id: string }>();
@@ -15,6 +16,7 @@ export default function CenterDetailPage() {
   const utils = api.useUtils();
   const toast = useToast();
   const confirm = useConfirm();
+  const { t } = useT();
   const me = api.me.useQuery();
   const canWrite = me.data?.permissions.includes('centers:write') ?? false;
   const center = api.centers.get.useQuery({ id: centerId });
@@ -31,7 +33,7 @@ export default function CenterDetailPage() {
       setUnitName('');
       setUnitFloor('');
       await refresh();
-      toast.success('Unidad creada.');
+      toast.success(t('centers.detail.unit.created'));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -39,30 +41,30 @@ export default function CenterDetailPage() {
     onSuccess: async () => {
       setBedCode('');
       await refresh();
-      toast.success('Plaza creada.');
+      toast.success(t('centers.detail.bed.created'));
     },
     onError: (e) => toast.error(e.message),
   });
   const deleteBed = api.beds.delete.useMutation({
     onSuccess: async () => {
       await refresh();
-      toast.success('Plaza eliminada.');
+      toast.success(t('centers.detail.bed.deleted'));
     },
     onError: (e) => toast.error(e.message),
   });
   const deleteUnit = api.units.delete.useMutation({
     onSuccess: async () => {
       await refresh();
-      toast.success('Unidad eliminada.');
+      toast.success(t('centers.detail.unit.deleted'));
     },
     onError: (e) => toast.error(e.message),
   });
 
   async function confirmDeleteUnit(id: string, name: string) {
     const ok = await confirm({
-      title: `Eliminar la unidad "${name}"`,
-      description: 'Esta acción no se puede deshacer.',
-      confirmLabel: 'Eliminar',
+      title: t('centers.detail.deleteUnit.title', { name }),
+      description: t('centers.detail.deleteUnit.desc'),
+      confirmLabel: t('centers.detail.deleteUnit.confirm'),
       tone: 'danger',
     });
     if (ok) deleteUnit.mutate({ id });
@@ -70,16 +72,16 @@ export default function CenterDetailPage() {
 
   async function confirmDeleteBed(id: string, code: string) {
     const ok = await confirm({
-      title: `Eliminar la plaza "${code}"`,
-      description: 'Esta acción no se puede deshacer.',
-      confirmLabel: 'Eliminar',
+      title: t('centers.detail.deleteBed.title', { code }),
+      description: t('centers.detail.deleteBed.desc'),
+      confirmLabel: t('centers.detail.deleteBed.confirm'),
       tone: 'danger',
     });
     if (ok) deleteBed.mutate({ id });
   }
 
-  if (center.isLoading) return <p className="text-slate-500">Cargando…</p>;
-  if (!center.data) return <p className="text-slate-500">Centro no encontrado.</p>;
+  if (center.isLoading) return <p className="text-[#1A3A3F]/60">{t('centers.detail.loading')}</p>;
+  if (!center.data) return <p className="text-[#1A3A3F]/60">{t('centers.detail.notFound')}</p>;
 
   const c = center.data;
   const totalBeds = c.units.reduce((n, u) => n + u.beds.length, 0);
@@ -89,15 +91,15 @@ export default function CenterDetailPage() {
     <div className="flex flex-col gap-6">
       <div>
         <Link href="/centros" className="text-sm text-brand-700 hover:underline">
-          ← Centros
+          {t('centers.detail.backToCenters')}
         </Link>
         <h1 className="mt-1 text-2xl font-bold">{c.name}</h1>
-        <p className="text-slate-500">
+        <p className="text-[#1A3A3F]/60">
           <Badge tone="blue">{CENTER_TYPE_LABELS[c.type]}</Badge>{' '}
           {[c.address, c.city].filter(Boolean).join(', ')}
         </p>
-        <p className="mt-1 text-sm text-slate-500">
-          Ocupación: {occupied} / {totalBeds} plazas · {c._count.residents} residentes
+        <p className="mt-1 text-sm text-[#1A3A3F]/60">
+          {t('centers.detail.occupancy', { occupied, total: totalBeds, residents: c._count.residents })}
         </p>
       </div>
 
@@ -105,7 +107,7 @@ export default function CenterDetailPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>
             <CardContent>
-              <CardTitle className="mb-3 text-base">Añadir unidad</CardTitle>
+              <CardTitle className="mb-3 text-base">{t('centers.detail.addUnit')}</CardTitle>
               <form
                 className="flex flex-col gap-3"
                 onSubmit={(e) => {
@@ -114,15 +116,15 @@ export default function CenterDetailPage() {
                 }}
               >
                 <div>
-                  <Label htmlFor="unitName">Nombre</Label>
+                  <Label htmlFor="unitName">{t('centers.detail.unit.name')}</Label>
                   <Input id="unitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} required placeholder="Planta 1" />
                 </div>
                 <div>
-                  <Label htmlFor="unitFloor">Planta (opcional)</Label>
+                  <Label htmlFor="unitFloor">{t('centers.detail.unit.floor')}</Label>
                   <Input id="unitFloor" value={unitFloor} onChange={(e) => setUnitFloor(e.target.value)} />
                 </div>
                 <Button type="submit" disabled={createUnit.isPending}>
-                  Añadir unidad
+                  {t('centers.detail.unit.submit')}
                 </Button>
               </form>
             </CardContent>
@@ -130,7 +132,7 @@ export default function CenterDetailPage() {
 
           <Card>
             <CardContent>
-              <CardTitle className="mb-3 text-base">Añadir plaza</CardTitle>
+              <CardTitle className="mb-3 text-base">{t('centers.detail.addBed')}</CardTitle>
               <form
                 className="flex flex-col gap-3"
                 onSubmit={(e) => {
@@ -139,9 +141,9 @@ export default function CenterDetailPage() {
                 }}
               >
                 <div>
-                  <Label htmlFor="bedUnit">Unidad</Label>
+                  <Label htmlFor="bedUnit">{t('centers.detail.bed.unit')}</Label>
                   <Select id="bedUnit" value={bedUnitId} onChange={(e) => setBedUnitId(e.target.value)} required>
-                    <option value="">Selecciona…</option>
+                    <option value="">{t('centers.detail.bed.unitPh')}</option>
                     {c.units.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name}
@@ -150,11 +152,11 @@ export default function CenterDetailPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="bedCode">Código</Label>
+                  <Label htmlFor="bedCode">{t('centers.detail.bed.code')}</Label>
                   <Input id="bedCode" value={bedCode} onChange={(e) => setBedCode(e.target.value)} required placeholder="101-A" />
                 </div>
                 <Button type="submit" disabled={createBed.isPending || !bedUnitId}>
-                  Añadir plaza
+                  {t('centers.detail.bed.submit')}
                 </Button>
               </form>
             </CardContent>
@@ -163,23 +165,23 @@ export default function CenterDetailPage() {
       )}
 
       {c.units.length === 0 ? (
-        <p className="text-slate-500">No hay unidades todavía.</p>
+        <p className="text-[#1A3A3F]/60">{t('centers.detail.noUnits')}</p>
       ) : (
         c.units.map((u) => (
           <Card key={u.id}>
             <CardContent>
               <div className="mb-3 flex items-center justify-between">
                 <CardTitle className="text-base">
-                  {u.name} {u.floor ? <span className="text-slate-400">· {u.floor}</span> : null}
+                  {u.name} {u.floor ? <span className="text-[#1A3A3F]/40">· {u.floor}</span> : null}
                 </CardTitle>
                 {canWrite && u.beds.length === 0 && (
                   <Button variant="ghost" size="sm" onClick={() => confirmDeleteUnit(u.id, u.name)}>
-                    Eliminar unidad
+                    {t('centers.detail.deleteUnit')}
                   </Button>
                 )}
               </div>
               {u.beds.length === 0 ? (
-                <p className="text-sm text-slate-500">Sin plazas.</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('centers.detail.noBeds')}</p>
               ) : (
                 <ul className="flex flex-wrap gap-2">
                   {u.beds.map((b) => (
@@ -195,13 +197,13 @@ export default function CenterDetailPage() {
                           {b.resident.firstName} {b.resident.lastName}
                         </Badge>
                       ) : (
-                        <Badge tone="green">Libre</Badge>
+                        <Badge tone="green">{t('centers.detail.bed.free')}</Badge>
                       )}
                       {canWrite && !b.resident && (
                         <button
                           type="button"
-                          aria-label={`Eliminar plaza ${b.code}`}
-                          className="text-slate-400 hover:text-red-600"
+                          aria-label={t('centers.detail.deleteBed.aria', { code: b.code })}
+                          className="text-[#1A3A3F]/40 hover:text-red-600"
                           onClick={() => confirmDeleteBed(b.id, b.code)}
                         >
                           ×

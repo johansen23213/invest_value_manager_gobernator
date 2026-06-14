@@ -382,7 +382,7 @@ export default function MedicationPage() {
             </div>
 
             {schedule.isLoading ? (
-              <p className="text-[#1A3A3F]/60">Cargando…</p>
+              <p className="text-[#1A3A3F]/60">{t('state.loading')}</p>
             ) : visibleShiftGroups.length > 0 ? (
               <div className="flex flex-col gap-5">
                 {visibleShiftGroups.map((group) => (

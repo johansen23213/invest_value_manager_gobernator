@@ -98,7 +98,7 @@ export default function AcpPage() {
       <Card>
         <CardContent>
           {reviewsQ.isLoading ? (
-            <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+            <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
           ) : reviews.length === 0 ? (
             <EmptyState
               title={t('acp.empty.title')}

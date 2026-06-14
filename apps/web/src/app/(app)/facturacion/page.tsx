@@ -269,16 +269,16 @@ function TarifasTab() {
                     </td>
                     <td className="py-2 text-center">
                       {tariff.active ? (
-                        <Badge tone="green">Sí</Badge>
+                        <Badge tone="green">{t('billing.tariffs.vatYes')}</Badge>
                       ) : (
-                        <Badge tone="neutral">No</Badge>
+                        <Badge tone="neutral">{t('billing.tariffs.vatNo')}</Badge>
                       )}
                     </td>
                     {canManage && (
                       <td className="py-2">
                         <div className="flex justify-end gap-1.5">
                           <Button size="sm" variant="ghost" onClick={() => startEdit(tariff)}>
-                            Editar
+                            {t('billing.tariffs.edit')}
                           </Button>
                           {tariff.active && (
                             <Button
@@ -582,7 +582,7 @@ function FacturasTab() {
             onChange={(e) => { setYearFilter(e.target.value ? Number(e.target.value) : ''); setPage(1); }}
             className="w-auto"
           >
-            <option value="">Año: Todos</option>
+            <option value="">{t('billing.filter.yearAll')}</option>
             {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
           </Select>
         </div>
@@ -595,7 +595,7 @@ function FacturasTab() {
               onChange={(e) => { setMonthFilter(e.target.value ? Number(e.target.value) : ''); setPage(1); }}
               className="w-auto"
             >
-              <option value="">Mes: Todos</option>
+              <option value="">{t('billing.filter.monthAll')}</option>
               {MONTHS.map((m) => (
                 <option key={m} value={m}>{MONTH_NAMES_ES[m - 1]}</option>
               ))}
@@ -739,7 +739,7 @@ function FacturasTab() {
           <DialogTitle>{t('billing.invoices.createDraft')}</DialogTitle>
           <form id="draft-form" noValidate onSubmit={handleDraftSubmit} className="flex flex-col gap-4 mt-2">
             <div>
-              <Label htmlFor="draft-resident">Residente</Label>
+              <Label htmlFor="draft-resident">{t('billing.invoices.resident')}</Label>
               <Select
                 id="draft-resident"
                 value={draftFields.residentId}
@@ -758,7 +758,7 @@ function FacturasTab() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="draft-year">Año</Label>
+                <Label htmlFor="draft-year">{t('billing.invoices.year')}</Label>
                 <Select
                   id="draft-year"
                   value={draftFields.periodYear}
@@ -768,7 +768,7 @@ function FacturasTab() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="draft-month">Mes</Label>
+                <Label htmlFor="draft-month">{t('billing.invoices.month')}</Label>
                 <Select
                   id="draft-month"
                   value={draftFields.periodMonth}
@@ -781,7 +781,7 @@ function FacturasTab() {
               </div>
             </div>
             <div>
-              <Label htmlFor="draft-series">Serie</Label>
+              <Label htmlFor="draft-series">{t('billing.invoices.series')}</Label>
               <Input
                 id="draft-series"
                 value={draftFields.series}
@@ -792,10 +792,10 @@ function FacturasTab() {
           </form>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="secondary" type="button">Cancelar</Button>
+              <Button variant="secondary" type="button">{t('action.cancel')}</Button>
             </DialogClose>
             <Button type="submit" form="draft-form" disabled={createDraft.isPending}>
-              {createDraft.isPending ? 'Creando…' : t('billing.invoices.createDraft')}
+              {createDraft.isPending ? t('billing.invoices.creating') : t('billing.invoices.createDraft')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -812,7 +812,7 @@ function FacturasTab() {
           ) : detail ? (
             <>
               <DialogTitle>
-                Factura{' '}
+                {t('billing.invoices.draft.title')}{' '}
                 {detail.invoiceNumber
                   ? `${detail.series}-${detail.invoiceYear}-${String(detail.invoiceNumber).padStart(4, '0')}`
                   : `(${t('invoice.status.DRAFT')})`}
@@ -841,7 +841,7 @@ function FacturasTab() {
                   </p>
                 )}
                 <p className="text-[#1A3A3F]/60">
-                  Pagador: <Badge tone="neutral">{t(`payer.type.${detail.payerType}`)}</Badge>
+                  {t('billing.invoices.payer')} <Badge tone="neutral">{t(`payer.type.${detail.payerType}`)}</Badge>
                   {detail.payerName && <span className="ml-1">{detail.payerName}</span>}
                 </p>
 
@@ -850,10 +850,10 @@ function FacturasTab() {
                   <table className="w-full text-xs" aria-label="Líneas de la factura">
                     <thead>
                       <tr className="bg-brand-50">
-                        <th scope="col" className="px-3 py-2 text-left font-semibold text-[#1A3A3F]/60">Concepto</th>
-                        <th scope="col" className="px-3 py-2 text-right font-semibold text-[#1A3A3F]/60">Base</th>
-                        <th scope="col" className="px-3 py-2 text-right font-semibold text-[#1A3A3F]/60">IVA</th>
-                        <th scope="col" className="px-3 py-2 text-right font-semibold text-[#1A3A3F]/60">Total</th>
+                        <th scope="col" className="px-3 py-2 text-left font-semibold text-[#1A3A3F]/60">{t('billing.invoices.concept')}</th>
+                        <th scope="col" className="px-3 py-2 text-right font-semibold text-[#1A3A3F]/60">{t('billing.invoices.base')}</th>
+                        <th scope="col" className="px-3 py-2 text-right font-semibold text-[#1A3A3F]/60">{t('billing.invoices.vat')}</th>
+                        <th scope="col" className="px-3 py-2 text-right font-semibold text-[#1A3A3F]/60">{t('billing.invoices.lineTotal')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -861,7 +861,7 @@ function FacturasTab() {
                         <tr key={line.id} className="border-t border-brand-100/60">
                           <td className="px-3 py-2 text-[#1A3A3F]">
                             {line.description}
-                            {line.vatExempt && <span className="ml-1 text-[#1A3A3F]/40">(exento)</span>}
+                            {line.vatExempt && <span className="ml-1 text-[#1A3A3F]/40">{t('billing.invoices.exempt')}</span>}
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatEur(locale, Number(line.lineBase))}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatEur(locale, Number(line.lineVat))}</td>
@@ -871,7 +871,7 @@ function FacturasTab() {
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-brand-200 bg-brand-50/50">
-                        <td className="px-3 py-2 font-semibold text-[#1A3A3F]" colSpan={2}>TOTAL</td>
+                        <td className="px-3 py-2 font-semibold text-[#1A3A3F]" colSpan={2}>{t('billing.invoices.grandTotal')}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-[#1A3A3F]/60">{formatEur(locale, Number(detail.vatAmount))}</td>
                         <td className="px-3 py-2 text-right tabular-nums font-bold text-[#1A3A3F]">{formatEur(locale, Number(detail.totalAmount))}</td>
                       </tr>
@@ -916,7 +916,7 @@ function FacturasTab() {
 
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant="secondary" type="button">Cerrar</Button>
+                  <Button variant="secondary" type="button">{t('action.close')}</Button>
                 </DialogClose>
               </DialogFooter>
             </>
@@ -948,8 +948,8 @@ export default function FacturacionPage() {
   if (!canRead) {
     return (
       <EmptyState
-        title="Acceso restringido"
-        description="Tu rol no tiene permiso para ver la sección de facturación."
+        title={t('billing.access.restricted')}
+        description={t('billing.access.noPermission')}
       />
     );
   }
