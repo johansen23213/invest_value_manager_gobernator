@@ -53,6 +53,18 @@ export const PERMISSIONS = [
   // FAMILIAR usa assertFamilyAccess en listMine/getMine, sin necesitar estos permisos.
   'billing:read',
   'billing:manage',
+  // Admisión / Preadmisión / Forecast (RF-ADM-001..010)
+  // admissions:read   → ver solicitudes y forecast (DIRECTOR, SANITARIO).
+  // admissions:manage → crear/actualizar/transicionar solicitudes (DIRECTOR).
+  //
+  // Matriz RBAC de admisiones:
+  //   SUPERADMIN → manage + read (todos los permisos)
+  //   DIRECTOR   → manage + read (gestiona el proceso completo)
+  //   SANITARIO  → read (participa en la evaluación clínica; solo lectura)
+  //   AUXILIAR   → sin acceso (no interviene en admisiones)
+  //   FAMILIAR   → sin acceso (proceso interno del centro)
+  'admissions:read',
+  'admissions:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -86,6 +98,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'shifts:manage',
     'billing:read',
     'billing:manage',
+    'admissions:read',
+    'admissions:manage',
   ],
   SANITARIO: [
     'tenant:read',
@@ -115,6 +129,10 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     // tiene en cada turno para coordinar la atención clínica. No puede planificarlo
     // (shifts:manage es exclusivo de dirección).
     'shifts:read',
+    // SANITARIO tiene admissions:read: participa en la evaluación clínica del
+    // candidato (valoración de grado de dependencia, diagnósticos, necesidades).
+    // No puede crear ni transicionar solicitudes (admissions:manage es solo DIRECTOR).
+    'admissions:read',
   ],
   // El auxiliar registra atención directa y administra medicación (MAR).
   // En muchos centros el auxiliar hace las funciones de recepción (check-in/out).

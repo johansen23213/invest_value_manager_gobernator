@@ -157,4 +157,53 @@ describe.skipIf(!hasDb)('RLS — aislamiento multitenant', () => {
     // Limpieza
     await dbAdmin.pushSubscription.delete({ where: { id: subA.id } });
   });
+
+  it('AdmissionRequest — aislamiento RLS entre tenants', async () => {
+    const dbAdmin = asPlatformAdmin();
+    const dbA = forTenant({ tenantId: tenantAId });
+    const dbB = forTenant({ tenantId: tenantBId });
+
+    // Cada tenant necesita un centro propio (centerId es obligatorio).
+    const centerA = await dbA.center.create({
+      data: { tenantId: tenantAId, name: 'Centro Adm A', type: 'RESIDENCIA' },
+    });
+    const centerB = await dbB.center.create({
+      data: { tenantId: tenantBId, name: 'Centro Adm B', type: 'RESIDENCIA' },
+    });
+
+    // Tenant A crea una solicitud de admisión (preadmisión / lista de espera).
+    const reqA = await dbA.admissionRequest.create({
+      data: {
+        tenantId: tenantAId,
+        centerId: centerA.id,
+        firstName: 'Cand',
+        lastName: `A-${stamp}`,
+      },
+    });
+
+    // Tenant A solo ve las suyas.
+    const fromA = await dbA.admissionRequest.findMany();
+    expect(fromA.every((r) => r.tenantId === tenantAId)).toBe(true);
+    expect(fromA.some((r) => r.id === reqA.id)).toBe(true);
+
+    // Tenant B no ve la solicitud de A ni forzando el where.
+    const fromB = await dbB.admissionRequest.findMany({ where: { id: reqA.id } });
+    expect(fromB).toHaveLength(0);
+
+    // WITH CHECK: Tenant B no puede crear una solicitud para el tenant A.
+    await expect(
+      dbB.admissionRequest.create({
+        data: {
+          tenantId: tenantAId, // intento cross-tenant
+          centerId: centerB.id,
+          firstName: 'Evil',
+          lastName: `B-${stamp}`,
+        },
+      }),
+    ).rejects.toThrow();
+
+    // Limpieza.
+    await dbAdmin.admissionRequest.delete({ where: { id: reqA.id } });
+    await dbAdmin.center.deleteMany({ where: { id: { in: [centerA.id, centerB.id] } } });
+  });
 });

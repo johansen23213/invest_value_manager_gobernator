@@ -887,3 +887,96 @@ describe('paridad es/ca — Valoraciones: alertas de vencimiento + evolución (R
     }
   });
 });
+
+describe('paridad es/ca — Admisiones / Preadmisión / Forecast de ocupació', () => {
+  const admissionKeys = [
+    'nav.admissions',
+    'admissions.title',
+    'admissions.subtitle',
+    'admissions.new',
+    'admissions.empty.title',
+    'admissions.empty.desc',
+    'admissions.filter.status',
+    'admissions.filter.center',
+    'admissions.filter.all',
+    'admission.status.LEAD',
+    'admission.status.WAITLIST',
+    'admission.status.EVALUATION',
+    'admission.status.OFFERED',
+    'admission.status.ADMITTED',
+    'admission.status.REJECTED',
+    'admission.status.WITHDRAWN',
+    'admission.priority.BAJA',
+    'admission.priority.NORMAL',
+    'admission.priority.ALTA',
+    'admission.priority.URGENTE',
+    'admission.placeType.PRIVADA',
+    'admission.placeType.CONCERTADA',
+    'admission.placeType.PUBLICA',
+    'admission.origin.DOMICILIO',
+    'admission.origin.HOSPITAL',
+    'admission.origin.OTRO_CENTRO',
+    'admission.origin.LISTA_ESPERA_CCAA',
+    'admission.origin.OTRO',
+    'admissions.form.title',
+    'admissions.form.candidate',
+    'admissions.form.firstName',
+    'admissions.form.lastName',
+    'admissions.form.contactPhone',
+    'admissions.form.contactName',
+    'admissions.form.center',
+    'admissions.form.placeType',
+    'admissions.form.priority',
+    'admissions.form.expectedDate',
+    'admissions.form.submit',
+    'admissions.form.success',
+    'admissions.detail.back',
+    'admissions.detail.status',
+    'admissions.detail.expectedDate',
+    'admissions.detail.requestDate',
+    'admissions.detail.noResident',
+    'admissions.actions.transition',
+    'admissions.actions.transitioned',
+    'admissions.actions.reject',
+    'admissions.actions.admit',
+    'admissions.actions.closed',
+    'admissions.forecast.title',
+    'admissions.forecast.subtitle',
+    'admissions.forecast.totalBeds',
+    'admissions.forecast.occupied',
+    'admissions.forecast.free',
+    'admissions.forecast.rate',
+    'admissions.forecast.empty',
+    'admissions.forecast.calculate',
+  ];
+
+  it('todas las claves de admisiones existen en es', () => {
+    for (const key of admissionKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de admisiones existen en ca', () => {
+    for (const key of admissionKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de admisiones difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'admissions.title',
+      'admissions.subtitle',
+      'admissions.empty.desc',
+      'admissions.form.title',
+      'admissions.forecast.subtitle',
+      'admissions.detail.noResident',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});

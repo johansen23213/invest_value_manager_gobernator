@@ -41,11 +41,12 @@ model Tenant {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  users     User[]
-  centers   Center[]
-  residents Resident[]
-  auditLogs AuditLog[]
-  tariffs   Tariff[]
+  users              User[]
+  centers            Center[]
+  residents          Resident[]
+  auditLogs          AuditLog[]
+  tariffs            Tariff[]
+  admissionRequests  AdmissionRequest[]
 
   @@map("tenants")
 }
@@ -337,10 +338,11 @@ model Center {
   createdAt  DateTime   @default(now()) @map("created_at")
   updatedAt  DateTime   @updatedAt @map("updated_at")
 
-  units          Unit[]
-  residents      Resident[]
-  visitSlotConfigs VisitSlotConfig[]
-  menuItems      MenuItem[]
+  units              Unit[]
+  residents          Resident[]
+  visitSlotConfigs   VisitSlotConfig[]
+  menuItems          MenuItem[]
+  admissionRequests  AdmissionRequest[]
 
   // --- Épica D: turnos del personal ---
   shiftTemplates  ShiftTemplate[]
@@ -361,8 +363,9 @@ model Unit {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  beds          Bed[]
-  announcements Announcement[]
+  beds               Bed[]
+  announcements      Announcement[]
+  admissionRequests  AdmissionRequest[]
 
   // --- Épica D: turnos del personal ---
   shiftTemplates   ShiftTemplate[]
@@ -492,6 +495,9 @@ model Resident {
   // --- Facturación (RF-ECO-001..005) ---
   billingProfile    ResidentBillingProfile?
   invoices          Invoice[]
+
+  // --- Admisión/Preadmisión ---
+  admissionRequests AdmissionRequest[] // historial de solicitudes que derivaron en este residente
 
   @@index([tenantId])
   @@index([centerId])
@@ -1924,6 +1930,102 @@ model Message {
   @@index([tenantId])
   @@index([threadId])
   @@map("messages")
+}
+
+// ---------------------------------------------------------------------------
+// Admisión / Preadmisión / Lista de espera (RF-ADM-001..010)
+// ---------------------------------------------------------------------------
+//
+// Candidato a ingreso: dato personal ANTES de ser Resident.
+// RGPD / DSAR: cuando la admisión se confirma (→ ADMITTED), se crea el Resident
+// y residentId se rellena. El candidato queda vinculado desde ese momento y
+// AdmissionRequest entra en el flujo DSAR normal de residentes.
+// Mientras el candidato NO ha sido admitido, los datos personales se tratan
+// bajo "interés legítimo del responsable" (art. 6.1.f RGPD) para el proceso
+// de evaluación y lista de espera. Los candidatos rechazados/retirados se
+// retienen con base de interés legítimo limitado y se purgan por retención
+// (política definitiva pendiente de Q-003 — no se inventa aquí).
+// Ver dsar-registry.ts para la declaración formal de la tabla.
+
+/// Estado del proceso de admisión.
+enum AdmissionStatus {
+  LEAD            // contacto inicial / captación
+  WAITLIST        // en lista de espera (solicitud recibida)
+  EVALUATION      // en proceso de evaluación (visita, informes…)
+  OFFERED         // se ha ofrecido plaza concreta
+  ADMITTED        // admitido → crea Resident y vincula residentId
+  REJECTED        // rechazado (con motivo)
+  WITHDRAWN       // retirado (candidato/familia retira la solicitud)
+}
+
+/// Procedencia del candidato.
+enum AdmissionOrigin {
+  DERIVACION_HOSPITAL   // alta hospitalaria
+  DERIVACION_SS         // servicios sociales
+  INICIATIVA_PROPIA     // petición directa de la familia
+  TRASLADO_OTRO_CENTRO  // traslado desde otro centro
+  OTRO
+}
+
+/// Solicitud de ingreso / preadmisión. Un candidato puede existir aunque aún
+/// no sea Resident (residentId es null hasta que la solicitud pasa a ADMITTED).
+///
+/// RLS: tenantId + ENABLE + FORCE + política tenant_isolation (ver migración).
+/// DSAR: declarado en dsar-registry.ts — el dato personal del candidato
+///       se trata bajo interés legítimo mientras no hay residentId;
+///       una vez ADMITTED el residentId vincula el registro al flujo DSAR
+///       del Resident.
+model AdmissionRequest {
+  id              String           @id @default(cuid())
+  tenantId        String           @map("tenant_id")
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Centro deseado (puede diferir del que finalmente ingresa).
+  centerId        String           @map("center_id")
+  center          Center           @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  /// Unidad/plaza deseada (opcional — puede no estar definida en el momento de la solicitud).
+  unitId          String?          @map("unit_id")
+  unit            Unit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  // --- Datos del candidato ---
+  firstName       String           @map("first_name")
+  lastName        String           @map("last_name")
+  birthDate       DateTime?        @map("birth_date")
+  dependencyGrade DependencyGrade  @default(SIN_VALORAR) @map("dependency_grade")
+  placeRegime     PlaceRegime      @default(PRIVADA) @map("place_regime")
+  origin          AdmissionOrigin  @default(INICIATIVA_PROPIA)
+  /// Teléfono del candidato o contacto principal.
+  contactPhone    String?          @map("contact_phone")
+  /// Email del candidato o contacto principal.
+  contactEmail    String?          @map("contact_email")
+  /// Nombre del contacto / familiar que tramita la solicitud.
+  contactName     String?          @map("contact_name")
+
+  // --- Proceso ---
+  status          AdmissionStatus  @default(LEAD)
+  /// Prioridad interna del centro (1=alta, 2=media, 3=baja).
+  priority        Int              @default(2)
+  requestedAt     DateTime         @default(now()) @map("requested_at")
+  /// Fecha de ingreso prevista (usada en el forecast de ocupación).
+  expectedAdmissionDate DateTime?  @map("expected_admission_date")
+  /// Motivo de rechazo o retirada (solo cuando status=REJECTED|WITHDRAWN).
+  outcomeReason   String?          @map("outcome_reason")
+  notes           String?
+
+  /// Se rellena solo cuando status=ADMITTED: apunta al Resident creado.
+  /// NULL mientras el candidato no es residente.
+  residentId      String?          @map("resident_id")
+  resident        Resident?        @relation(fields: [residentId], references: [id], onDelete: SetNull)
+
+  createdById     String?          @map("created_by_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, centerId])
+  @@index([tenantId, status])
+  @@index([tenantId, expectedAdmissionDate])
+  @@index([residentId])
+  @@map("admission_requests")
 }
 
 // ---------------------------------------------------------------------------
