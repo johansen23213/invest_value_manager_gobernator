@@ -197,6 +197,24 @@ export default function PortalPage() {
           </div>
         </div>
 
+        {/* Actividades — acceso rápido (ACT-001) */}
+        <Link
+          href="/portal/actividades"
+          className="flex items-center justify-between rounded-2xl border border-brand-100/60 bg-white px-5 py-4 shadow-card transition-smooth hover:shadow-card-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          aria-label={t('activities.portal.title')}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg shrink-0" aria-hidden="true">
+              🎭
+            </span>
+            <div>
+              <p className="font-semibold text-[#1A3A3F]">{t('activities.portal.title')}</p>
+              <p className="text-sm text-[#1A3A3F]/60">{t('activities.portal.intro')}</p>
+            </div>
+          </div>
+          <span className="text-brand-700" aria-hidden="true">→</span>
+        </Link>
+
         {/* Facturas — acceso rápido (RF-ECO-001) */}
         <Link
           href="/portal/facturas"
