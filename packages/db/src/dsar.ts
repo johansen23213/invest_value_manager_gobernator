@@ -38,6 +38,10 @@
 //    · Dato de salud nutricional (art. 9 RGPD): export:true, anonymize:'delete'.
 //    · MenuItem NO tiene residentId; no se exporta individualmente (es dato del centro).
 //    La versión del JSON sube de 4 a 5.
+//  - v7 (2026-06-14, Admisión/Preadmisión): añadida AdmissionRequest (solicitud de
+//    ingreso/preadmisión). export:true, anonymize:'scrub' (PII del candidato limpiada,
+//    fila conservada para trazabilidad del proceso).
+//    La versión del JSON sube de 6 a 7.
 
 import type { TenantPrisma } from './rls';
 
@@ -72,7 +76,7 @@ export const DEFAULT_ANONYMIZE_POLICY: AnonymizePolicy = {
 /** Export completo del expediente (art. 15). El shape es estable y versionado. */
 export interface ResidentExport {
   format: 'vetlla-dsar-export';
-  version: 6;
+  version: 7;
   generatedAt: string;
   tenantId: string;
   resident: unknown;
@@ -106,6 +110,8 @@ export interface ResidentExport {
   // v6: Facturación (RF-ECO-001..005) — datos económicos del interesado
   billingProfile: unknown | null;
   invoices: unknown[];
+  // v7: Admisión/Preadmisión (RF-ADM-001..010) — historial del proceso de admisión
+  admissionRequests: unknown[];
 }
 
 export interface ResidentExportResult {
@@ -165,6 +171,7 @@ export async function exportResidentData(
     intakeRecords,
     billingProfile,
     invoices,
+    admissionRequests,
   ] = await Promise.all([
     db.careRecord.findMany({ where: { residentId }, orderBy: { recordedAt: 'asc' } }),
     db.medication.findMany({ where: { residentId }, orderBy: { createdAt: 'asc' } }),
@@ -243,11 +250,18 @@ export async function exportResidentData(
       include: { lines: { orderBy: { sortOrder: 'asc' } } },
       orderBy: { createdAt: 'asc' },
     }),
+    // v7: Admisión/Preadmisión (RF-ADM-001..010) — historial del proceso de
+    // admisión que derivó en este residente. El interesado tiene derecho a
+    // acceder a los datos de su solicitud de ingreso (art. 15 RGPD).
+    db.admissionRequest.findMany({
+      where:   { residentId },
+      orderBy: { requestedAt: 'asc' },
+    }),
   ]);
 
   const data: ResidentExport = {
     format: 'vetlla-dsar-export',
-    version: 6,
+    version: 7,
     generatedAt: new Date().toISOString(),
     tenantId,
     resident,
@@ -276,6 +290,7 @@ export async function exportResidentData(
     intakeRecords,
     billingProfile,
     invoices,
+    admissionRequests,
   };
 
   const sha256 = await sha256Hex(JSON.stringify(data));
@@ -404,6 +419,25 @@ export async function anonymizeResident(
     // Épica C — registros de ingesta (v5, dato de salud nutricional):
     await db.intakeRecord.deleteMany({ where: { residentId } });
   }
+
+  // Admisión/Preadmisión (v7, RF-ADM-001..010) — política 'scrub' SIEMPRE:
+  //   Las solicitudes de admisión del residente se conservan para trazabilidad
+  //   del proceso (interés legítimo del centro), pero se limpian los PII del
+  //   candidato: nombre, fecha nac., contacto. El estado, fechas del proceso y
+  //   notas clínicas del proceso se conservan. La FK residentId se mantiene
+  //   (ON DELETE SET NULL garantiza que si el Resident se borra, pasa a null
+  //   automáticamente — aquí el residente existe pero anonimizado).
+  await db.admissionRequest.updateMany({
+    where: { residentId },
+    data: {
+      firstName:    'Anonimizado',
+      lastName:     'XXXX',
+      birthDate:    null,
+      contactPhone: null,
+      contactEmail: null,
+      contactName:  null,
+    },
+  });
 
   // Facturación (v6, RF-ECO-001..005) — política 'scrub' SIEMPRE:
   //   Las facturas se CONSERVAN por obligación legal contable/fiscal

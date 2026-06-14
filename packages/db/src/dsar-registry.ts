@@ -267,6 +267,51 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
     anonymize: 'delete',
     reason:    'Perfil de bienestar ACP (UNE 158101): contiene preferencias personales, autodeterminación, relaciones. Datos personales de la persona. Se exporta en DSAR art.15. Se borra en anonimización.',
   },
+
+  // ---------------------------------------------------------------------------
+  // Admisión / Preadmisión (RF-ADM-001..010)
+  //
+  // Política DSAR de AdmissionRequest:
+  //   La tabla contiene datos personales del CANDIDATO (nombre, fecha nac.,
+  //   contacto) que aún no es Resident (residentId es null hasta ADMITTED).
+  //
+  //   Base jurídica: interés legítimo (art. 6.1.f RGPD) durante el proceso.
+  //
+  //   Cuando pasa a ADMITTED:
+  //     - Se crea un Resident y residentId se rellena.
+  //     - Los datos del sujeto fluyen al expediente del Resident (que tiene
+  //       export:true y anonymize:'delete').
+  //     - La solicitud de admisión se exporta junto con el expediente del
+  //       residente (art. 15): el interesado puede ver su historial de admisión.
+  //
+  //   Cuando es REJECTED o WITHDRAWN (candidato no admitido):
+  //     - No hay residentId → el flujo DSAR automatizado de residentes
+  //       no alcanza esta tabla directamente.
+  //     - La política de retención y purga definitiva se define en Q-003 (CIO).
+  //     - Por ahora: se incluye en la exportación si el interesado solicita
+  //       acceso a sus datos (el ejercicio de derechos se gestiona por el
+  //       canal del DPO del centro, no por el portal de familias).
+  //
+  //   Decisión de anonimización:
+  //     - scrub: cuando el residente es suprimido, se limpian los datos PII
+  //       del candidato (nombre, contacto) de la solicitud. Se conserva la
+  //       fila para trazabilidad del proceso de admisión (interés legítimo
+  //       del centro). La FK residentId pasa a null por ON DELETE SET NULL.
+  //     - Si el candidato nunca fue admitido (REJECTED/WITHDRAWN), la purga
+  //       la gestiona la política de retención de Q-003 (fuera del flujo
+  //       automatizado de anonymizeResident).
+  // ---------------------------------------------------------------------------
+  {
+    model:     'AdmissionRequest',
+    export:    true,
+    anonymize: 'scrub',
+    reason:    'Solicitud de admisión/preadmisión: contiene datos personales del candidato (nombre, ' +
+               'fecha nac., contacto). Cuando es ADMITTED, el residentId vincula al Resident y la ' +
+               'solicitud se exporta en el DSAR del residente (art. 15). En anonimización: scrub de ' +
+               'firstName/lastName/birthDate/contactPhone/contactEmail/contactName → null. La fila se ' +
+               'conserva para trazabilidad del proceso de admisión. Candidatos NO admitidos: purga según ' +
+               'Q-003 (política de retención de interés legítimo, pendiente CIO).',
+  },
 ];
 
 /** Lookup rápido por nombre de modelo. */
