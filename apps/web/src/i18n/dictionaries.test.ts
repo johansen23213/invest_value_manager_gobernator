@@ -980,3 +980,111 @@ describe('paridad es/ca — Admisiones / Preadmisión / Forecast de ocupació', 
     }
   });
 });
+
+describe('paridad es/ca — Indicadors de qualitat assistencial (quality:read)', () => {
+  const calidadKeys = [
+    'nav.calidad',
+    'calidad.title',
+    'calidad.subtitle',
+    'calidad.noPermission',
+    'calidad.filter.center',
+    'calidad.filter.centerAll',
+    'calidad.filter.unit',
+    'calidad.filter.unitAll',
+    'calidad.filter.period',
+    'calidad.filter.period.30d',
+    'calidad.filter.period.90d',
+    'calidad.filter.period.custom',
+    'calidad.filter.from',
+    'calidad.filter.to',
+    'calidad.filter.apply',
+    'calidad.period.label',
+    'calidad.upp.title',
+    'calidad.upp.hint',
+    'calidad.upp.prevalencia',
+    'calidad.upp.prevalenciaSub',
+    'calidad.upp.prevalenciaCentro',
+    'calidad.upp.prevalenciaCentroSub',
+    'calidad.upp.incidencia',
+    'calidad.upp.incidenciaSub',
+    'calidad.upp.tasa',
+    'calidad.upp.tasaSub',
+    'calidad.upp.desglose.title',
+    'calidad.upp.stage1',
+    'calidad.upp.stage2',
+    'calidad.upp.stage3',
+    'calidad.upp.stage4',
+    'calidad.upp.cohorte.title',
+    'calidad.upp.cohorte.empty',
+    'calidad.upp.cohorte.action',
+    'calidad.caidas.title',
+    'calidad.caidas.hint',
+    'calidad.caidas.total',
+    'calidad.caidas.totalSub',
+    'calidad.caidas.tasa',
+    'calidad.caidas.tasaSub',
+    'calidad.caidas.pctResidentes',
+    'calidad.caidas.pctResidentesSub',
+    'calidad.caidas.conLesion',
+    'calidad.caidas.conLesionSub',
+    'calidad.cobertura.title',
+    'calidad.cobertura.hint',
+    'calidad.cobertura.pctVigente',
+    'calidad.cobertura.pctVigenteSub',
+    'calidad.cobertura.pctEnRiesgo',
+    'calidad.cobertura.pctEnRiesgoSub',
+    'calidad.cobertura.sinValoracion',
+    'calidad.cobertura.sinValoracionSub',
+    'calidad.cobertura.enRiesgo',
+    'calidad.cobertura.enRiesgoSub',
+    'calidad.cobertura.cohorte.title',
+    'calidad.cobertura.cohorte.empty',
+    'calidad.cobertura.cohorte.action',
+    'calidad.sujeciones.title',
+    'calidad.sujeciones.hint',
+    'calidad.sujeciones.prevalencia',
+    'calidad.sujeciones.prevalenciaSub',
+    'calidad.sujeciones.activas',
+    'calidad.sujeciones.activasSub',
+    'calidad.sujeciones.cohorte.title',
+    'calidad.sujeciones.cohorte.empty',
+    'calidad.sujeciones.cohorte.action',
+    'calidad.cohort.col.resident',
+    'calidad.cohort.col.unit',
+    'calidad.cohort.col.motivo',
+    'calidad.cohort.col.actions',
+    'calidad.cohort.action.view',
+    'calidad.cohort.empty',
+  ];
+
+  it('todas las claves de calidad existen en es', () => {
+    for (const key of calidadKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de calidad existen en ca', () => {
+    for (const key of calidadKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de calidad difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'calidad.title',
+      'calidad.subtitle',
+      'calidad.noPermission',
+      'calidad.upp.hint',
+      'calidad.caidas.hint',
+      'calidad.cobertura.hint',
+      'calidad.sujeciones.hint',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
