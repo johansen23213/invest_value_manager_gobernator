@@ -1652,6 +1652,95 @@ const es: Record<string, string> = {
   'admissions.forecast.calculate':   'Calcular',
 
   // ---------------------------------------------------------------------------
+  // Indicadores de calidad asistencial — panel de cohorte (quality:read)
+  // ---------------------------------------------------------------------------
+  'nav.calidad': 'Calidad asistencial',
+
+  'calidad.title': 'Indicadores de calidad asistencial',
+  'calidad.subtitle': 'Indicadores de cohorte del centro: UPP, caídas, cobertura de valoración y sujeciones.',
+  'calidad.noPermission': 'Tu rol no tiene acceso al panel de indicadores de calidad.',
+
+  // Selectores de contexto (centro / unidad / periodo)
+  'calidad.filter.center': 'Centro',
+  'calidad.filter.centerAll': 'Todos los centros',
+  'calidad.filter.unit': 'Unidad',
+  'calidad.filter.unitAll': 'Todas las unidades',
+  'calidad.filter.period': 'Periodo',
+  'calidad.filter.period.30d': 'Últimos 30 días',
+  'calidad.filter.period.90d': 'Último trimestre',
+  'calidad.filter.period.custom': 'Personalizado',
+  'calidad.filter.from': 'Desde',
+  'calidad.filter.to': 'Hasta',
+  'calidad.filter.apply': 'Aplicar',
+  'calidad.period.label': 'Periodo analizado: {desde} – {hasta}',
+
+  // Bloque UPP
+  'calidad.upp.title': 'Úlceras por presión (UPP)',
+  'calidad.upp.hint': 'La prevalencia refleja el porcentaje de residentes con UPP activa al final del periodo. La incidencia mide casos nuevos en el periodo.',
+  'calidad.upp.prevalencia': 'Prevalencia',
+  'calidad.upp.prevalenciaSub': '% residentes con UPP activa',
+  'calidad.upp.prevalenciaCentro': 'Prevalencia de centro',
+  'calidad.upp.prevalenciaCentroSub': '% UPP adquiridas en el centro',
+  'calidad.upp.incidencia': 'Incidencia nuevas',
+  'calidad.upp.incidenciaSub': 'casos nuevos en el periodo',
+  'calidad.upp.tasa': 'Tasa por 1.000',
+  'calidad.upp.tasaSub': 'nuevos UPP / 1.000 residentes·día',
+  'calidad.upp.desglose.title': 'Desglose por estadio',
+  'calidad.upp.stage1': 'Estadio I',
+  'calidad.upp.stage2': 'Estadio II',
+  'calidad.upp.stage3': 'Estadio III',
+  'calidad.upp.stage4': 'Estadio IV',
+  'calidad.upp.cohorte.title': 'Residentes con UPP activa',
+  'calidad.upp.cohorte.empty': 'Ningún residente con UPP activa en el periodo.',
+  'calidad.upp.cohorte.action': 'Ver UPP activas',
+
+  // Bloque caídas
+  'calidad.caidas.title': 'Caídas',
+  'calidad.caidas.hint': 'La tasa por 1.000 estancias-día facilita la comparación entre centros de distinto tamaño y ocupación.',
+  'calidad.caidas.total': 'Total caídas',
+  'calidad.caidas.totalSub': 'en el periodo',
+  'calidad.caidas.tasa': 'Tasa por 1.000',
+  'calidad.caidas.tasaSub': 'caídas / 1.000 estancias-día',
+  'calidad.caidas.pctResidentes': '% con caída',
+  'calidad.caidas.pctResidentesSub': 'residentes que han caído',
+  'calidad.caidas.conLesion': 'Con lesión',
+  'calidad.caidas.conLesionSub': '% sobre el total de caídas',
+
+  // Bloque cobertura de valoración
+  'calidad.cobertura.title': 'Cobertura de valoración',
+  'calidad.cobertura.hint': 'Valoración vigente: Norton o Braden realizada en los últimos 180 días. En riesgo: puntuación de alto riesgo en la última valoración.',
+  'calidad.cobertura.pctVigente': '% con valoración vigente',
+  'calidad.cobertura.pctVigenteSub': 'Norton/Braden en 180 días',
+  'calidad.cobertura.pctEnRiesgo': '% en riesgo',
+  'calidad.cobertura.pctEnRiesgoSub': 'puntuación de alto riesgo',
+  'calidad.cobertura.sinValoracion': 'Sin valoración',
+  'calidad.cobertura.sinValoracionSub': 'residentes sin valoración vigente',
+  'calidad.cobertura.enRiesgo': 'En riesgo',
+  'calidad.cobertura.enRiesgoSub': 'residentes con riesgo alto',
+  'calidad.cobertura.cohorte.title': 'Residentes sin valoración vigente',
+  'calidad.cobertura.cohorte.empty': 'Todos los residentes tienen valoración vigente.',
+  'calidad.cobertura.cohorte.action': 'Ver sin valoración',
+
+  // Bloque sujeciones
+  'calidad.sujeciones.title': 'Sujeciones mecánicas',
+  'calidad.sujeciones.hint': 'Las sujeciones mecánicas deben estar justificadas clínicamente y revisadas periódicamente (Ley 41/2002). La prevalencia alta puede indicar necesidad de revisión del protocolo.',
+  'calidad.sujeciones.prevalencia': 'Prevalencia',
+  'calidad.sujeciones.prevalenciaSub': '% residentes con sujeción activa',
+  'calidad.sujeciones.activas': 'Sujeciones activas',
+  'calidad.sujeciones.activasSub': 'número de residentes',
+  'calidad.sujeciones.cohorte.title': 'Residentes con sujeción activa',
+  'calidad.sujeciones.cohorte.empty': 'Ningún residente con sujeción activa.',
+  'calidad.sujeciones.cohorte.action': 'Ver con sujeción activa',
+
+  // Tabla de cohorte de acción
+  'calidad.cohort.col.resident': 'Residente',
+  'calidad.cohort.col.unit': 'Unidad',
+  'calidad.cohort.col.motivo': 'Motivo',
+  'calidad.cohort.col.actions': 'Acciones',
+  'calidad.cohort.action.view': 'Ver residente →',
+  'calidad.cohort.empty': 'Sin residentes en esta cohorte.',
+
+  // ---------------------------------------------------------------------------
   // Actividades — animación sociocultural / terapia ocupacional (ACT-001..ACT-010)
   // ---------------------------------------------------------------------------
   'nav.activities': 'Actividades',
@@ -3379,6 +3468,95 @@ const ca: Record<string, string> = {
   'admissions.forecast.admissions':  'Ingressos previstos',
   'admissions.forecast.empty':       'Sense dades de projecció.',
   'admissions.forecast.calculate':   'Calcular',
+
+  // ---------------------------------------------------------------------------
+  // Indicadors de qualitat assistencial — tauler de cohort (quality:read)
+  // ---------------------------------------------------------------------------
+  'nav.calidad': 'Qualitat assistencial',
+
+  'calidad.title': 'Indicadors de qualitat assistencial',
+  'calidad.subtitle': 'Indicadors de cohort del centre: UPP, caigudes, cobertura de valoració i subjeccions.',
+  'calidad.noPermission': 'El teu rol no té accés al tauler d\'indicadors de qualitat.',
+
+  // Selectors de context (centre / unitat / període)
+  'calidad.filter.center': 'Centre',
+  'calidad.filter.centerAll': 'Tots els centres',
+  'calidad.filter.unit': 'Unitat',
+  'calidad.filter.unitAll': 'Totes les unitats',
+  'calidad.filter.period': 'Període',
+  'calidad.filter.period.30d': 'Darrers 30 dies',
+  'calidad.filter.period.90d': 'Darrer trimestre',
+  'calidad.filter.period.custom': 'Personalitzat',
+  'calidad.filter.from': 'Des de',
+  'calidad.filter.to': 'Fins a',
+  'calidad.filter.apply': 'Aplicar',
+  'calidad.period.label': 'Període analitzat: {desde} – {hasta}',
+
+  // Bloc UPP
+  'calidad.upp.title': 'Úlceres per pressió (UPP)',
+  'calidad.upp.hint': 'La prevalença reflecteix el percentatge de residents amb UPP activa al final del període. La incidència mesura casos nous en el període.',
+  'calidad.upp.prevalencia': 'Prevalença',
+  'calidad.upp.prevalenciaSub': '% residents amb UPP activa',
+  'calidad.upp.prevalenciaCentro': 'Prevalença de centre',
+  'calidad.upp.prevalenciaCentroSub': '% UPP adquirides al centre',
+  'calidad.upp.incidencia': 'Incidència noves',
+  'calidad.upp.incidenciaSub': 'casos nous en el període',
+  'calidad.upp.tasa': 'Taxa per 1.000',
+  'calidad.upp.tasaSub': 'noves UPP / 1.000 residents·dia',
+  'calidad.upp.desglose.title': 'Desglossament per estadi',
+  'calidad.upp.stage1': 'Estadi I',
+  'calidad.upp.stage2': 'Estadi II',
+  'calidad.upp.stage3': 'Estadi III',
+  'calidad.upp.stage4': 'Estadi IV',
+  'calidad.upp.cohorte.title': 'Residents amb UPP activa',
+  'calidad.upp.cohorte.empty': 'Cap resident amb UPP activa en el període.',
+  'calidad.upp.cohorte.action': 'Veure UPP actives',
+
+  // Bloc caigudes
+  'calidad.caidas.title': 'Caigudes',
+  'calidad.caidas.hint': 'La taxa per 1.000 estades-dia facilita la comparació entre centres de mida i ocupació diferent.',
+  'calidad.caidas.total': 'Total caigudes',
+  'calidad.caidas.totalSub': 'en el període',
+  'calidad.caidas.tasa': 'Taxa per 1.000',
+  'calidad.caidas.tasaSub': 'caigudes / 1.000 estades-dia',
+  'calidad.caidas.pctResidentes': '% amb caiguda',
+  'calidad.caidas.pctResidentesSub': 'residents que han caigut',
+  'calidad.caidas.conLesion': 'Amb lesió',
+  'calidad.caidas.conLesionSub': '% sobre el total de caigudes',
+
+  // Bloc cobertura de valoració
+  'calidad.cobertura.title': 'Cobertura de valoració',
+  'calidad.cobertura.hint': 'Valoració vigent: Norton o Braden realitzada en els darrers 180 dies. En risc: puntuació d\'alt risc en la darrera valoració.',
+  'calidad.cobertura.pctVigente': '% amb valoració vigent',
+  'calidad.cobertura.pctVigenteSub': 'Norton/Braden en 180 dies',
+  'calidad.cobertura.pctEnRiesgo': '% en risc',
+  'calidad.cobertura.pctEnRiesgoSub': 'puntuació d\'alt risc',
+  'calidad.cobertura.sinValoracion': 'Sense valoració',
+  'calidad.cobertura.sinValoracionSub': 'residents sense valoració vigent',
+  'calidad.cobertura.enRiesgo': 'En risc',
+  'calidad.cobertura.enRiesgoSub': 'residents amb risc alt',
+  'calidad.cobertura.cohorte.title': 'Residents sense valoració vigent',
+  'calidad.cobertura.cohorte.empty': 'Tots els residents tenen valoració vigent.',
+  'calidad.cobertura.cohorte.action': 'Veure sense valoració',
+
+  // Bloc subjeccions
+  'calidad.sujeciones.title': 'Subjeccions mecàniques',
+  'calidad.sujeciones.hint': 'Les subjeccions mecàniques han d\'estar justificades clínicament i revisades periòdicament (Llei 41/2002). Una prevalença alta pot indicar necessitat de revisar el protocol.',
+  'calidad.sujeciones.prevalencia': 'Prevalença',
+  'calidad.sujeciones.prevalenciaSub': '% residents amb subjecció activa',
+  'calidad.sujeciones.activas': 'Subjeccions actives',
+  'calidad.sujeciones.activasSub': 'nombre de residents',
+  'calidad.sujeciones.cohorte.title': 'Residents amb subjecció activa',
+  'calidad.sujeciones.cohorte.empty': 'Cap resident amb subjecció activa.',
+  'calidad.sujeciones.cohorte.action': 'Veure amb subjecció activa',
+
+  // Taula de cohort d'acció
+  'calidad.cohort.col.resident': 'Resident',
+  'calidad.cohort.col.unit': 'Unitat',
+  'calidad.cohort.col.motivo': 'Motiu',
+  'calidad.cohort.col.actions': 'Accions',
+  'calidad.cohort.action.view': 'Veure resident →',
+  'calidad.cohort.empty': 'Sense residents en aquesta cohort.',
 
   // ---------------------------------------------------------------------------
   // Activitats — animació sociocultural / teràpia ocupacional (ACT-001..ACT-010)
