@@ -403,6 +403,8 @@ const es: Record<string, string> = {
   'rbac.perm.shifts:manage': 'Planificar el cuadrante, gestionar plantillas de turno, ausencias y sustituciones',
   'rbac.perm.billing:read': 'Ver tarifas, perfiles de facturación y facturas del centro',
   'rbac.perm.billing:manage': 'Crear tarifas, emitir, anular y registrar el cobro de facturas',
+  'rbac.perm.admissions:read': 'Ver solicitudes de admisión, lista de espera y proyección de ocupación',
+  'rbac.perm.admissions:manage': 'Crear y gestionar solicitudes de admisión, transicionar estados y registrar ingresos',
 
   // Visión 360 del residente (R-360)
   'r360.title': 'Visión 360',
@@ -1545,6 +1547,105 @@ const es: Record<string, string> = {
 
   'billing.portal.myInvoices':          'Mis facturas',
   'billing.portal.empty':               'Sin facturas disponibles.',
+
+  // Admisiones / Preadmisión / Forecast de ocupación
+  'nav.admissions': 'Admisiones',
+  'admissions.title': 'Admisiones y lista de espera',
+  'admissions.subtitle': 'Gestión del proceso de admisión y proyección de ocupación.',
+  'admissions.new': 'Nueva solicitud',
+  'admissions.empty.title': 'Sin solicitudes',
+  'admissions.empty.desc': 'Crea la primera solicitud de admisión.',
+  'admissions.filter.status': 'Estado',
+  'admissions.filter.center': 'Centro',
+  'admissions.filter.all': 'Todos',
+
+  // Estado de la solicitud
+  'admission.status.LEAD':       'Primer contacto',
+  'admission.status.WAITLIST':   'Lista de espera',
+  'admission.status.EVALUATION': 'Evaluación',
+  'admission.status.OFFERED':    'Plaza ofertada',
+  'admission.status.ADMITTED':   'Ingresado',
+  'admission.status.REJECTED':   'Rechazada',
+  'admission.status.WITHDRAWN':  'Retirada',
+
+  // Prioridad
+  'admission.priority.BAJA':    'Baja',
+  'admission.priority.NORMAL':  'Normal',
+  'admission.priority.ALTA':    'Alta',
+  'admission.priority.URGENTE': 'Urgente',
+
+  // Tipo de plaza
+  'admission.placeType.PRIVADA':    'Privada',
+  'admission.placeType.CONCERTADA': 'Concertada',
+  'admission.placeType.PUBLICA':    'Pública',
+
+  // Procedencia
+  'admission.origin.DOMICILIO':         'Domicilio familiar',
+  'admission.origin.HOSPITAL':          'Traslado desde hospital',
+  'admission.origin.OTRO_CENTRO':       'Traslado desde otro centro',
+  'admission.origin.LISTA_ESPERA_CCAA': 'Lista de espera de la CCAA',
+  'admission.origin.OTRO':              'Otra procedencia',
+
+  // Formulario de solicitud
+  'admissions.form.title':          'Nueva solicitud de admisión',
+  'admissions.form.candidate':      'Datos del candidato',
+  'admissions.form.firstName':      'Nombre',
+  'admissions.form.lastName':       'Apellidos',
+  'admissions.form.birthDate':      'Fecha de nacimiento',
+  'admissions.form.contactPhone':   'Teléfono de contacto',
+  'admissions.form.contactEmail':   'Email de contacto',
+  'admissions.form.contactName':    'Persona de contacto (familiar/representante)',
+  'admissions.form.center':         'Centro solicitado',
+  'admissions.form.unit':           'Unidad (opcional)',
+  'admissions.form.dependencyGrade':'Grado de dependencia estimado',
+  'admissions.form.origin':         'Procedencia',
+  'admissions.form.placeType':      'Tipo de plaza',
+  'admissions.form.priority':       'Prioridad',
+  'admissions.form.expectedDate':   'Fecha de ingreso prevista',
+  'admissions.form.notes':          'Notas',
+  'admissions.form.submit':         'Crear solicitud',
+  'admissions.form.submitting':     'Creando…',
+  'admissions.form.success':        'Solicitud creada correctamente.',
+
+  // Detalle de la solicitud
+  'admissions.detail.back':          '← Solicitudes',
+  'admissions.detail.status':        'Estado',
+  'admissions.detail.priority':      'Prioridad',
+  'admissions.detail.center':        'Centro',
+  'admissions.detail.unit':          'Unidad',
+  'admissions.detail.placeType':     'Tipo de plaza',
+  'admissions.detail.origin':        'Procedencia',
+  'admissions.detail.expectedDate':  'Fecha prevista de ingreso',
+  'admissions.detail.admittedAt':    'Fecha de ingreso efectivo',
+  'admissions.detail.requestDate':   'Fecha de solicitud',
+  'admissions.detail.notes':         'Notas',
+  'admissions.detail.resident':      'Expediente del residente',
+  'admissions.detail.noResident':    'Pendiente de ingreso',
+
+  // Transiciones / acciones
+  'admissions.actions.transition':   'Cambiar estado',
+  'admissions.actions.transitioned': 'Estado actualizado.',
+  'admissions.actions.close':        'Cerrar solicitud',
+  'admissions.actions.reject':       'Rechazar',
+  'admissions.actions.withdraw':     'Retirar',
+  'admissions.actions.admit':        'Ingresar',
+  'admissions.actions.closingReason':'Motivo',
+  'admissions.actions.closed':       'Solicitud cerrada.',
+
+  // Forecast de ocupación
+  'admissions.forecast.title':       'Proyección de ocupación',
+  'admissions.forecast.subtitle':    'Evolución de plazas libres en el horizonte seleccionado.',
+  'admissions.forecast.horizon':     'Horizonte (días)',
+  'admissions.forecast.center':      'Centro',
+  'admissions.forecast.unit':        'Unidad (opcional)',
+  'admissions.forecast.totalBeds':   'Plazas totales',
+  'admissions.forecast.occupied':    'Ocupadas',
+  'admissions.forecast.free':        'Libres',
+  'admissions.forecast.rate':        'Tasa de ocupación',
+  'admissions.forecast.discharges':  'Altas previstas',
+  'admissions.forecast.admissions':  'Ingresos previstos',
+  'admissions.forecast.empty':       'Sin datos de proyección.',
+  'admissions.forecast.calculate':   'Calcular',
 };
 
 const ca: Record<string, string> = {
@@ -1947,6 +2048,8 @@ const ca: Record<string, string> = {
   'rbac.perm.shifts:manage': 'Planificar el quadrant, gestionar plantilles de torn, absències i substitucions',
   'rbac.perm.billing:read': 'Veure tarifes, perfils de facturació i factures del centre',
   'rbac.perm.billing:manage': 'Crear tarifes, emetre, anul·lar i registrar el cobrament de factures',
+  'rbac.perm.admissions:read': "Veure sol·licituds d'admissió, llista d'espera i projecció d'ocupació",
+  'rbac.perm.admissions:manage': "Crear i gestionar sol·licituds d'admissió, transitar estats i registrar ingressos",
 
   // Visió 360 del resident (R-360)
   'r360.title': 'Visió 360',
@@ -3080,6 +3183,105 @@ const ca: Record<string, string> = {
 
   'billing.portal.myInvoices':          'Les meves factures',
   'billing.portal.empty':               'Sense factures disponibles.',
+
+  // Admissions / Preadmissions / Forecast d'ocupació
+  'nav.admissions': 'Admissions',
+  'admissions.title': 'Admissions i llista d\'espera',
+  'admissions.subtitle': 'Gestió del procés d\'admissió i projecció d\'ocupació.',
+  'admissions.new': 'Nova sol·licitud',
+  'admissions.empty.title': 'Sense sol·licituds',
+  'admissions.empty.desc': 'Crea la primera sol·licitud d\'admissió.',
+  'admissions.filter.status': 'Estat',
+  'admissions.filter.center': 'Centre',
+  'admissions.filter.all': 'Tots',
+
+  // Estat de la sol·licitud
+  'admission.status.LEAD':       'Primer contacte',
+  'admission.status.WAITLIST':   'Llista d\'espera',
+  'admission.status.EVALUATION': 'Avaluació',
+  'admission.status.OFFERED':    'Plaça oferta',
+  'admission.status.ADMITTED':   'Ingressat',
+  'admission.status.REJECTED':   'Rebutjada',
+  'admission.status.WITHDRAWN':  'Retirada',
+
+  // Prioritat
+  'admission.priority.BAJA':    'Baixa',
+  'admission.priority.NORMAL':  'Normal',
+  'admission.priority.ALTA':    'Alta',
+  'admission.priority.URGENTE': 'Urgent',
+
+  // Tipus de plaça
+  'admission.placeType.PRIVADA':    'Privada',
+  'admission.placeType.CONCERTADA': 'Concertada',
+  'admission.placeType.PUBLICA':    'Pública',
+
+  // Procedència
+  'admission.origin.DOMICILIO':         'Domicili familiar',
+  'admission.origin.HOSPITAL':          'Trasllat des d\'hospital',
+  'admission.origin.OTRO_CENTRO':       'Trasllat des d\'altre centre',
+  'admission.origin.LISTA_ESPERA_CCAA': 'Llista d\'espera de la CCAA',
+  'admission.origin.OTRO':              'Altra procedència',
+
+  // Formulari de sol·licitud
+  'admissions.form.title':          'Nova sol·licitud d\'admissió',
+  'admissions.form.candidate':      'Dades del candidat',
+  'admissions.form.firstName':      'Nom',
+  'admissions.form.lastName':       'Cognoms',
+  'admissions.form.birthDate':      'Data de naixement',
+  'admissions.form.contactPhone':   'Telèfon de contacte',
+  'admissions.form.contactEmail':   'Email de contacte',
+  'admissions.form.contactName':    'Persona de contacte (familiar/representant)',
+  'admissions.form.center':         'Centre sol·licitat',
+  'admissions.form.unit':           'Unitat (opcional)',
+  'admissions.form.dependencyGrade':'Grau de dependència estimat',
+  'admissions.form.origin':         'Procedència',
+  'admissions.form.placeType':      'Tipus de plaça',
+  'admissions.form.priority':       'Prioritat',
+  'admissions.form.expectedDate':   'Data d\'ingrés prevista',
+  'admissions.form.notes':          'Notes',
+  'admissions.form.submit':         'Crear sol·licitud',
+  'admissions.form.submitting':     'Creant…',
+  'admissions.form.success':        'Sol·licitud creada correctament.',
+
+  // Detall de la sol·licitud
+  'admissions.detail.back':          '← Sol·licituds',
+  'admissions.detail.status':        'Estat',
+  'admissions.detail.priority':      'Prioritat',
+  'admissions.detail.center':        'Centre',
+  'admissions.detail.unit':          'Unitat',
+  'admissions.detail.placeType':     'Tipus de plaça',
+  'admissions.detail.origin':        'Procedència',
+  'admissions.detail.expectedDate':  'Data prevista d\'ingrés',
+  'admissions.detail.admittedAt':    'Data d\'ingrés efectiu',
+  'admissions.detail.requestDate':   'Data de sol·licitud',
+  'admissions.detail.notes':         'Notes',
+  'admissions.detail.resident':      'Expedient del resident',
+  'admissions.detail.noResident':    'Pendent d\'ingrés',
+
+  // Transicions / accions
+  'admissions.actions.transition':   'Canviar estat',
+  'admissions.actions.transitioned': 'Estat actualitzat.',
+  'admissions.actions.close':        'Tancar sol·licitud',
+  'admissions.actions.reject':       'Rebutjar',
+  'admissions.actions.withdraw':     'Retirar',
+  'admissions.actions.admit':        'Ingressar',
+  'admissions.actions.closingReason':'Motiu',
+  'admissions.actions.closed':       'Sol·licitud tancada.',
+
+  // Forecast d'ocupació
+  'admissions.forecast.title':       'Projecció d\'ocupació',
+  'admissions.forecast.subtitle':    'Evolució de places lliures en el termini seleccionat.',
+  'admissions.forecast.horizon':     'Termini (dies)',
+  'admissions.forecast.center':      'Centre',
+  'admissions.forecast.unit':        'Unitat (opcional)',
+  'admissions.forecast.totalBeds':   'Places totals',
+  'admissions.forecast.occupied':    'Ocupades',
+  'admissions.forecast.free':        'Lliures',
+  'admissions.forecast.rate':        'Taxa d\'ocupació',
+  'admissions.forecast.discharges':  'Altes previstes',
+  'admissions.forecast.admissions':  'Ingressos previstos',
+  'admissions.forecast.empty':       'Sense dades de projecció.',
+  'admissions.forecast.calculate':   'Calcular',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };

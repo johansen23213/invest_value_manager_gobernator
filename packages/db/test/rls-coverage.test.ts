@@ -258,6 +258,7 @@ describe('RLS coverage — cobertura estructural por tabla (sin BD)', () => {
     const tableNames = tenantModels.map((m) => m.sqlTable).sort();
     // Verifica que están las tablas conocidas del MVP (H0-H6).
     const expectedKnown = [
+      'admission_requests',
       'allergies',
       'announcement_receipts',
       'announcements',
