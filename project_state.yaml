@@ -357,6 +357,28 @@ recobertura_post_epicas_ad:
       Angel (sin cambios): pagos Q-007, Verifactu Q-012, OVHcloud Q-004, retención
       RGPD Q-003, firma Q-008, multicentro Q-009.
 
+  auditoria_externa_2026_06_14:
+    detonante: "El CIO dio CI por verde sin mirarlo; llevaba días rojo. Auditoría honesta."
+    veredicto: "NO listo para producción. Núcleo asistencial genuino + base RLS sólida (59 tablas verificadas), pero capa de despliegue ausente, varios críticos de seguridad y red de tests con huecos."
+    recuento: { criticos: 9, altos: 16, medios: 10, falsos_positivos_cazados: 1 }
+    metodologia: "8 auditores independientes en paralelo, adversarial, solo lectura; CIO verifica críticos en vivo (no se fía de reportes)."
+    informes: "docs/auditoria/2026-06-14/00-resumen.md + 01-08 por área + PDF consolidado."
+    hallazgo_0_cerrado:
+      titulo: "ci.yml rojo (#198-#218): migración REVOKE ... FROM vetlla_app rompía en BD limpia"
+      fix: "app-role-bootstrap.sql crea el rol antes de migrate (ci.yml + demo-screenshots.yml). Commit dd41bca."
+      verificado: "CI run #222 en main = SUCCESS. El gate de aislamiento RLS vuelve a correr."
+    criticos_abiertos:
+      - "SEC-C01: secreto TOTP en claro en BD (cifrar con KMS UE antes de activar MFA en prod)."
+      - "DAT-C01: auth_tokens sin RLS + vetlla_app con grants totales (lectura cross-tenant de hashes)."
+      - "DAT-C02: aforo de actividades sin transacción Serializable (carrera; visits.ts sí lo usa)."
+      - "ARQ-C01: push notifications muertas (sw.js sin listener push/notificationclick). El CIO lo reportó hecho sin verificar."
+      - "OPS-C01..C04: sin camino a producción, sin DPA OVHcloud, sin backups/DR, RLS fail-open si no existe vetlla_app."
+      - "UX-C01: centros/[id] y equipo/familias sin i18n (castellano hardcodeado)."
+    raiz_sistemica:
+      - "ARQ-A03 (P0): dev-setup.sh no provisiona vetlla_app -> en local RLS y privilegios nunca se ejercitan. Es la divergencia que ocultó el bug del REVOKE."
+      - "QA-A01 (P0): los 49 e2e nunca corren en CI (solo se parsean). Habilitar el job."
+    leccion_cio: "Verificar, no validar. CI verde > local verde. No reportar 'hecho' sin comprobarlo (caso push)."
+
 # --------------------------------------------------------------------------
 # Gap analysis Core Asistencial Completo (2026-06-13, Pau)
 # Motivado por decisión estratégica de Angel: competir con paridad de core
