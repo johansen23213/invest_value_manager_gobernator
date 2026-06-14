@@ -150,6 +150,7 @@ describe('DSAR coverage — cobertura estructural por tabla con residentId (sin 
       'Allergy',
       'Announcement',
       'Assessment',
+      'AssistiveDevice',
       'CarePlan',
       'CareRecord',
       'ConsentRecord',

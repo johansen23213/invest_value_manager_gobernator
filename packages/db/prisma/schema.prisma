@@ -499,6 +499,9 @@ model Resident {
   // --- Admisión/Preadmisión ---
   admissionRequests AdmissionRequest[] // historial de solicitudes que derivaron en este residente
 
+  // --- Diagnósticos con estado y ayudas técnicas ---
+  assistiveDevices AssistiveDevice[]
+
   // --- Actividades (animación sociocultural / terapia ocupacional) ---
   activityEnrollments ActivityEnrollment[]
 
@@ -549,24 +552,111 @@ model Allergy {
   @@map("allergies")
 }
 
-/// Diagnóstico clínico.
+// ---------------------------------------------------------------------------
+// Diagnósticos con estado (extensión del campo libre previo)
+// ---------------------------------------------------------------------------
+
+/// Tipo de diagnóstico según su rol en el cuadro clínico.
+enum DiagnosisType {
+  PRINCIPAL   // diagnóstico principal (el que motivó el ingreso / dominante)
+  SECUNDARIO  // diagnóstico coexistente
+}
+
+/// Estado del diagnóstico en el momento actual.
+enum DiagnosisStatus {
+  ACTIVO    // presente y en seguimiento
+  CRONICO   // estabilizado, requiere control pero no intervención aguda
+  RESUELTO  // curado o remitido (requiere fecha de resolución)
+}
+
+/// Diagnóstico clínico con estado y ciclo de vida.
+///
+/// CONVIVENCIA CON EL CAMPO PREVIO:
+///   El modelo Diagnosis ya existía con código opcional (CIE-10), descripción y
+///   fecha de diagnóstico. Esta versión añade tipo, estado, fecha de resolución,
+///   prescriptor y notas SIN ROMPER los datos existentes (todos los campos
+///   nuevos son nullable/con default). Los registros previos quedan como
+///   `type = PRINCIPAL` (default) y `status = ACTIVO` (default).
+///
+/// DSAR: tiene residentId → declarado en dsar-registry.ts (art. 15 export;
+///   art. 17 con keepClinicalRecords=false → delete).
 model Diagnosis {
-  id          String    @id @default(cuid())
-  tenantId    String    @map("tenant_id")
-  residentId  String    @map("resident_id")
-  resident    Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
-  code        String? // CIE-10 (opcional)
-  description String
-  diagnosedAt DateTime? @map("diagnosed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id             String          @id @default(cuid())
+  tenantId       String          @map("tenant_id")
+  residentId     String          @map("resident_id")
+  resident       Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  code           String?         // CIE-10/CIE-9 como texto libre (opcional)
+  description    String
+  type           DiagnosisType   @default(PRINCIPAL) @map("type")
+  status         DiagnosisStatus @default(ACTIVO) @map("status")
+  diagnosedAt    DateTime?       @map("diagnosed_at")
+  resolvedAt     DateTime?       @map("resolved_at")  // obligatorio cuando status=RESUELTO
+  prescribedById String?         @map("prescribed_by_id") // userId del profesional (sin FK — trazado en AuditLog)
+  notes          String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
 
   medications Medication[] // M-10: prescripciones vinculadas a este diagnóstico
   treatments  Treatment[]  // M-09: tratamientos con este diagnóstico de referencia
 
   @@index([tenantId])
   @@index([residentId])
+  @@index([tenantId, status])
   @@map("diagnoses")
+}
+
+// ---------------------------------------------------------------------------
+// Ayudas técnicas / productos de apoyo (AssistiveDevice)
+// ---------------------------------------------------------------------------
+
+/// Tipo de ayuda técnica / producto de apoyo.
+enum AssistiveDeviceType {
+  SILLA_RUEDAS      // silla de ruedas manual o eléctrica
+  ANDADOR           // andador (fijo, articulado, rollator)
+  GRUA              // grúa de transferencia
+  CAMA_ARTICULADA   // cama articulada eléctrica
+  AUDIFONO          // audífono o amplificador auditivo
+  OXIGENO           // oxigenoterapia domiciliaria (botella, concentrador)
+  MULETAS           // muletas o bastón
+  ORTESIS           // ortesis / prótesis (no auditiva — protesis_auditiva = AUDIFONO)
+  SILLA_DUCHA       // silla de ducha / bañera
+  COLCHON_ANTIESCARAS // colchón antiescaras / antidecúbito
+  OTRO
+}
+
+/// Estado del ciclo de vida de la ayuda técnica.
+enum AssistiveDeviceStatus {
+  ACTIVO   // la ayuda está asignada y en uso
+  RETIRADO // la ayuda ha sido devuelta o dejó de usarse
+}
+
+/// Ayuda técnica / producto de apoyo asignado a un residente.
+///
+/// Cubre tanto dispositivos propios del residente como los del centro prestados
+/// temporalmente (campo `ownedByCenter`).
+///
+/// DSAR: tiene residentId → declarado en dsar-registry.ts (art. 15 export;
+///   art. 17 con keepClinicalRecords=false → delete, si no → keep por dato clínico).
+model AssistiveDevice {
+  id             String               @id @default(cuid())
+  tenantId       String               @map("tenant_id")
+  residentId     String               @map("resident_id")
+  resident       Resident             @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type           AssistiveDeviceType
+  description    String?              // detalle libre ("Silla Invacare, mod. Action 3")
+  status         AssistiveDeviceStatus @default(ACTIVO)
+  prescribedAt   DateTime             @map("prescribed_at") // fecha de prescripción/asignación
+  retiredAt      DateTime?            @map("retired_at")    // fecha de retirada (nullable)
+  prescribedById String?              @map("prescribed_by_id") // userId del prescriptor (sin FK)
+  ownedByCenter  Boolean              @default(false) @map("owned_by_center") // true = propiedad del centro / false = del residente
+  notes          String?
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([residentId])
+  @@index([tenantId, status])
+  @@map("assistive_devices")
 }
 
 /// Cabecera de tratamiento (M-09): agrupa líneas de prescripción bajo un
