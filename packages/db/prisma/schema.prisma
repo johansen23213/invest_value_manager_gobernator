@@ -499,6 +499,9 @@ model Resident {
   // --- Admisión/Preadmisión ---
   admissionRequests AdmissionRequest[] // historial de solicitudes que derivaron en este residente
 
+  // --- Actividades (animación sociocultural / terapia ocupacional) ---
+  activityEnrollments ActivityEnrollment[]
+
   @@index([tenantId])
   @@index([centerId])
   @@map("residents")
@@ -2172,4 +2175,130 @@ model InvoiceLine {
   @@index([tenantId])
   @@index([invoiceId])
   @@map("invoice_lines")
+}
+
+// ---------------------------------------------------------------------------
+// Actividades — animación sociocultural / terapia ocupacional
+// (RF-ACT-001..012)
+//
+// Modelo en tres capas:
+//   Activity       → catálogo del centro (sin residentId; dato de organización)
+//   ActivitySession → programación (concreción de una actividad en fecha/hora)
+//   ActivityEnrollment → inscripción y asistencia de un residente a una sesión
+//
+// Decisión de diseño (fusión enrollment+attendance):
+//   Se unifica en ActivityEnrollment porque el flujo es siempre:
+//   1. El staff inscribe al residente (INSCRITO).
+//   2. En la sesión, registra si asistió y sus observaciones.
+//   Separar en dos tablas solo añadiría joins sin semántica adicional.
+//   Un campo `attended` nullable (null=pendiente, true/false=registrado) y
+//   un campo `observation` cubren ambas fases en una sola fila.
+//
+// DSAR:
+//   Activity        → sin residentId → no entra en dsar-registry.
+//   ActivitySession → sin residentId → no entra en dsar-registry.
+//   ActivityEnrollment → tiene residentId → entra en dsar-registry:
+//     export:true (participación es dato personal de actividad y preferencias).
+//     anonymize:'delete' (desvincula al residente de la sesión; art. 17).
+//
+// RLS: las tres tablas llevan ENABLE+FORCE+política tenant_isolation.
+// ---------------------------------------------------------------------------
+
+/// Categoría de actividad sociocultural / terapéutica.
+enum ActivityCategory {
+  COGNITIVA   // estimulación cognitiva, memoria, puzles
+  FISICA      // gimnasia, fisioterapia grupal, paseo
+  SOCIAL      // tertulias, juegos de mesa, celebraciones
+  CREATIVA    // manualidades, pintura, música
+  SALIDA      // excursión o salida del centro
+  OTRA
+}
+
+/// Estado del ciclo de vida de una sesión programada.
+enum ActivitySessionStatus {
+  PROGRAMADA  // planificada, pendiente de celebrarse
+  REALIZADA   // celebrada (asistencia puede haberse registrado)
+  CANCELADA   // cancelada (con motivo)
+}
+
+/// Estado de la inscripción del residente a una sesión.
+enum EnrollmentStatus {
+  INSCRITO      // inscrito y con plaza confirmada
+  LISTA_ESPERA  // aforo completo; en cola
+  CANCELADO     // se canceló la inscripción
+}
+
+/// Actividad del catálogo del centro.
+/// Datos de organización — sin residentId → no entra en dsar-registry.
+model Activity {
+  id           String           @id @default(cuid())
+  tenantId     String           @map("tenant_id")
+  name         String           // p. ej. "Taller de memoria"
+  description  String?
+  category     ActivityCategory @default(OTRA)
+  location     String?          // sala, patio, exterior…
+  responsibleId String?         @map("responsible_id") // userId del animador/TASOC
+  maxCapacity  Int              @default(20) @map("max_capacity") // aforo máximo
+  durationMin  Int              @default(60) @map("duration_min") // duración en minutos
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  sessions ActivitySession[]
+
+  @@index([tenantId])
+  @@map("activities")
+}
+
+/// Sesión concreta de una actividad (programación).
+/// Sin residentId → no entra en dsar-registry.
+model ActivitySession {
+  id          String                @id @default(cuid())
+  tenantId    String                @map("tenant_id")
+  activityId  String                @map("activity_id")
+  activity    Activity              @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  centerId    String?               @map("center_id")   // centro donde se celebra (opcional)
+  unitId      String?               @map("unit_id")     // unidad específica (opcional)
+  startsAt    DateTime              @map("starts_at")
+  endsAt      DateTime              @map("ends_at")
+  status      ActivitySessionStatus @default(PROGRAMADA)
+  notes       String?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  enrollments ActivityEnrollment[]
+
+  @@index([tenantId])
+  @@index([tenantId, activityId])
+  @@index([tenantId, startsAt])
+  @@map("activity_sessions")
+}
+
+/// Inscripción y asistencia de un residente a una sesión (fusión enrollment+attendance).
+///
+/// attended: null = sesión aún no celebrada / asistencia no registrada
+///           true = asistió
+///           false = no asistió
+///
+/// observation: notas sobre la participación o el estado de ánimo.
+///
+/// DSAR: tiene residentId → declarado en dsar-registry (export:true, anonymize:'delete').
+model ActivityEnrollment {
+  id          String           @id @default(cuid())
+  tenantId    String           @map("tenant_id")
+  sessionId   String           @map("session_id")
+  session     ActivitySession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  residentId  String           @map("resident_id")
+  resident    Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  status      EnrollmentStatus @default(INSCRITO)
+  attended    Boolean?         // null = pendiente; true/false = registrado
+  observation String?          // participación, estado de ánimo…
+  enrolledAt  DateTime         @default(now()) @map("enrolled_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@unique([sessionId, residentId])
+  @@index([tenantId])
+  @@index([tenantId, sessionId])
+  @@index([tenantId, residentId])
+  @@map("activity_enrollments")
 }

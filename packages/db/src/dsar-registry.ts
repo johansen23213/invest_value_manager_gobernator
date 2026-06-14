@@ -269,6 +269,22 @@ export const RESIDENT_DATA_TABLES: DsarTableEntry[] = [
   },
 
   // ---------------------------------------------------------------------------
+  // Actividades (animación sociocultural / terapia ocupacional)
+  //
+  // ActivityEnrollment: inscripción y asistencia de un residente a una sesión.
+  //   Contiene participación, preferencias de ocio y estado de ánimo (observation).
+  //   Es dato personal del residente → export art.15 + anonymize art.17.
+  //   'delete': desvincula al residente de la actividad. La sesión (Activity,
+  //   ActivitySession) no tiene residentId y no entra en este registro.
+  // ---------------------------------------------------------------------------
+  {
+    model:     'ActivityEnrollment',
+    export:    true,
+    anonymize: 'delete',
+    reason:    'Inscripción y asistencia del residente a actividades: participación y estado de ánimo (observation) son datos personales. Export art.15; delete en anonimización (desvincula al residente).',
+  },
+
+  // ---------------------------------------------------------------------------
   // Admisión / Preadmisión (RF-ADM-001..010)
   //
   // Política DSAR de AdmissionRequest:
