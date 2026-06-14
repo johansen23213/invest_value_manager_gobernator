@@ -234,10 +234,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 <div className="flex items-center gap-2 text-sm shrink-0">
                   <LocaleSwitcher />
                   {!isFamily && <SyncStatusBadge />}
-                  <span className="hidden rounded-full bg-brand-50 px-3 py-1.5 text-[#1A3A3F]/70 sm:inline">
+                  {/* Enlace a ajustes de seguridad de la cuenta (MFA) */}
+                  <Link
+                    href="/cuenta/seguridad"
+                    aria-label={t('nav.cuenta.seguridad')}
+                    className="hidden rounded-full bg-brand-50 px-3 py-1.5 text-[#1A3A3F]/70 transition-smooth hover:bg-brand-100 hover:text-brand-700 sm:inline"
+                  >
                     {user.name ?? user.email}
                     <span className="ml-1 text-[#1A3A3F]/70">· {t(`role.${user.role}`)}</span>
-                  </span>
+                  </Link>
                   <form
                     action={async () => {
                       'use server';

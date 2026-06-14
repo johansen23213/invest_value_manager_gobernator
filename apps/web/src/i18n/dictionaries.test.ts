@@ -637,6 +637,66 @@ describe('paridad es/ca — Épica B (exitus, social, bienestar ACP)', () => {
   });
 });
 
+describe('paridad es/ca — MFA + Lockout (RNF-SEG-002 / RNF-SEG-011)', () => {
+  const mfaKeys = [
+    'login.error.ACCOUNT_LOCKED',
+    'login.error.MFA_REQUIRED',
+    'login.error.MFA_INVALID',
+    'mfa.setup.title',
+    'mfa.setup.intro',
+    'mfa.setup.qrLabel',
+    'mfa.setup.codeLabel',
+    'mfa.setup.confirm',
+    'mfa.setup.confirming',
+    'mfa.setup.success',
+    'mfa.setup.recoveryTitle',
+    'mfa.setup.recoveryHint',
+    'mfa.disable.title',
+    'mfa.disable.password',
+    'mfa.disable.totp',
+    'mfa.disable.submit',
+    'mfa.disable.success',
+    'mfa.status.enabled',
+    'mfa.status.disabled',
+    'mfa.status.recoveryCodes',
+    'mfa.totp.label',
+    'mfa.totp.submit',
+    'mfa.totp.useRecovery',
+    'mfa.recovery.label',
+    'mfa.regenerate.title',
+    'mfa.regenerate.submit',
+    'mfa.regenerate.success',
+  ];
+
+  it('todas las claves MFA existen en es', () => {
+    for (const key of mfaKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves MFA existen en ca', () => {
+    for (const key of mfaKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas MFA difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'login.error.ACCOUNT_LOCKED',
+      'mfa.setup.title',
+      'mfa.setup.recoveryHint',
+      'mfa.totp.useRecovery',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
 describe('paridad es/ca — Ola B (expediente sociosanitario Fase 1)', () => {
   const olaBKeys = [
     // Chrome safety chips
@@ -696,6 +756,51 @@ describe('paridad es/ca — Ola B (expediente sociosanitario Fase 1)', () => {
       'exp.clinical.restraints.legalNote',
       'exp.admin.title',
       'chrome.safety.devices',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
+
+describe('paridad es/ca — Notificaciones push (RF-NOT-001..005)', () => {
+  const pushKeys = [
+    'push.title',
+    'push.subtitle',
+    'push.enable',
+    'push.disable',
+    'push.enabled',
+    'push.disabled',
+    'push.notSupported',
+    'push.permissionDenied',
+    'push.devices.title',
+    'push.devices.empty',
+    'push.devices.remove',
+    'push.devices.removed',
+  ];
+
+  it('todas las claves push existen en es', () => {
+    for (const key of pushKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves push existen en ca', () => {
+    for (const key of pushKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas push difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'push.title',
+      'push.subtitle',
+      'push.notSupported',
+      'push.permissionDenied',
     ];
     for (const key of narrativeKeys) {
       expect(DICTIONARIES.es[key]).toBeDefined();

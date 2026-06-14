@@ -63,13 +63,27 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  familyLinks FamilyLink[]
-  authTokens  AuthToken[]
+  // --- MFA TOTP (RNF-SEG-002) ---
+  // mfaSecret: secreto TOTP base32. null = MFA no configurado.
+  // TODO Q-SEC: cifrar en reposo con column-level encryption cuando se integre KMS EU-soberano.
+  mfaSecret      String?   @map("mfa_secret")
+  mfaEnabledAt   DateTime? @map("mfa_enabled_at")
+
+  // --- Bloqueo por intentos fallidos (RNF-SEG-011) ---
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+
+  familyLinks       FamilyLink[]
+  authTokens        AuthToken[]
+  mfaRecoveryCodes  MfaRecoveryCode[]
 
   // --- Portal de familias: solicitudes creadas/asignadas ---
   createdRequests  ServiceRequest[]        @relation("RequestCreatedBy")
   assignedRequests ServiceRequest[]        @relation("RequestAssignedTo")
   requestComments  ServiceRequestComment[]
+
+  // --- Notificaciones push (RF-NOT-001..005) ---
+  pushSubscriptions     PushSubscription[]
 
   // --- Comunicaciones ---
   authoredAnnouncements Announcement[]        @relation("AnnouncementAuthor")
@@ -125,6 +139,27 @@ model AuthToken {
 
   @@index([userId])
   @@map("auth_tokens")
+}
+
+/// Código de recuperación MFA (RNF-SEG-002).
+/// Se genera en bloques de 10 al activar MFA. Se guarda el hash SHA-256
+/// del código plano (el código plano solo se muestra UNA vez al usuario).
+/// usedAt: null = disponible; timestamp = ya consumido (no se borra: auditoría).
+/// tenantId + RLS: aunque es infraestructura de auth, los recovery codes
+/// pertenecen a un usuario de tenant y deben estar aislados por tenant.
+/// SUPERADMIN (sin tenant) usa bypass_rls.
+model MfaRecoveryCode {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id") // '' para SUPERADMIN (bypass_rls siempre activo)
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique @map("code_hash") // SHA-256 hex del código plano
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("mfa_recovery_codes")
 }
 
 /// Vínculo entre un usuario familiar y el residente que puede consultar (portal).
@@ -1801,6 +1836,47 @@ model ShiftHandover {
   @@map("shift_handovers")
 }
 
+// ---------------------------------------------------------------------------
+// Notificaciones push (RF-NOT-001..005) — Web Push / VAPID
+// ---------------------------------------------------------------------------
+// PushSubscription: suscripción de un dispositivo del usuario a las push
+// notifications Web Push. Un usuario puede tener varios dispositivos (móvil,
+// tablet, portátil). La tabla es por Usuario, no por Residente.
+//
+// Sin residentId → no entra en dsar-registry de residentes.
+// Sí tiene tenantId → RLS ENABLE+FORCE+policy obligatorio.
+//
+// Campos de seguridad (p256dh, auth) son las claves públicas del dispositivo;
+// no son secretos del servidor ni PII de salud. Son necesarios para cifrar
+// el payload que envía el servidor al navegador.
+//
+// expiredAt: nullable; se rellena (con un timestamp) cuando el endpoint
+// devuelve 410 Gone o 404. Permite marcar suscripciones caducadas en lugar
+// de borrarlas inmediatamente (para auditoría).
+
+/// Suscripción de un usuario a las notificaciones push Web Push (RF-NOT-001..005).
+/// Un usuario puede registrar múltiples dispositivos (cada uno tiene su propio endpoint).
+/// El endpoint es único: upsert por endpoint para evitar duplicados.
+/// RLS+FORCE+policy por tenant garantiza que ningún tenant accede a las suscripciones de otro.
+model PushSubscription {
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint    String    @unique // URL del push service del navegador
+  p256dh      String    @map("p256dh")   // clave pública del dispositivo (DH)
+  auth        String    // clave de autenticación del dispositivo
+  userAgent   String?   @map("user_agent") // identificador del dispositivo (opcional, UX)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastSeenAt  DateTime? @map("last_seen_at") // última vez que el dispositivo usó la app
+  expiredAt   DateTime? @map("expired_at")   // relleno si el endpoint devuelve 410/404
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ---------------------------------------------------------------------------
 /// Hilo de mensajería bidireccional entre un familiar y el centro (COM-002).
 /// Pertenece a un residente; el familiar vinculado y el staff del tenant participan.
 ///
