@@ -181,7 +181,7 @@ export function DischargeTab({ residentId, residentStatus, canWrite }: Discharge
               {t('exp.discharge.history.title')}
             </h3>
             {history.isLoading ? (
-              <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+              <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
             ) : (history.data ?? []).length === 0 ? (
               <p className="text-sm text-[#1A3A3F]/60">{t('exp.discharge.history.empty')}</p>
             ) : (

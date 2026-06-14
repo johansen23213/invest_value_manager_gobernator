@@ -64,7 +64,7 @@ interface NursingNotesTabProps {
 }
 
 export function NursingNotesTab({ residentId, canWrite }: NursingNotesTabProps) {
-  const { locale } = useT();
+  const { locale, t } = useT();
   const toast = useToast();
   const utils = api.useUtils();
 
@@ -251,7 +251,7 @@ export function NursingNotesTab({ residentId, canWrite }: NursingNotesTabProps) 
 
           {/* Lista de notas */}
           {notes.isLoading ? (
-            <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+            <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
           ) : isEmpty ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
               <p className="text-sm text-[#1A3A3F]/60">

@@ -280,7 +280,7 @@ export function DiagnosesTab({ residentId, canClinical }: DiagnosesTabProps) {
         }
       >
         {isLoading ? (
-          <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+          <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
         ) : active.length === 0 ? (
           <p className="text-sm text-[#1A3A3F]/60">{t('exp.dx.empty')}</p>
         ) : (
@@ -304,7 +304,7 @@ export function DiagnosesTab({ residentId, canClinical }: DiagnosesTabProps) {
       {/* Sección: Resueltos */}
       <SectionCard title={t('exp.dx.section.resolved')}>
         {isLoading ? (
-          <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+          <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
         ) : resolved.length === 0 ? (
           <p className="text-sm text-[#1A3A3F]/60">{t('exp.dx.section.resolved.empty')}</p>
         ) : (

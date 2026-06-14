@@ -286,7 +286,7 @@ export function WellbeingTab({ residentId, canWrite }: WellbeingTabProps) {
       >
         <p className="mb-2 text-xs text-[#1A3A3F]/50">{t('exp.wellbeing.subtitle')}</p>
         {profileQ.isLoading ? (
-          <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+          <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
         ) : !profile ? (
           <p className="text-sm text-[#1A3A3F]/60">{t('exp.wellbeing.empty')}</p>
         ) : (

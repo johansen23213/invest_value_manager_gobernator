@@ -331,8 +331,19 @@ const DEPENDENCY_LABELS: Record<string, string> = {
 
 /**
  * Construye el resumen textual minimizado del expediente que se manda al modelo.
- * Función pura: solo concatena datos clínicos en frases es; NO incluye PII directa
- * (el seudonimizado se aplica después con `redactPii` sobre `guidance` y nombres).
+ *
+ * Minimización de datos clínicos (art. 9 RGPD / ADR-0010):
+ * - Base legal: art. 9.2.h RGPD — tratamiento necesario para la prestación de
+ *   asistencia sanitaria y social, sujeto a secreto profesional.
+ * - Para diagnósticos: se prioriza el CÓDIGO CIE-10 sobre la descripción libre
+ *   cuando está disponible. Si solo hay descripción libre, se trunca a 60 chars
+ *   para reducir la superficie de reidentificación combinatoria.
+ * - Para alergias: el nombre de la sustancia es necesario para la seguridad del
+ *   paciente (no se puede omitir); se incluye en claro junto con la severidad.
+ * - Los identificadores directos (nombres/contactos) se seudonimizzan DESPUÉS
+ *   con `redactPii` sobre el resumen completo, incluyendo el `guidance`.
+ *
+ * Función pura: solo concatena datos clínicos en frases es; NO incluye PII directa.
  */
 export function buildDossierSummary(dossier: ResidentDossier): string {
   const lines: string[] = [];
@@ -348,13 +359,26 @@ export function buildDossierSummary(dossier: ResidentDossier): string {
   }
 
   if (dossier.diagnoses && dossier.diagnoses.length > 0) {
+    // Minimización art. 9 RGPD: preferimos el código CIE-10 (opaco) sobre la
+    // descripción libre. Si solo hay descripción, la truncamos a 60 chars para
+    // reducir la superficie de reidentificación combinatoria. El código es
+    // suficiente para que el modelo comprenda el contexto clínico.
     const dx = dossier.diagnoses
-      .map((d) => (d.code ? `${d.description} (${d.code})` : d.description))
+      .map((d) => {
+        if (d.code) {
+          // Solo código CIE-10: menos texto libre, igual utilidad para el modelo.
+          return d.code;
+        }
+        // Sin código: truncamos la descripción libre a 60 chars.
+        return d.description.length > 60 ? d.description.slice(0, 60) : d.description;
+      })
       .join('; ');
-    lines.push(`Diagnósticos: ${dx}.`);
+    lines.push(`Diagnósticos (CIE-10): ${dx}.`);
   }
 
   if (dossier.allergies && dossier.allergies.length > 0) {
+    // La sustancia alergénica es necesaria para la seguridad del paciente
+    // (art. 9.2.h); no se puede omitir. Se incluye con la severidad cuando existe.
     const al = dossier.allergies
       .map((a) => (a.severity ? `${a.substance} (${a.severity})` : a.substance))
       .join('; ');
@@ -362,7 +386,12 @@ export function buildDossierSummary(dossier: ResidentDossier): string {
   }
 
   if (dossier.guidance && dossier.guidance.trim() !== '') {
-    lines.push(`Indicaciones del profesional: ${dossier.guidance.trim()}`);
+    // Defensa contra inyección de prompts: el texto libre del profesional se
+    // delimita con marcadores de sección para que el modelo lo trate como DATO,
+    // no como instrucción. La validación Zod de salida actúa como segunda barrera.
+    lines.push(
+      `[INDICACIONES_PROFESIONAL]\n${dossier.guidance.trim()}\n[/INDICACIONES_PROFESIONAL]`,
+    );
   }
 
   if (lines.length === 0) {

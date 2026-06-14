@@ -35,7 +35,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { VisitStatus } from '@vetlla/db';
-import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
+import { createTRPCRouter, permissionProcedure, anyPermissionProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
 import {
   slotsForDate,
@@ -229,18 +229,14 @@ export const visitsRouter = createTRPCRouter({
   /**
    * Franjas disponibles de un centro para una fecha dada.
    * El frontend usa esto para el selector de franjas al solicitar una visita.
+   * SEC-A03: anyPermissionProcedure reemplaza el check manual en tenantProcedure.
    */
-  availability: tenantProcedure
+  availability: anyPermissionProcedure(['visits:request', 'visits:manage'] as const)
     .input(z.object({
       centerId: z.string().min(1),
       date:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
     }))
     .query(async ({ ctx, input }) => {
-      const role = ctx.session.user.role;
-      if (!hasPermission(role, 'visits:request') && !hasPermission(role, 'visits:manage')) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso al módulo de visitas.' });
-      }
-
       // Parsear la fecha (se interpreta como medianoche UTC del día solicitado)
       const dateObj = new Date(`${input.date}T00:00:00Z`);
       if (isNaN(dateObj.getTime())) {
@@ -624,9 +620,10 @@ export const visitsRouter = createTRPCRouter({
 
   // =========================================================================
   // CANCELACIÓN (familiar: solo las suyas con canCancel; staff: cualquiera)
+  // SEC-A03: anyPermissionProcedure reemplaza el check manual en tenantProcedure.
   // =========================================================================
 
-  cancel: tenantProcedure
+  cancel: anyPermissionProcedure(['visits:request', 'visits:manage'] as const)
     .input(z.object({
       visitId: z.string().min(1),
       reason:  z.string().trim().min(1).max(500),
@@ -635,10 +632,6 @@ export const visitsRouter = createTRPCRouter({
       const role = ctx.session.user.role;
       const isStaff = hasPermission(role, 'visits:manage');
       const isFamiliar = hasPermission(role, 'visits:request');
-
-      if (!isStaff && !isFamiliar) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso al módulo de visitas.' });
-      }
 
       const visit = await ctx.db.visit.findUnique({
         where:   { id: input.visitId },

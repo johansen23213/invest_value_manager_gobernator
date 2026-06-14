@@ -35,7 +35,7 @@ import {
   MessageThreadCategory,
   MessageThreadStatus,
 } from '@vetlla/db';
-import { createTRPCRouter, permissionProcedure, tenantProcedure } from '@/server/trpc';
+import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import { hasPermission } from '@/lib/rbac';
 import {
   computeRecipients,
@@ -715,18 +715,18 @@ export const commsRouter = createTRPCRouter({
     }),
 
   /**
-   * Cerrar un hilo de mensajería (staff).
-   * Permiso: comms:read con rol no familiar (staff solo).
+   * Cerrar un hilo de mensajería (DIRECTOR + SUPERADMIN).
+   * SEC-A02: permiso declarativo comms:broadcast reemplaza el check manual
+   * `comms:read && !isFamiliarRole` que era frágil ante nuevos roles.
+   * La gestión del ciclo de vida de los hilos (cerrar/reabrir) es una
+   * operación de dirección: comms:broadcast (DIRECTOR+SUPERADMIN) es el
+   * permiso más restrictivo disponible que excluye FAMILIAR sin check manual.
+   * SANITARIO/AUXILIAR pierden acceso a close/reopen (mínimo privilegio: la
+   * lectura y envío de mensajes se mantiene vía comms:read).
    */
-  closeThread: tenantProcedure
+  closeThread: permissionProcedure('comms:broadcast')
     .input(z.object({ threadId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const role = ctx.session.user.role;
-
-      if (!hasPermission(role, 'comms:read') || isFamiliarRole(role)) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo el staff puede cerrar hilos.' });
-      }
-
       const thread = await ctx.db.messageThread.findUnique({
         where: { id: input.threadId },
         select: { id: true, status: true, subject: true },
@@ -755,18 +755,13 @@ export const commsRouter = createTRPCRouter({
     }),
 
   /**
-   * Reabrir un hilo cerrado (staff).
-   * Permiso: staff (comms:read + no familiar).
+   * Reabrir un hilo cerrado (DIRECTOR + SUPERADMIN).
+   * SEC-A02: mismo razonamiento que closeThread — permiso comms:broadcast
+   * reemplaza el check manual frágil con isFamiliarRole.
    */
-  reopenThread: tenantProcedure
+  reopenThread: permissionProcedure('comms:broadcast')
     .input(z.object({ threadId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const role = ctx.session.user.role;
-
-      if (!hasPermission(role, 'comms:read') || isFamiliarRole(role)) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo el staff puede reabrir hilos.' });
-      }
-
       const thread = await ctx.db.messageThread.findUnique({
         where: { id: input.threadId },
         select: { id: true, status: true, subject: true },

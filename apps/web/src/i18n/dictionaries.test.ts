@@ -1251,3 +1251,128 @@ describe('paridad es/ca — Diagnòstics amb estat + Ajudes tècniques', () => {
     expect(missing, `ca: claves sin traducir: ${missing.join(', ')}`).toHaveLength(0);
   });
 });
+
+describe('paridad es/ca — Remediació i18n 2026-06-14 (H-01..H-09)', () => {
+  const remediationKeys = [
+    // Centres/[id]
+    'centers.detail.loading',
+    'centers.detail.notFound',
+    'centers.detail.addUnit',
+    'centers.detail.unit.name',
+    'centers.detail.unit.floor',
+    'centers.detail.unit.submit',
+    'centers.detail.addBed',
+    'centers.detail.bed.unit',
+    'centers.detail.bed.code',
+    'centers.detail.bed.submit',
+    'centers.detail.noUnits',
+    'centers.detail.noBeds',
+    'centers.detail.deleteUnit',
+    'centers.detail.bed.free',
+    'centers.detail.unit.created',
+    'centers.detail.bed.created',
+    // Equip/famílies
+    'family.access.title',
+    'family.access.subtitle',
+    'family.access.grant.title',
+    'family.access.resident',
+    'family.access.relationship',
+    'family.access.email',
+    'family.access.name',
+    'family.access.password',
+    'family.access.submit',
+    'family.access.submitting',
+    'family.access.granted',
+    'family.access.links.title',
+    'family.access.links.loading',
+    'family.access.links.empty',
+    'family.access.revoke',
+    'family.access.revoked',
+    'family.access.privacy.care',
+    'family.access.privacy.medication',
+    'family.access.privacy.assessments',
+    // Atenció directa
+    'care.page.title',
+    'care.offline.notice',
+    'care.vitals.title',
+    'care.vitals.submit',
+    'care.intake.title',
+    'care.intake.meal',
+    'care.intake.quantity',
+    'care.intake.submit',
+    'care.stool.title',
+    'care.stool.submit',
+    'care.incident.title',
+    'care.incident.submit',
+    'care.records.title',
+    'care.pending.syncNow',
+    'care.pending.retrying',
+    'care.pending.pending',
+    'care.yes',
+    'care.no',
+    // Facturació
+    'billing.tariffs.vatYes',
+    'billing.tariffs.vatNo',
+    'billing.tariffs.edit',
+    'billing.filter.yearAll',
+    'billing.filter.monthAll',
+    'billing.invoices.concept',
+    'billing.invoices.base',
+    'billing.invoices.vat',
+    'billing.invoices.lineTotal',
+    'billing.invoices.exempt',
+    'billing.invoices.grandTotal',
+    'billing.access.restricted',
+    // Residents/[id]
+    'exp.datos.tab',
+    'exp.escalas.tab',
+    'exp.contactos.tab',
+    'exp.alergias.tab',
+    'exp.datos.birthDate',
+    'exp.datos.admissionDate',
+    'exp.datos.nationalId',
+    'exp.datos.center',
+    'exp.datos.bed',
+    // Admissions
+    'admissions.tab.pipeline',
+    'admissions.forecast.date',
+    'admissions.form.center.ph',
+    'admissions.form.unit.none',
+    'admissions.actions.selectStatus',
+    // MFA
+    'mfa.description',
+    'mfa.activate',
+    'mfa.codesLow',
+  ];
+
+  it('totes les claus de remediació existeixen en es', () => {
+    for (const key of remediationKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('totes les claus de remediació existeixen en ca', () => {
+    for (const key of remediationKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claus narratives de remediació difereixen entre es i ca (paritat real)', () => {
+    const narrativeKeys = [
+      'family.access.title',
+      'family.access.granted',
+      'care.page.title',
+      'care.offline.notice',
+      'billing.filter.yearAll',
+      'admissions.tab.pipeline',
+      'mfa.description',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});

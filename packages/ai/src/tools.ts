@@ -97,10 +97,20 @@ export interface CopilotTool<TSchema extends z.ZodTypeAny = z.ZodTypeAny> {
 }
 
 /**
- * Convierte una herramienta a la `ToolDefinition` que consume el provider. Deriva un
- * JSON Schema mínimo a partir del Zod schema. Mantiene el inputSchema como objeto
- * abierto en este slice; los proveedores reales generarán el JSON Schema completo al
- * cablearse (p. ej. con `zod-to-json-schema`).
+ * Convierte una herramienta a la `ToolDefinition` que consume el provider.
+ *
+ * DEFERIDO (IA-H02 / auditoría 2026-06-14): el `inputSchema` emite un objeto vacío
+ * `{ type: 'object' }`. Para los dos flujos estrella actuales (Feature 1 y 2) esto
+ * no es un problema porque ambos usan `responseFormat:json` directo, NO tool-calling
+ * real — el modelo actúa como extractor, no como agente que invoca herramientas.
+ *
+ * Cuando se active `runToolUseLoop` real con un proveedor vLLM/Bedrock, habrá que
+ * generar el JSON Schema completo desde el Zod schema. La solución es añadir
+ * `zod-to-json-schema` como dependencia de `@vetlla/ai` e integrarla aquí:
+ *   import { zodToJsonSchema } from 'zod-to-json-schema';
+ *   inputSchema: zodToJsonSchema(tool.schema)
+ * No se hace ahora para no añadir una dependencia sin un consumidor activo.
+ * Registrado: TODO IA-H02 — resolver antes de activar flujos agénticos con tool-use.
  */
 export function toToolDefinition(tool: CopilotTool): ToolDefinition {
   return {
