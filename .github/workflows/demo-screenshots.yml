@@ -1,0 +1,150 @@
+name: Demo Screenshots & PDF
+
+# Disparo SOLO manual para no gastar CI en cada commit.
+# GitHub Actions UI → "Run workflow" → selecciona la branch deseada.
+on:
+  workflow_dispatch:
+
+jobs:
+  demo-pdf:
+    runs-on: ubuntu-latest
+
+    # -----------------------------------------------------------------------
+    # Servicio Postgres 16 — idéntico al job build-test de ci.yml para
+    # garantizar paridad de entorno (mismas credenciales, imagen, opciones).
+    # -----------------------------------------------------------------------
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vetlla
+          POSTGRES_PASSWORD: vetlla_dev_password
+          POSTGRES_DB: vetlla
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vetlla -d vetlla"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Rol OWNER — migraciones y seed
+      DATABASE_URL: postgresql://vetlla:vetlla_dev_password@localhost:5432/vetlla?schema=public
+      # Rol de APP no propietario — runtime con RLS activo (ADR-0014)
+      APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
+      AUTH_SECRET: ci-secret-not-for-production
+      # Email en modo consola (no hay SMTP en CI)
+      EMAIL_PROVIDER: console
+      # Sin IA real en las capturas (StubProvider)
+      AI_PROVIDER: stub
+      # URL base que usará el script de capturas
+      DEMO_BASE_URL: http://localhost:3000
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/vetlla-saas-mvp-spec-PuHOW
+
+      # -----------------------------------------------------------------------
+      # 2. Toolchain — mismas versiones que ci.yml
+      # -----------------------------------------------------------------------
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # -----------------------------------------------------------------------
+      # 3. Dependencias
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # 4. Prisma client
+      # -----------------------------------------------------------------------
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      # -----------------------------------------------------------------------
+      # 5. Migraciones (rol OWNER)
+      # -----------------------------------------------------------------------
+      - name: Apply database migrations
+        run: pnpm --filter @vetlla/db migrate:deploy
+
+      # -----------------------------------------------------------------------
+      # 6. Rol de app no propietario (ADR-0014) — igual que ci.yml
+      # -----------------------------------------------------------------------
+      - name: Create non-owner app role for RLS (ADR-0014)
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: vetlla
+          PGPASSWORD: vetlla_dev_password
+          PGDATABASE: vetlla
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
+            -f packages/db/prisma/sql/app-role.sql
+
+      # -----------------------------------------------------------------------
+      # 7. Seed de demo — crea tenant, residencia, residentes, usuarios demo
+      # -----------------------------------------------------------------------
+      - name: Seed demo data
+        run: pnpm --filter @vetlla/db run seed
+
+      # -----------------------------------------------------------------------
+      # 8. Build de producción de Next.js
+      # -----------------------------------------------------------------------
+      - name: Build Next.js app
+        run: pnpm --filter web build
+
+      # -----------------------------------------------------------------------
+      # 9. Arrancar la app en background y esperar a que :3000 responda
+      # -----------------------------------------------------------------------
+      - name: Start Next.js app (background)
+        run: pnpm --filter web start &
+
+      - name: Wait for app on :3000
+        run: npx --yes wait-on http://localhost:3000 --timeout 120000
+
+      # -----------------------------------------------------------------------
+      # 10. Instalar Chromium de Playwright
+      #     (NO se usa PW_CHROMIUM: descarga gestionada por Playwright)
+      # -----------------------------------------------------------------------
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # -----------------------------------------------------------------------
+      # 11. Capturar screenshots y generar PDF
+      # -----------------------------------------------------------------------
+      - name: Run demo screenshots script
+        run: node scripts/demo-screenshots.mjs
+
+      # -----------------------------------------------------------------------
+      # 12. Subir artefactos: PDF + PNGs individuales
+      # -----------------------------------------------------------------------
+      - name: Upload demo PDF
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Vetlla-Demo-Real-PDF
+          path: artifacts/Vetlla-Demo-Real.pdf
+          retention-days: 30
+
+      - name: Upload individual screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Vetlla-Demo-Screenshots-PNG
+          path: artifacts/shots/
+          retention-days: 30

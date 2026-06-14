@@ -168,6 +168,7 @@ describe('DSAR coverage — cobertura estructural por tabla con residentId (sin 
       'MessageThread',
       'NursingNote',
       'PressureUlcer',
+      'ResidentBelonging',
       'Restraint',
       'ResidentBillingProfile',
       'ResidentDevice',
