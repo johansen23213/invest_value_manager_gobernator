@@ -121,6 +121,44 @@ const es: Record<string, string> = {
   'login.error': 'Credenciales incorrectas.',
   'login.invalid': 'Introduce un email y una contraseña válidos.',
 
+  // MFA (RNF-SEG-002) — errores y labels
+  'login.error.ACCOUNT_LOCKED': 'Cuenta bloqueada temporalmente por demasiados intentos. Inténtalo de nuevo en 15 minutos.',
+  'login.error.MFA_REQUIRED': 'Introduce el código de tu aplicación de autenticación.',
+  'login.error.MFA_INVALID': 'Código incorrecto. Comprueba tu aplicación o usa un código de recuperación.',
+  'mfa.setup.title': 'Configurar autenticación en dos pasos (MFA)',
+  'mfa.setup.intro': 'Escanea el código QR con tu aplicación de autenticación (Google Authenticator, Authy…) y confirma con el código de 6 dígitos.',
+  'mfa.setup.qrLabel': 'Código QR',
+  'mfa.setup.codeLabel': 'Código de verificación',
+  'mfa.setup.codePh': '000000',
+  'mfa.setup.confirm': 'Activar MFA',
+  'mfa.setup.confirming': 'Verificando…',
+  'mfa.setup.success': 'MFA activado. Guarda estos códigos de recuperación en un lugar seguro.',
+  'mfa.setup.recoveryTitle': 'Códigos de recuperación',
+  'mfa.setup.recoveryHint': 'Guarda estos códigos. Solo se muestran una vez. Úsalos si pierdes acceso a tu aplicación de autenticación.',
+  'mfa.disable.title': 'Desactivar MFA',
+  'mfa.disable.intro': 'Introduce tu contraseña y un código TOTP (o código de recuperación) para desactivar el MFA.',
+  'mfa.disable.password': 'Contraseña actual',
+  'mfa.disable.totp': 'Código TOTP',
+  'mfa.disable.recovery': 'Código de recuperación',
+  'mfa.disable.submit': 'Desactivar MFA',
+  'mfa.disable.submitting': 'Desactivando…',
+  'mfa.disable.success': 'MFA desactivado.',
+  'mfa.status.enabled': 'MFA activo',
+  'mfa.status.disabled': 'MFA no configurado',
+  'mfa.status.recoveryCodes': '{count} códigos de recuperación disponibles',
+  'mfa.totp.label': 'Código de autenticación',
+  'mfa.totp.ph': '000000',
+  'mfa.totp.submit': 'Verificar',
+  'mfa.totp.submitting': 'Verificando…',
+  'mfa.totp.useRecovery': '¿No tienes acceso a tu app? Usa un código de recuperación.',
+  'mfa.recovery.label': 'Código de recuperación',
+  'mfa.recovery.ph': 'ABCDEFGH',
+  'mfa.regenerate.title': 'Regenerar códigos de recuperación',
+  'mfa.regenerate.intro': 'Introduce un código TOTP para regenerar tus códigos de recuperación. Los anteriores quedarán invalidados.',
+  'mfa.regenerate.submit': 'Regenerar',
+  'mfa.regenerate.submitting': 'Regenerando…',
+  'mfa.regenerate.success': 'Códigos de recuperación regenerados. Guárdalos en un lugar seguro.',
+
   'role.SUPERADMIN': 'Superadmin de plataforma',
   'role.DIRECTOR': 'Dirección / gestor',
   'role.SANITARIO': 'Sanitario',
@@ -1367,6 +1405,29 @@ const es: Record<string, string> = {
   'handover.closed.signedBy': 'Firmado por {name}',
   'handover.closed.at': 'a las {time} del {date}',
   'handover.closed.edit': 'Editar cierre',
+
+  // ---------------------------------------------------------------------------
+  // Cuenta — Ajustes de seguridad (/cuenta/seguridad)
+  // ---------------------------------------------------------------------------
+  'cuenta.seguridad.title': 'Seguridad de la cuenta',
+  'cuenta.seguridad.subtitle': 'Gestiona la verificación en dos pasos y otras opciones de seguridad.',
+  'nav.cuenta.seguridad': 'Seguridad',
+
+  // ---------------------------------------------------------------------------
+  // Notificaciones push (RF-NOT-001..005)
+  // ---------------------------------------------------------------------------
+  'push.title': 'Notificaciones',
+  'push.subtitle': 'Recibe avisos en este dispositivo cuando haya novedades importantes.',
+  'push.enable': 'Activar notificaciones',
+  'push.disable': 'Desactivar notificaciones',
+  'push.enabled': 'Notificaciones activadas en este dispositivo.',
+  'push.disabled': 'Notificaciones desactivadas en este dispositivo.',
+  'push.notSupported': 'Tu navegador no admite notificaciones push.',
+  'push.permissionDenied': 'El permiso de notificaciones fue denegado. Actívalo en los ajustes del navegador.',
+  'push.devices.title': 'Dispositivos suscritos',
+  'push.devices.empty': 'Sin dispositivos suscritos.',
+  'push.devices.remove': 'Eliminar',
+  'push.devices.removed': 'Dispositivo eliminado.',
 };
 
 const ca: Record<string, string> = {
@@ -1486,6 +1547,44 @@ const ca: Record<string, string> = {
   'login.loading': 'Entrant…',
   'login.error': 'Credencials incorrectes.',
   'login.invalid': "Introdueix un correu i una contrasenya vàlids.",
+
+  // MFA (RNF-SEG-002) — errors i etiquetes (ca-ES)
+  'login.error.ACCOUNT_LOCKED': "Compte bloquejat temporalment per massa intents. Torna-ho a provar d'aquí a 15 minuts.",
+  'login.error.MFA_REQUIRED': "Introdueix el codi de la teva aplicació d'autenticació.",
+  'login.error.MFA_INVALID': "Codi incorrecte. Comprova la teva aplicació o utilitza un codi de recuperació.",
+  'mfa.setup.title': "Configurar autenticació en dos passos (MFA)",
+  'mfa.setup.intro': "Escaneja el codi QR amb la teva aplicació d'autenticació (Google Authenticator, Authy…) i confirma amb el codi de 6 dígits.",
+  'mfa.setup.qrLabel': 'Codi QR',
+  'mfa.setup.codeLabel': 'Codi de verificació',
+  'mfa.setup.codePh': '000000',
+  'mfa.setup.confirm': 'Activar MFA',
+  'mfa.setup.confirming': 'Verificant…',
+  'mfa.setup.success': "MFA activat. Desa aquests codis de recuperació en un lloc segur.",
+  'mfa.setup.recoveryTitle': 'Codis de recuperació',
+  'mfa.setup.recoveryHint': "Desa aquests codis. Només es mostren una vegada. Utilitza'ls si perds l'accés a la teva aplicació d'autenticació.",
+  'mfa.disable.title': 'Desactivar MFA',
+  'mfa.disable.intro': "Introdueix la teva contrasenya i un codi TOTP (o codi de recuperació) per desactivar el MFA.",
+  'mfa.disable.password': 'Contrasenya actual',
+  'mfa.disable.totp': 'Codi TOTP',
+  'mfa.disable.recovery': 'Codi de recuperació',
+  'mfa.disable.submit': 'Desactivar MFA',
+  'mfa.disable.submitting': 'Desactivant…',
+  'mfa.disable.success': 'MFA desactivat.',
+  'mfa.status.enabled': 'MFA actiu',
+  'mfa.status.disabled': 'MFA no configurat',
+  'mfa.status.recoveryCodes': '{count} codis de recuperació disponibles',
+  'mfa.totp.label': "Codi d'autenticació",
+  'mfa.totp.ph': '000000',
+  'mfa.totp.submit': 'Verificar',
+  'mfa.totp.submitting': 'Verificant…',
+  "mfa.totp.useRecovery": "No tens accés a la teva app? Utilitza un codi de recuperació.",
+  'mfa.recovery.label': 'Codi de recuperació',
+  'mfa.recovery.ph': 'ABCDEFGH',
+  'mfa.regenerate.title': 'Regenerar codis de recuperació',
+  'mfa.regenerate.intro': "Introdueix un codi TOTP per regenerar els teus codis de recuperació. Els anteriors quedaran invalidats.",
+  'mfa.regenerate.submit': 'Regenerar',
+  'mfa.regenerate.submitting': 'Regenerant…',
+  'mfa.regenerate.success': "Codis de recuperació regenerats. Desa'ls en un lloc segur.",
 
   'role.SUPERADMIN': 'Superadmin de plataforma',
   'role.DIRECTOR': 'Direcció / gestor',
@@ -2724,6 +2823,29 @@ const ca: Record<string, string> = {
   'medical.type.EXPLORACION': 'Exploració',
   'medical.type.DERIVACION': 'Derivació',
   'medical.type.VISITA': 'Visita',
+
+  // ---------------------------------------------------------------------------
+  // Compte — Ajustos de seguretat (/cuenta/seguridad)
+  // ---------------------------------------------------------------------------
+  'cuenta.seguridad.title': 'Seguretat del compte',
+  'cuenta.seguridad.subtitle': 'Gestiona la verificació en dos passos i altres opcions de seguretat.',
+  'nav.cuenta.seguridad': 'Seguretat',
+
+  // ---------------------------------------------------------------------------
+  // Notificacions push (RF-NOT-001..005)
+  // ---------------------------------------------------------------------------
+  'push.title': 'Notificacions',
+  'push.subtitle': 'Rep avisos en aquest dispositiu quan hi hagi novetats importants.',
+  'push.enable': 'Activar notificacions',
+  'push.disable': 'Desactivar notificacions',
+  'push.enabled': 'Notificacions activades en aquest dispositiu.',
+  'push.disabled': 'Notificacions desactivades en aquest dispositiu.',
+  'push.notSupported': 'El teu navegador no admet notificacions push.',
+  'push.permissionDenied': 'El permís de notificacions va ser denegat. Activa\'l als ajustos del navegador.',
+  'push.devices.title': 'Dispositius subscrits',
+  'push.devices.empty': 'Sense dispositius subscrits.',
+  'push.devices.remove': 'Eliminar',
+  'push.devices.removed': 'Dispositiu eliminat.',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };
