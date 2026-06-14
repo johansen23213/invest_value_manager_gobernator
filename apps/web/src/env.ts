@@ -2,10 +2,17 @@ import { z } from 'zod';
 
 // Validación de variables de entorno del servidor (Zod). Falla rápido y claro
 // si falta configuración. Las variables se documentan en .env.example.
+//
+// NOTA: ANTHROPIC_API_KEY está intencionalmente AUSENTE de este schema.
+// El acceso a Claude debe ser exclusivamente vía BedrockProvider o VertexProvider
+// (ambos detrás de la interfaz ModelProvider con residencia UE garantizada).
+// No añadir una clave directa de Anthropic aquí: saltaría la capa de
+// seudonimización y enviaría PII fuera del control de la capa ai/ (ADR-0010).
+// Cuando se implemente BedrockProvider/VertexProvider, las credenciales necesarias
+// (AI_BEDROCK_REGION, AI_VERTEX_PROJECT…) se definen en packages/ai/src/models.ts.
 const schema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL es obligatoria'),
   AUTH_SECRET: z.string().min(1, 'AUTH_SECRET es obligatoria'),
-  ANTHROPIC_API_KEY: z.string().optional().default(''),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 

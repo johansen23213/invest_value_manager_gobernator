@@ -574,18 +574,18 @@ export default function ResidentDetailPage() {
     setAdminInit(true);
   }
 
-  if (resident.isLoading) return <p className="text-[#1A3A3F]/60">Cargando…</p>;
-  if (!r) return <p className="text-[#1A3A3F]/60">Residente no encontrado.</p>;
+  if (resident.isLoading) return <p className="text-[#1A3A3F]/60">{t('state.loading')}</p>;
+  if (!r) return <p className="text-[#1A3A3F]/60">{t('r360.notFound')}</p>;
 
   const today = new Date().toISOString().split('T')[0]!;
 
   return (
     <Tabs defaultValue="datos" className="flex flex-col gap-2">
       <TabsList>
-        <TabsTrigger value="datos">Datos</TabsTrigger>
-        <TabsTrigger value="escalas">Escalas</TabsTrigger>
-        <TabsTrigger value="contactos">Contactos</TabsTrigger>
-        <TabsTrigger value="alergias">Alergias</TabsTrigger>
+        <TabsTrigger value="datos">{t('exp.datos.tab')}</TabsTrigger>
+        <TabsTrigger value="escalas">{t('exp.escalas.tab')}</TabsTrigger>
+        <TabsTrigger value="contactos">{t('exp.contactos.tab')}</TabsTrigger>
+        <TabsTrigger value="alergias">{t('exp.alergias.tab')}</TabsTrigger>
         <TabsTrigger value="diagnosticos">{t('exp.dx.title')}</TabsTrigger>
         <TabsTrigger value="ayudas">{t('exp.ad.title')}</TabsTrigger>
         <TabsTrigger value="cuidados">{t('exp.care.title')}</TabsTrigger>
@@ -602,37 +602,37 @@ export default function ResidentDetailPage() {
 
       {/* ── DATOS PERSONALES ─────────────────────────────────────────────── */}
       <TabsContent value="datos">
-        <SectionCard title="Datos personales">
+        <SectionCard title={t('exp.datos.title')}>
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
-                <dt className="text-[#1A3A3F]/60">Nacimiento</dt>
+                <dt className="text-[#1A3A3F]/60">{t('exp.datos.birthDate')}</dt>
                 <dd>{fmtDate(r.birthDate)}</dd>
               </div>
               <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
-                <dt className="text-[#1A3A3F]/60">Ingreso</dt>
+                <dt className="text-[#1A3A3F]/60">{t('exp.datos.admissionDate')}</dt>
                 <dd>{fmtDate(r.admissionDate)}</dd>
               </div>
               <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
-                <dt className="text-[#1A3A3F]/60">DNI/NIE</dt>
+                <dt className="text-[#1A3A3F]/60">{t('exp.datos.nationalId')}</dt>
                 <dd>{r.nationalId ?? '—'}</dd>
               </div>
               <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
-                <dt className="text-[#1A3A3F]/60">Centro</dt>
+                <dt className="text-[#1A3A3F]/60">{t('exp.datos.center')}</dt>
                 <dd>{r.center.name}</dd>
               </div>
               <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
-                <dt className="text-[#1A3A3F]/60">Plaza</dt>
-                <dd>{r.bed ? `${r.bed.code} (${r.bed.unit.name})` : 'Sin plaza'}</dd>
+                <dt className="text-[#1A3A3F]/60">{t('exp.datos.bed')}</dt>
+                <dd>{r.bed ? `${r.bed.code} (${r.bed.unit.name})` : t('exp.datos.noBed')}</dd>
               </div>
               {r.bloodGroup && (
                 <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
-                  <dt className="text-[#1A3A3F]/60">Grupo sanguíneo</dt>
+                  <dt className="text-[#1A3A3F]/60">{t('exp.datos.bloodGroup')}</dt>
                   <dd>{r.bloodGroup}</dd>
                 </div>
               )}
               {r.preferredLanguage && (
                 <div className="flex justify-between gap-2 border-b border-brand-100/60 py-1">
-                  <dt className="text-[#1A3A3F]/60">Idioma preferente</dt>
+                  <dt className="text-[#1A3A3F]/60">{t('exp.datos.language')}</dt>
                   <dd>{r.preferredLanguage}</dd>
                 </div>
               )}
@@ -1011,7 +1011,7 @@ export default function ResidentDetailPage() {
             ) : undefined}
           >
               {devices.isLoading ? (
-                <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
               ) : (devices.data ?? []).length === 0 ? (
                 <p className="text-sm text-[#1A3A3F]/60">{t('exp.clinical.devices.empty')}</p>
               ) : (
@@ -1058,7 +1058,7 @@ export default function ResidentDetailPage() {
             ) : undefined}
           >
               {vaccines.isLoading ? (
-                <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
               ) : (vaccines.data ?? []).length === 0 ? (
                 <p className="text-sm text-[#1A3A3F]/60">{t('exp.clinical.vaccines.empty')}</p>
               ) : (
@@ -1084,7 +1084,7 @@ export default function ResidentDetailPage() {
             ) : undefined}
           >
               {weights.isLoading ? (
-                <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
               ) : (weights.data ?? []).length === 0 ? (
                 <p className="text-sm text-[#1A3A3F]/60">{t('exp.clinical.weight.empty')}</p>
               ) : (
@@ -1110,7 +1110,7 @@ export default function ResidentDetailPage() {
             ) : undefined}
           >
               {ulcers.isLoading ? (
-                <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
               ) : (ulcers.data ?? []).length === 0 ? (
                 <p className="text-sm text-[#1A3A3F]/60">{t('exp.clinical.upp.empty')}</p>
               ) : (
@@ -1191,7 +1191,7 @@ export default function ResidentDetailPage() {
             ) : undefined}
           >
               {falls.isLoading ? (
-                <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
               ) : (falls.data ?? []).length === 0 ? (
                 <p className="text-sm text-[#1A3A3F]/60">{t('exp.clinical.falls.empty')}</p>
               ) : (
@@ -1228,7 +1228,7 @@ export default function ResidentDetailPage() {
                 {t('exp.clinical.restraints.legalNote')}
               </p>
               {restraints.isLoading ? (
-                <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
               ) : (restraints.data ?? []).length === 0 ? (
                 <p className="text-sm text-[#1A3A3F]/60">{t('exp.clinical.restraints.empty')}</p>
               ) : (
@@ -1297,7 +1297,7 @@ export default function ResidentDetailPage() {
             ) : undefined}
           >
               {consents.isLoading ? (
-                <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+                <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
               ) : (consents.data ?? []).length === 0 ? (
                 <p className="text-sm text-[#1A3A3F]/60">{t('exp.clinical.consents.empty')}</p>
               ) : (

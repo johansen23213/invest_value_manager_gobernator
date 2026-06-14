@@ -118,10 +118,67 @@ log "Instalando dependencias (pnpm install)…"
 pnpm install
 
 # --- 5. Base de datos: cliente + esquema + datos demo -------------------------
+# ORDEN OBLIGATORIO (espeja CI y producción — ver ADR-0014 y app-role-bootstrap.sql):
+#
+#   a) app-role-bootstrap.sql: crea el rol vetlla_app (NOSUPERUSER NOBYPASSRLS)
+#      ANTES de migrate:deploy, porque las migraciones lo referencian (GRANT/
+#      REVOKE) y Postgres falla con "role does not exist" si no existe.
+#
+#   b) migrate:deploy: aplica el schema con el rol ya existente.
+#
+#   c) app-role.sql: concede CRUD sobre las tablas RECIÉN creadas y revoca
+#      DELETE de audit_logs (append-only). Idempotente: seguro re-ejecutarlo.
+#
+#   d) seed: datos demo.
+#
+# Resultado: la app local conecta como vetlla_app vía APP_DATABASE_URL y
+# RLS se ejercita de verdad, igual que en CI y en producción. Esto elimina la
+# divergencia que ocultó el bug del REVOKE (ARQ-A03 / auditoría 2026-06-14).
+
 log "Generando cliente Prisma…"
 pnpm db:generate
+
+# a) Bootstrap del rol vetlla_app — ANTES de migrate ----------------------------
+if command -v psql >/dev/null 2>&1; then
+  log "Creando/actualizando rol vetlla_app (bootstrap ANTES de migrate)…"
+  PGHOST="${PG_HOST}" PGPORT="${PG_PORT}" PGUSER=vetlla \
+    PGPASSWORD=vetlla_dev_password PGDATABASE=vetlla \
+    psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_dev_password" \
+         -f "$(dirname "${BASH_SOURCE[0]}")/../packages/db/prisma/sql/app-role-bootstrap.sql" \
+    || die "Falló app-role-bootstrap.sql. ¿Está corriendo Postgres con el rol vetlla?"
+  ok "Rol vetlla_app existente con atributos correctos."
+else
+  log "No se encuentra 'psql' en el PATH. Saltando bootstrap de vetlla_app."
+  log "Para que RLS se ejercite en local instala postgresql-client e intenta de nuevo."
+fi
+
+# b) Migraciones ----------------------------------------------------------------
 log "Aplicando migraciones…"
 pnpm --filter @vetlla/db migrate:deploy
+
+# c) Grants del rol de app — DESPUÉS de migrate ---------------------------------
+if command -v psql >/dev/null 2>&1; then
+  log "Aplicando grants del rol vetlla_app (app-role.sql)…"
+  PGHOST="${PG_HOST}" PGPORT="${PG_PORT}" PGUSER=vetlla \
+    PGPASSWORD=vetlla_dev_password PGDATABASE=vetlla \
+    psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_dev_password" \
+         -f "$(dirname "${BASH_SOURCE[0]}")/../packages/db/prisma/sql/app-role.sql" \
+    || die "Falló app-role.sql."
+  ok "Grants de vetlla_app actualizados."
+fi
+
+# d) Exportar APP_DATABASE_URL para que la app conecte como vetlla_app ----------
+# (RLS solo se enforce si la conexión NO es superusuario ni propietario)
+if [ -z "${APP_DATABASE_URL:-}" ]; then
+  export APP_DATABASE_URL="postgresql://vetlla_app:vetlla_app_dev_password@${PG_HOST}:${PG_PORT}/vetlla?schema=public"
+  # Persistir en .env si no está ya definida, para que pnpm dev lo lea.
+  if ! grep -q '^APP_DATABASE_URL=' .env 2>/dev/null; then
+    printf '\nAPP_DATABASE_URL="%s"\n' "$APP_DATABASE_URL" >> .env
+    ok "APP_DATABASE_URL añadida a .env (conexión como vetlla_app con RLS activo)."
+  fi
+fi
+
+# e) Seed -----------------------------------------------------------------------
 log "Sembrando datos demo…"
 pnpm db:seed
 
@@ -158,7 +215,10 @@ printf '────────────────────────
 
 if [ "$START" -eq 1 ]; then
   log "Arrancando en http://localhost:${APP_PORT} …  (Ctrl+C para parar)"
-  exec env PORT="$APP_PORT" AUTH_URL="http://localhost:${APP_PORT}" pnpm --filter @vetlla/web dev
+  exec env PORT="$APP_PORT" AUTH_URL="http://localhost:${APP_PORT}" \
+       APP_DATABASE_URL="${APP_DATABASE_URL:-}" \
+       pnpm --filter @vetlla/web dev
 else
   log "Listo. Arranca con:  PORT=${APP_PORT} AUTH_URL=http://localhost:${APP_PORT} pnpm --filter @vetlla/web dev"
+  log "  (APP_DATABASE_URL ya está en .env — la app conectará como vetlla_app con RLS)"
 fi

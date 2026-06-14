@@ -481,8 +481,22 @@ const invoicesRouter = createTRPCRouter({
       // Si hay colisión (P2034), la capa de aplicación puede reintentar.
       const issued = await basePrisma.$transaction(
         async (tx) => {
-          // Activar bypass_rls local para la transacción (el acceso ya está verificado)
+          // DAT-A01: el bypass_rls se activa SOLO para la query de numeración correlativa
+          // (MAX + FOR UPDATE sobre invoices del tenant). Es la única query que lo necesita
+          // porque basePrisma opera como vetlla_app y sin tenant_id fijado en el GUC, la
+          // política RLS bloquearía el SELECT. El acceso ya fue validado arriba (findFirst
+          // con permissionProcedure billing:manage) y la WHERE impone el tenant explícitamente.
+          //
+          // INVARIANTE: el bypass solo cubre esta transacción (tercer arg TRUE = local a tx).
+          // El tx.invoice.update que sigue también usa el bypass activo — esto es intencional:
+          // la factura pertenece al mismo tenant y ya fue verificada en findFirst. No se añaden
+          // queries a otras tablas ni a otros tenants dentro de esta transacción.
           await tx.$executeRaw`SELECT set_config('app.bypass_rls', 'on', TRUE)`;
+
+          // Fijar también el tenant para que el Prisma ORM (si en el futuro se añaden
+          // queries al modelo dentro de esta tx) siga filtrado por RLS del tenant correcto.
+          await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, TRUE)`;
+
           // Bloquear el máximo actual para este tenant+año+serie (FOR UPDATE)
           const maxRow = await tx.$queryRaw<Array<{ max: number | null }>>`
             SELECT MAX(invoice_number) AS max

@@ -37,7 +37,7 @@ export default function RolesPage() {
   }, [canViewUsers, router]);
 
   if (me.isLoading || canViewUsers === null) {
-    return <p className="text-[#1A3A3F]/60">Cargando…</p>;
+    return <p className="text-[#1A3A3F]/60">{t('state.loading')}</p>;
   }
   if (!canViewUsers) {
     return null; // el useEffect redirige

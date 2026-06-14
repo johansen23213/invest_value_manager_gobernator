@@ -48,3 +48,19 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 --    El trigger BEFORE DELETE instalado en la migración 20260612130000
 --    añade una segunda capa de defensa.
 REVOKE DELETE ON public.audit_logs FROM vetlla_app;
+
+-- 6) DAT-C01 (auditoría 2026-06-14) — REVERTIDO tras verificación en vivo.
+--    Se intentó `REVOKE ALL ON auth_tokens FROM vetlla_app`, PERO el supuesto era
+--    falso: asPlatformAdmin()/forTenant() conectan como APP_DATABASE_URL (vetlla_app)
+--    con bypass de RLS, NO como el owner. Los flujos de auth (tokens.ts: createAuthToken
+--    /consumeAuthToken) usan asPlatformAdmin(), así que revocar el acceso ROMPE el reset
+--    de contraseña y las invitaciones (verificado: "permission denied for table
+--    auth_tokens" en auth-tokens.integration.test.ts). Por eso NO se revoca aquí.
+--
+--    Riesgo real (reclasificado de Crítico a Medio): vetlla_app puede leer filas de
+--    auth_tokens de cualquier tenant. Mitigantes: solo se almacena el HASH SHA-256 del
+--    token (no el valor en claro, que solo viaja en el enlace del email), de un solo
+--    uso y con TTL corto. Un hash filtrado NO permite resetear una contraseña.
+--    Fix correcto (DIFERIDO, requiere diseño): rol dedicado `vetlla_auth` con acceso a
+--    auth_tokens, y que tokens.ts conecte con ese rol; quitar auth_tokens del GRANT
+--    general a vetlla_app. Ver docs/auditoria/2026-06-14/06-modelo-datos-rls.md.

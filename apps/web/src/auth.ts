@@ -128,12 +128,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // Contraseña correcta: resetear el contador de fallos (si había alguno)
+        // Contraseña correcta: resetear el contador de fallos (si había alguno).
+        // Guardamos el estado efectivo post-reset para poder acumular fallos de MFA
+        // desde 0, independientemente del valor que tuviese el contador antes del login.
+        let mfaLockoutState = { failedLoginAttempts: 0, lockedUntil: null as Date | null };
         if (user.failedLoginAttempts > 0 || user.lockedUntil) {
           await authDb.user.update({
             where: { id: user.id },
             data: resetLockout(),
           });
+          // mfaLockoutState ya está en { 0, null } — lo dejamos así.
+        } else {
+          // No había fallos previos; el estado también es { 0, null }.
+          mfaLockoutState = { failedLoginAttempts: user.failedLoginAttempts, lockedUntil: user.lockedUntil };
         }
 
         // -- 4. Verificar segundo factor si MFA está activo
@@ -175,6 +182,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           if (!mfaOk) {
+            // SEC-M (M-04): los fallos de segundo factor también incrementan el contador
+            // de bloqueo, con el mismo umbral y ventana que los fallos de contraseña.
+            // Esto evita que un atacante con sesión (post-password) itere recovery codes
+            // o códigos TOTP a velocidad de red sin límite.
+            // Usamos mfaLockoutState (estado post-reset) para acumular desde 0 limpio,
+            // evitando usar el estado stale del objeto `user` cargado antes del reset.
+            const lockoutUpdate = registerFailure(mfaLockoutState, now);
+            await authDb.user.update({
+              where: { id: user.id },
+              data: lockoutUpdate,
+            });
+            // Actualizar el estado local para que reintentos en la misma sesión acumulen.
+            mfaLockoutState = lockoutUpdate;
+            if (lockoutUpdate.lockedUntil && user.tenantId) {
+              await logAudit(authDb, {
+                tenantId: user.tenantId,
+                actorId: user.id,
+                actorEmail: user.email,
+                action: 'ACCOUNT_LOCKED',
+                entity: 'User',
+                entityId: user.id,
+                summary: `Cuenta bloqueada tras ${lockoutUpdate.failedLoginAttempts} intentos fallidos (segundo factor)`,
+              });
+            }
             throw new Error('MFA_INVALID');
           }
         }

@@ -193,7 +193,7 @@ export function SocialTab({ residentId, canWrite }: SocialTabProps) {
         ) : undefined}
       >
           {latest.isLoading ? (
-            <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+            <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
           ) : !r ? (
             <p className="text-sm text-[#1A3A3F]/60">{t('exp.social.report.empty')}</p>
           ) : (
@@ -287,7 +287,7 @@ export function SocialTab({ residentId, canWrite }: SocialTabProps) {
       {/* Historial de informes */}
       <SectionCard title={t('exp.social.history.title')}>
           {history.isLoading ? (
-            <p className="text-sm text-[#1A3A3F]/60">Cargando…</p>
+            <p className="text-sm text-[#1A3A3F]/60">{t('state.loading')}</p>
           ) : (history.data ?? []).length <= 1 ? (
             <p className="text-sm text-[#1A3A3F]/60">{t('exp.social.history.empty')}</p>
           ) : (

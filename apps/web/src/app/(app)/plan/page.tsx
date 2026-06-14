@@ -11,7 +11,7 @@ export default function PlanPage() {
   const { t, locale } = useT();
   const summary = api.plan.summary.useQuery();
 
-  if (summary.isLoading) return <p className="text-[#1A3A3F]/60">Cargando…</p>;
+  if (summary.isLoading) return <p className="text-[#1A3A3F]/60">{t('state.loading')}</p>;
 
   if (!summary.data) return null;
 

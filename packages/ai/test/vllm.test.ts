@@ -9,7 +9,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VllmProvider } from '../src/providers/vllm';
-import { createProvider } from '../src/providers';
+import { createProvider, assertEuEndpoint } from '../src/providers';
 import { ProviderConfigError, ProviderRequestError } from '../src/providers/errors';
 import type { CompletionInput } from '../src/provider';
 
@@ -317,6 +317,60 @@ describe('VllmProvider — resolución de modelo', () => {
     const p = new VllmProvider({ baseUrl: BASE_URL, env: { AI_PROVIDER: 'vllm' } });
     await p.complete(baseInput());
     expect(lastCall(fetchMock).body.model).toBe('llama-3.3-70b');
+  });
+});
+
+describe('assertEuEndpoint — validación de región UE (IA-A02)', () => {
+  // Endpoints permitidos: locales, privados, o dominios que no están en la lista bloqueada.
+  it('permite localhost (Ollama local)', () => {
+    expect(() => assertEuEndpoint('http://localhost:11434/v1')).not.toThrow();
+    expect(() => assertEuEndpoint('http://127.0.0.1:8000/v1')).not.toThrow();
+  });
+
+  it('permite IPs privadas (infra EU-soberana propia)', () => {
+    expect(() => assertEuEndpoint('http://10.0.0.5:8000/v1')).not.toThrow();
+    expect(() => assertEuEndpoint('http://172.16.1.100/v1')).not.toThrow();
+    expect(() => assertEuEndpoint('http://192.168.1.10/v1')).not.toThrow();
+  });
+
+  it('permite endpoints OVHcloud/Scaleway UE', () => {
+    expect(() =>
+      assertEuEndpoint('https://oai.endpoints.kepler.ai.cloud.ovh.net/v1'),
+    ).not.toThrow();
+    expect(() => assertEuEndpoint('https://api.scaleway.ai/v1')).not.toThrow();
+  });
+
+  it('rechaza api.openai.com con ProviderConfigError (art. 44+ RGPD)', () => {
+    expect(() => assertEuEndpoint('https://api.openai.com/v1')).toThrow(ProviderConfigError);
+    expect(() => assertEuEndpoint('https://api.openai.com/v1')).toThrow(/no-UE/);
+  });
+
+  it('rechaza api.anthropic.com (Anthropic directo no es UE)', () => {
+    expect(() => assertEuEndpoint('https://api.anthropic.com/v1')).toThrow(ProviderConfigError);
+  });
+
+  it('rechaza api.mistral.ai (Mistral global, no EU-soberano)', () => {
+    expect(() => assertEuEndpoint('https://api.mistral.ai/v1')).toThrow(ProviderConfigError);
+  });
+
+  it('rechaza subdominios de endpoints bloqueados', () => {
+    expect(() => assertEuEndpoint('https://eu.api.openai.com/v1')).toThrow(ProviderConfigError);
+  });
+
+  it('permite URLs inválidas sin lanzar (el VllmProvider las reportará al usarlas)', () => {
+    expect(() => assertEuEndpoint('not-a-url')).not.toThrow();
+  });
+
+  it('createProvider con vllm + URL no-UE lanza ProviderConfigError en arranque', () => {
+    expect(() =>
+      createProvider({ AI_PROVIDER: 'vllm', AI_VLLM_BASE_URL: 'https://api.openai.com/v1' }),
+    ).toThrow(ProviderConfigError);
+  });
+
+  it('createProvider con vllm + URL EU no lanza', () => {
+    expect(() =>
+      createProvider({ AI_PROVIDER: 'vllm', AI_VLLM_BASE_URL: 'http://localhost:11434/v1' }),
+    ).not.toThrow();
   });
 });
 

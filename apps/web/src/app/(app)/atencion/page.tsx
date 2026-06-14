@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Badge, Button, Card, CardContent, CardTitle, EmptyState, Input, Label, PageHeader } from '@vetlla/ui';
+import { Badge, Button, Card, CardContent, CardTitle, EmptyState, Input, Label, PageHeader, Select } from '@vetlla/ui';
 import { api } from '@/trpc/react';
 import { useCareSync } from '@/offline/use-care-sync';
 import type { CarePayload } from '@/offline/types';
@@ -19,6 +19,7 @@ function cleanPayload(raw: Record<string, string>): CarePayload {
 }
 
 const INTAKE_LEVELS = ['0', '25', '50', '75', '100'] as const;
+const MEAL_KEYS = ['DESAYUNO', 'COMIDA', 'MERIENDA', 'CENA'] as const;
 
 export default function CarePage() {
   const me = api.me.useQuery();
@@ -26,7 +27,7 @@ export default function CarePage() {
   const residents = api.residents.list.useQuery();
   const { enqueue, undo, online, pendingItems, syncNow } = useCareSync();
   const toast = useToast();
-  const { locale } = useT();
+  const { locale, t } = useT();
 
   const [residentId, setResidentId] = useState('');
   const [query, setQuery] = useState('');
@@ -36,8 +37,8 @@ export default function CarePage() {
   );
 
   const [vitals, setVitals] = useState({ tension: '', fc: '', temperatura: '', sato2: '' });
-  const [intake, setIntake] = useState({ comida: 'Comida', porcentaje: '100' });
-  const [stool, setStool] = useState({ deposicion: 'Sí', notas: '' });
+  const [intake, setIntake] = useState({ comida: 'COMIDA', porcentaje: '100' });
+  const [stool, setStool] = useState({ deposicion: 'SI', notas: '' });
   const [incident, setIncident] = useState('');
 
   const records = api.care.listByResident.useQuery(
@@ -93,10 +94,10 @@ export default function CarePage() {
     <Card>
       <CardContent>
         <div className="mb-2 flex items-center justify-between">
-          <CardTitle className="text-base">Pendientes de sincronizar ({pendingItems.length})</CardTitle>
+          <CardTitle className="text-base">{t('care.pending.title', { count: pendingItems.length })}</CardTitle>
           {online && (
             <Button size="sm" variant="secondary" onClick={() => syncNow()}>
-              Sincronizar ahora
+              {t('care.pending.syncNow')}
             </Button>
           )}
         </div>
@@ -107,7 +108,7 @@ export default function CarePage() {
                 <Badge tone="neutral">{CARE_TYPE_LABELS[p.type]}</Badge> {p.residentName}
               </span>
               <Badge tone={p.status === 'ERROR' ? 'red' : 'amber'}>
-                {p.status === 'ERROR' ? 'Reintentando' : 'Pendiente'}
+                {p.status === 'ERROR' ? t('care.pending.retrying') : t('care.pending.pending')}
               </Badge>
             </li>
           ))}
@@ -120,10 +121,10 @@ export default function CarePage() {
   if (!resident) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Atención directa" />
+        <PageHeader title={t('care.page.title')} />
         {!online && (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Sin conexión: tus registros se guardan en el dispositivo y se envían solos al recuperar la red.
+            {t('care.offline.notice')}
           </p>
         )}
         <Input
@@ -189,7 +190,7 @@ export default function CarePage() {
         {/* Constantes */}
         <Card>
           <CardContent>
-            <CardTitle className="mb-3 text-base">Constantes</CardTitle>
+            <CardTitle className="mb-3 text-base">{t('care.vitals.title')}</CardTitle>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="tension">T. arterial</Label>
@@ -216,7 +217,7 @@ export default function CarePage() {
                 setVitals({ tension: '', fc: '', temperatura: '', sato2: '' });
               }}
             >
-              Registrar constantes
+              {t('care.vitals.submit')}
             </Button>
           </CardContent>
         </Card>
@@ -224,19 +225,18 @@ export default function CarePage() {
         {/* Ingesta */}
         <Card>
           <CardContent>
-            <CardTitle className="mb-3 text-base">Ingesta</CardTitle>
-            <Label htmlFor="comida">Comida</Label>
-            <select
+            <CardTitle className="mb-3 text-base">{t('care.intake.title')}</CardTitle>
+            <Label htmlFor="comida">{t('care.intake.meal')}</Label>
+            <Select
               id="comida"
               value={intake.comida}
               onChange={(e) => setIntake((s) => ({ ...s, comida: e.target.value }))}
-              className="min-h-touch w-full rounded-2xl border border-brand-200 bg-white px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             >
-              {['Desayuno', 'Comida', 'Merienda', 'Cena'].map((c) => (
-                <option key={c}>{c}</option>
+              {MEAL_KEYS.map((key) => (
+                <option key={key} value={key}>{t(`meal.${key}`)}</option>
               ))}
-            </select>
-            <Label className="mt-3">Cantidad</Label>
+            </Select>
+            <Label className="mt-3">{t('care.intake.quantity')}</Label>
             <div className="flex gap-2">
               {INTAKE_LEVELS.map((p) => (
                 <button
@@ -253,9 +253,9 @@ export default function CarePage() {
             <Button
               size="lg"
               className="mt-3 w-full"
-              onClick={() => record('INGESTA', { comida: intake.comida, porcentaje: Number(intake.porcentaje) })}
+              onClick={() => record('INGESTA', { comida: t(`meal.${intake.comida as typeof MEAL_KEYS[number]}`), porcentaje: Number(intake.porcentaje) })}
             >
-              Registrar ingesta
+              {t('care.intake.submit')}
             </Button>
           </CardContent>
         </Card>
@@ -263,9 +263,9 @@ export default function CarePage() {
         {/* Deposición */}
         <Card>
           <CardContent>
-            <CardTitle className="mb-3 text-base">Deposición</CardTitle>
+            <CardTitle className="mb-3 text-base">{t('care.stool.title')}</CardTitle>
             <div className="flex gap-2">
-              {['Sí', 'No'].map((v) => (
+              {(['SI', 'NO'] as const).map((v) => (
                 <button
                   key={v}
                   type="button"
@@ -273,21 +273,21 @@ export default function CarePage() {
                   aria-pressed={stool.deposicion === v}
                   className={`min-h-[56px] flex-1 rounded-full border text-base font-semibold transition-colors ${stool.deposicion === v ? 'border-brand-700 bg-brand-700 text-white' : 'border-brand-200 bg-white text-[#1A3A3F] hover:bg-brand-50'}`}
                 >
-                  {v}
+                  {v === 'SI' ? t('care.yes') : t('care.no')}
                 </button>
               ))}
             </div>
-            <Label htmlFor="depNotas" className="mt-3">Notas</Label>
+            <Label htmlFor="depNotas" className="mt-3">{t('care.stool.notes')}</Label>
             <Input id="depNotas" value={stool.notas} onChange={(e) => setStool((s) => ({ ...s, notas: e.target.value }))} />
             <Button
               size="lg"
               className="mt-3 w-full"
               onClick={async () => {
-                await record('DEPOSICION', cleanPayload(stool));
-                setStool({ deposicion: 'Sí', notas: '' });
+                await record('DEPOSICION', cleanPayload({ deposicion: stool.deposicion === 'SI' ? t('care.yes') : t('care.no'), notas: stool.notas }));
+                setStool({ deposicion: 'SI', notas: '' });
               }}
             >
-              Registrar deposición
+              {t('care.stool.submit')}
             </Button>
           </CardContent>
         </Card>
@@ -295,8 +295,8 @@ export default function CarePage() {
         {/* Incidencia */}
         <Card>
           <CardContent>
-            <CardTitle className="mb-3 text-base">Incidencia</CardTitle>
-            <Label htmlFor="inc">Descripción</Label>
+            <CardTitle className="mb-3 text-base">{t('care.incident.title')}</CardTitle>
+            <Label htmlFor="inc">{t('care.incident.label')}</Label>
             <Input id="inc" value={incident} onChange={(e) => setIncident(e.target.value)} placeholder="Ha dormido inquieto…" />
             <Button
               size="lg"
@@ -306,7 +306,7 @@ export default function CarePage() {
                 setIncident('');
               }}
             >
-              Registrar incidencia
+              {t('care.incident.submit')}
             </Button>
           </CardContent>
         </Card>
@@ -319,9 +319,9 @@ export default function CarePage() {
 
       <Card>
         <CardContent>
-          <CardTitle className="mb-3 text-base">Registros recientes</CardTitle>
+          <CardTitle className="mb-3 text-base">{t('care.records.title')}</CardTitle>
           {!online ? (
-            <p className="text-sm text-[#1A3A3F]/60">Sin conexión: el histórico se mostrará al volver online.</p>
+            <p className="text-sm text-[#1A3A3F]/60">{t('r360.records.offline')}</p>
           ) : records.data && records.data.length > 0 ? (
             <ul className="flex flex-col gap-1 text-sm">
               {records.data.map((rec) => (
