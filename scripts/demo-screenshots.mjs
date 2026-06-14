@@ -109,6 +109,19 @@ async function waitReady(page) {
   } catch {
     // Si pasa el timeout, continuamos igualmente
   }
+  // Espera a que el contenido principal esté presente (evita capturar en plena
+  // carga, con el esqueleto/"Cargando…" todavía visible → página "en blanco").
+  try {
+    await page.locator('main').first().waitFor({ state: 'visible', timeout: 10_000 });
+    // Espera a que desaparezca cualquier indicador de carga residual.
+    await page
+      .getByText(/Cargando|Carregant/i)
+      .first()
+      .waitFor({ state: 'hidden', timeout: 8_000 })
+      .catch(() => {});
+  } catch {
+    // Sin <main>: puede ser una página de error; se captura igualmente y se verá.
+  }
   await page.waitForTimeout(SETTLE_MS);
   await page.evaluate(() => document.fonts.ready);
 }
@@ -530,6 +543,16 @@ async function main() {
 
     for (const route of ROUTES_BY_ROLE.director) {
       counter++;
+      // Salta rutas de detalle cuyo ID dinámico no se pudo resolver (evita
+      // capturar páginas not-found en blanco).
+      if (route.path.includes('{residenteId}') && !residenteId) {
+        console.warn(`  [SKIP] ${route.label}: sin residenteId resoluble`);
+        continue;
+      }
+      if (route.path.includes('{admisionId}') && !admisionId) {
+        console.warn(`  [SKIP] ${route.label}: sin admisionId resoluble`);
+        continue;
+      }
       let resolvedPath = route.path
         .replace('{residenteId}', residenteId ?? 'not-found')
         .replace('{admisionId}', admisionId ?? 'not-found');
@@ -555,6 +578,10 @@ async function main() {
 
     for (const route of ROUTES_BY_ROLE.sanitario) {
       counter++;
+      if (route.path.includes('{residenteId}') && !residenteIdSan) {
+        console.warn(`  [SKIP] ${route.label}: sin residenteId resoluble`);
+        continue;
+      }
       const resolvedPath = route.path.replace('{residenteId}', residenteIdSan ?? 'not-found');
       const filename = `${pad(counter)}-sanitario-${slugify(route.label)}`;
       const shot = await captureShot(sanCtx, `${BASE_URL}${resolvedPath}`, filename, route.label);
