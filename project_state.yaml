@@ -287,16 +287,75 @@ recobertura_post_epicas_ad:
       - id: BA-2
         modulo: "Notificaciones push Web Push/VAPID"
         rf: [RF-NOT-001..005]
-        estado: done_backend
-        commit: 8bd47f6
-        pendiente_cliente: >-
-          Falta el service worker (handler 'push' + click->url) y la UI de
-          suscripción (toggle en ajustes). Backend listo: router push + envío
-          server-only con web-push (no-op sin claves VAPID) + enganche en
-          Announcement y ServiceRequest. Variables VAPID_* en .env.example.
-    verificacion_ba_1_2: >-
-      typecheck 5/5, web 557, db 401 (incl. aislamiento RLS de mfa_recovery_codes y
-      push_subscriptions), build OK, lint OK, e2e parse 49. Propagado a main (9e7a137).
+        estado: done
+        commit: "8bd47f6 (backend) + 0ed74af (cliente: SW + toggle)"
+        notas: >-
+          Backend: router push + envío server-only con web-push (no-op sin claves
+          VAPID) + enganche en Announcement y ServiceRequest. Cliente: service
+          worker (push + notificationclick) y toggle de suscripción en
+          /cuenta/seguridad. Variables VAPID_* en .env.example.
+      - id: BA-3
+        modulo: "Valoraciones: alertas de vencimiento + evolución de escalas"
+        rf: [RF-VAL-004..008]
+        estado: done
+        commit: "6bfccf0 (backend) + 4d15ac8 (UI)"
+        notas: "Cadencia clínica por escala, gráfico SVG de evolución; sin tablas nuevas."
+      - id: BA-4
+        modulo: "Facturación básica (tarifas, copagos, facturas, ciclo)"
+        rf: [RF-ECO-001..005]
+        estado: done
+        commit: "458ef32 (backend) + UI a7aa1b0 en main 1aa8b35"
+        notas: >-
+          Invoice/Tariff/ResidentBillingProfile/InvoiceLine con RLS; numeración
+          correlativa race-safe; dsar-registry policy 'scrub' (retención contable).
+          Cobro digital deferido a Q-007; Verifactu a Q-012.
+      - id: BA-5
+        modulo: "Admisiones/preadmisión + forecast de ocupación"
+        rf: [admisiones]
+        estado: done
+        commit: "backend + UI en main d6a9de3"
+        notas: "Pipeline de lista de espera (máquina de estados, crea Resident al admitir) + forecast SVG."
+      - id: BA-6
+        modulo: "Actividades (catálogo, sesiones, aforo, asistencia)"
+        estado: done
+        commit: "cdbe64e (backend) + 03b195a (UI) en main 6d098b2"
+        notas: "Inscripción con aforo + lista de espera; portal de familia (participación)."
+      - id: BA-7
+        modulo: "Indicadores de calidad asistencial (cohorte)"
+        estado: done
+        commit: "0241c4d en main 6d098b2"
+        notas: "UPP/caídas/Norton-Braden/sujeciones; agregaciones que respetan RLS; sin tablas nuevas."
+      - id: BA-8
+        modulo: "Diagnósticos con estado + ayudas técnicas"
+        estado: done
+        commit: "f24a310 (backend) + 9e4389c (UI) en main e86270d"
+        notas: "Diagnosis con ciclo ACTIVO/CRONICO/RESUELTO; AssistiveDevice como entidad."
+      - id: BA-9
+        modulo: "Inventario / lavandería / pertenencias del residente"
+        estado: done
+        commit: "5be316a en main e86270d"
+        notas: >-
+          InventoryItem/InventoryMovement/ResidentBelonging con RLS; bajo stock;
+          pertenencias en dsar-registry (export v10). La ola se cerró tras relanzar
+          al especialista (la primera pasada quedó sin router/i18n/tests).
+      - id: BA-DEMO
+        modulo: "Tooling: capturas reales de la app + PDF de demo (CI)"
+        estado: done
+        commit: "38311ad en main e86270d"
+        notas: >-
+          .github/workflows/demo-screenshots.yml (workflow_dispatch) + script
+          Playwright que arranca la app con seed, login por rol, captura cada
+          pantalla y ensambla PDF como artefacto. El sandbox no tiene navegador;
+          las capturas reales se generan en CI (allí sí hay Chromium).
+    verificacion_cierre_bloque_a: >-
+      Checkpoint Bloque A construible-ya CERRADO 2026-06-14 (main e86270d).
+      typecheck 5/5, db 470, web 836, build OK, lint OK, e2e parse 49. Todas las
+      tablas nuevas con RLS+FORCE verificadas en vivo en Postgres; dsar-registry al
+      día (export v10). Pendiente del Bloque A NO bloqueado para futuras tandas:
+      dashboard del auxiliar role-diferenciado, encuestas/NPS, mantenimiento/
+      órdenes de trabajo, tareas operativas desde el PIA (RF-PRO-005). BLOQUEADO por
+      Angel (sin cambios): pagos Q-007, Verifactu Q-012, OVHcloud Q-004, retención
+      RGPD Q-003, firma Q-008, multicentro Q-009.
 
 # --------------------------------------------------------------------------
 # Gap analysis Core Asistencial Completo (2026-06-13, Pau)
