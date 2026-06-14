@@ -29,6 +29,8 @@ import { slaDueAt, canTransition, type SRCategory, type SRPriority, type SRStatu
 import { requestStatusChangedEmail } from '@/server/account/emails';
 import { assertFamilyAccess } from '@/server/family-access';
 import { sendEmailSafe } from '@/server/email/safe';
+import { sendPushToUser } from '@/server/push';
+import { buildPushPayload } from '@/server/push/payload';
 
 // ---------------------------------------------------------------------------
 // Esquemas Zod reutilizables (reutilizables en el cliente para validación igual)
@@ -331,6 +333,20 @@ export const requestsRouter = createTRPCRouter({
         { to: req.createdBy.email, ...requestStatusChangedEmail({ requestTitle: req.title, requestId: req.id, newStatus: input.status }) },
         { context: 'requests.updateStatus', requestId: input.requestId },
       );
+
+      // RF-NOT-003: notificación push al familiar creador de la solicitud (no-throw).
+      // El fallo de push NUNCA debe tumbar la operación principal.
+      void sendPushToUser(
+        ctx.db,
+        req.createdById,
+        buildPushPayload({
+          type:        'service_request_status',
+          requestId:   req.id,
+          requestTitle: req.title,
+          newStatus:   input.status,
+          residentName: '',   // no cargamos el residente aquí para minimizar el impacto
+        }),
+      ).catch(() => {/* silenciado: el fallo de push no debe interrumpir la respuesta */});
 
       return updated;
     }),
