@@ -45,14 +45,34 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import {
-  DiagnosisType,
-  DiagnosisStatus,
-  AssistiveDeviceType,
-  type TenantPrisma,
-} from '@vetlla/db';
+import { type TenantPrisma } from '@vetlla/db';
 import { createTRPCRouter, permissionProcedure } from '@/server/trpc';
 import { validateDiagnosisTransition } from '@/lib/diagnosticos';
+
+// ---------------------------------------------------------------------------
+// Schemas Zod — importados desde el módulo CLIENT-SAFE (única fuente de verdad).
+// Re-exportados para compatibilidad con módulos de servidor que los importen
+// desde este router. Los ficheros CLIENTE deben importar directamente desde
+// '@/lib/schemas/diagnosticos'.
+// ---------------------------------------------------------------------------
+
+import {
+  createDiagnosisSchema,
+  updateDiagnosisSchema,
+  transitionDiagnosisSchema,
+  createAssistiveDeviceSchema,
+  updateAssistiveDeviceSchema,
+  retireAssistiveDeviceSchema,
+} from '@/lib/schemas/diagnosticos';
+
+export {
+  createDiagnosisSchema,
+  updateDiagnosisSchema,
+  transitionDiagnosisSchema,
+  createAssistiveDeviceSchema,
+  updateAssistiveDeviceSchema,
+  retireAssistiveDeviceSchema,
+};
 
 // ---------------------------------------------------------------------------
 // Guards de acceso
@@ -97,62 +117,6 @@ async function assertAssistiveDevice(
   }
   return dev;
 }
-
-// ---------------------------------------------------------------------------
-// Esquemas Zod compartidos (reutilizables en frontend)
-// ---------------------------------------------------------------------------
-
-export const createDiagnosisSchema = z.object({
-  residentId:    z.string().min(1),
-  code:          z.string().max(20).optional(),
-  description:   z.string().min(1).max(500),
-  type:          z.nativeEnum(DiagnosisType).default('PRINCIPAL'),
-  status:        z.nativeEnum(DiagnosisStatus).default('ACTIVO'),
-  diagnosedAt:   z.coerce.date().optional(),
-  resolvedAt:    z.coerce.date().optional(),
-  notes:         z.string().max(1000).optional(),
-});
-
-export const updateDiagnosisSchema = z.object({
-  id:            z.string().min(1),
-  residentId:    z.string().min(1),
-  code:          z.string().max(20).optional(),
-  description:   z.string().min(1).max(500).optional(),
-  type:          z.nativeEnum(DiagnosisType).optional(),
-  diagnosedAt:   z.coerce.date().optional(),
-  notes:         z.string().max(1000).optional(),
-});
-
-export const transitionDiagnosisSchema = z.object({
-  id:         z.string().min(1),
-  residentId: z.string().min(1),
-  next:       z.nativeEnum(DiagnosisStatus),
-  resolvedAt: z.coerce.date().optional(),
-});
-
-export const createAssistiveDeviceSchema = z.object({
-  residentId:    z.string().min(1),
-  type:          z.nativeEnum(AssistiveDeviceType),
-  description:   z.string().max(300).optional(),
-  prescribedAt:  z.coerce.date(),
-  ownedByCenter: z.boolean().default(false),
-  notes:         z.string().max(500).optional(),
-});
-
-export const updateAssistiveDeviceSchema = z.object({
-  id:            z.string().min(1),
-  residentId:    z.string().min(1),
-  description:   z.string().max(300).optional(),
-  ownedByCenter: z.boolean().optional(),
-  notes:         z.string().max(500).optional(),
-});
-
-export const retireAssistiveDeviceSchema = z.object({
-  id:         z.string().min(1),
-  residentId: z.string().min(1),
-  retiredAt:  z.coerce.date(),
-  notes:      z.string().max(500).optional(),
-});
 
 // ---------------------------------------------------------------------------
 // Sub-router: diagnoses

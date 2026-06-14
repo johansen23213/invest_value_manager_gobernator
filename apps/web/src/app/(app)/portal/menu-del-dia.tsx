@@ -13,7 +13,7 @@ import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { formatDate } from '@/lib/format';
 import { AllergenChip } from '@/components/allergen-chip';
-import type { AllergenValue } from '@/server/routers/nutrition';
+import type { AllergenValue } from '@/lib/schemas/nutrition';
 
 const MEAL_ORDER = ['DESAYUNO', 'COMIDA', 'MERIENDA', 'CENA'] as const;
 type MealType = (typeof MEAL_ORDER)[number];

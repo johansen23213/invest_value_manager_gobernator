@@ -44,7 +44,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@vetlla/ui';
-import { AdmissionStatus, AdmissionOrigin, DependencyGrade, PlaceRegime } from '@vetlla/db';
 import { api } from '@/trpc/react';
 import { useT } from '@/i18n/provider';
 import { useToast } from '@/components/toast';
@@ -59,7 +58,11 @@ import {
 } from '@/lib/ocupacion-forecast';
 import {
   admissionRequestCreateSchema,
-} from '@/server/routers/admisiones';
+  AdmissionStatus,
+  AdmissionOrigin,
+  DependencyGrade,
+  PlaceRegime,
+} from '@/lib/schemas/admisiones';
 
 // ---------------------------------------------------------------------------
 // Tipos locales
