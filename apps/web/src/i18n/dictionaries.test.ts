@@ -811,3 +811,79 @@ describe('paridad es/ca — Notificaciones push (RF-NOT-001..005)', () => {
     }
   });
 });
+
+describe('paridad es/ca — Valoraciones: alertas de vencimiento + evolución (RF-VAL-004..008)', () => {
+  const valoracionKeys = [
+    'nav.valoraciones',
+    'valoracion.status.al_dia',
+    'valoracion.status.proxima',
+    'valoracion.status.vencida',
+    'valoracion.alerts.title',
+    'valoracion.alerts.subtitle',
+    'valoracion.alerts.empty.title',
+    'valoracion.alerts.empty.desc',
+    'valoracion.alerts.filter.unit',
+    'valoracion.alerts.filter.all',
+    'valoracion.alerts.col.resident',
+    'valoracion.alerts.col.scale',
+    'valoracion.alerts.col.lastDate',
+    'valoracion.alerts.col.dueDate',
+    'valoracion.alerts.col.status',
+    'valoracion.alerts.col.actions',
+    'valoracion.alerts.action.assess',
+    'valoracion.alerts.daysOverdue',
+    'valoracion.alerts.daysUntilDue',
+    'valoracion.alerts.dueToday',
+    'valoracion.alerts.cadence',
+    'valoracion.dashboard.badge',
+    'valoracion.dashboard.overdue',
+    'valoracion.dashboard.proximas',
+    'valoracion.evolution.title',
+    'valoracion.evolution.empty',
+    'valoracion.evolution.score',
+    'valoracion.evolution.date',
+    'valoracion.evolution.cadence',
+    'scale.BARTHEL',
+    'scale.TINETTI',
+    'scale.PFEIFFER',
+    'scale.MEC_LOBO',
+    'scale.GDS_REISBERG',
+    'scale.NORTON',
+    'scale.BRADEN',
+    'scale.MNA',
+    'scale.PAINAD',
+    'scale.DOWNTON',
+    'scale.LAWTON_BRODY',
+  ];
+
+  it('todas las claves de valoración existen en es', () => {
+    for (const key of valoracionKeys) {
+      expect(DICTIONARIES.es[key], `es: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('todas las claves de valoración existen en ca', () => {
+    for (const key of valoracionKeys) {
+      expect(DICTIONARIES.ca[key], `ca: falta clave "${key}"`).toBeDefined();
+    }
+  });
+
+  it('claves narrativas de valoración difieren entre es y ca (paridad real)', () => {
+    const narrativeKeys = [
+      'valoracion.alerts.title',
+      'valoracion.alerts.subtitle',
+      'valoracion.alerts.empty.desc',
+      'valoracion.evolution.empty',
+      'valoracion.status.vencida',
+      'scale.TINETTI',
+      'scale.GDS_REISBERG',
+    ];
+    for (const key of narrativeKeys) {
+      expect(DICTIONARIES.es[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key]).toBeDefined();
+      expect(DICTIONARIES.ca[key], `ca: "${key}" repite literalmente es`).not.toBe(
+        DICTIONARIES.es[key],
+      );
+    }
+  });
+});
