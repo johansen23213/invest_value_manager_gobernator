@@ -65,6 +65,21 @@ export const PERMISSIONS = [
   //   FAMILIAR   → sin acceso (proceso interno del centro)
   'admissions:read',
   'admissions:manage',
+  // Actividades (animación sociocultural / terapia ocupacional)
+  // Matriz RBAC:
+  //   activities:read   → leer catálogo, sesiones e inscripciones (todos los roles del centro).
+  //   activities:manage → gestionar catálogo, programar sesiones, inscribir y registrar asistencia.
+  //
+  //   SUPERADMIN → manage + read
+  //   DIRECTOR   → manage + read (responsable del programa de actividades)
+  //   AUXILIAR   → manage + read (el TASOC/animador es auxiliar en muchos centros;
+  //                              la animación sociocultural la realizan los auxiliares)
+  //   SANITARIO  → read (puede consultar la participación del residente)
+  //   FAMILIAR   → read de las actividades de SU residente (portal), vía endpoint
+  //               participationForResident con assertFamilyAccess (no usa este permiso
+  //               directamente — usa portal:read + assertFamilyAccess)
+  'activities:read',
+  'activities:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -100,6 +115,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'billing:manage',
     'admissions:read',
     'admissions:manage',
+    'activities:read',
+    'activities:manage',
   ],
   SANITARIO: [
     'tenant:read',
@@ -133,6 +150,10 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     // candidato (valoración de grado de dependencia, diagnósticos, necesidades).
     // No puede crear ni transicionar solicitudes (admissions:manage es solo DIRECTOR).
     'admissions:read',
+    // SANITARIO tiene activities:read: puede consultar la participación del
+    // residente en actividades (dato clínico relevante para el bienestar).
+    // No puede gestionar el catálogo ni inscribir (activities:manage es DIRECTOR+AUXILIAR).
+    'activities:read',
   ],
   // El auxiliar registra atención directa y administra medicación (MAR).
   // En muchos centros el auxiliar hace las funciones de recepción (check-in/out).
@@ -151,6 +172,10 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     // AUXILIAR puede ver su cuadrante (shifts:read): necesita saber en qué turno
     // está asignado y quiénes son sus compañeros. No puede planificarlo (shifts:manage).
     'shifts:read',
+    // AUXILIAR (TASOC/animador) gestiona el programa de actividades: catálogo,
+    // programación de sesiones, inscripción de residentes y registro de asistencia.
+    'activities:read',
+    'activities:manage',
   ],
   FAMILIAR: [
     'tenant:read',
