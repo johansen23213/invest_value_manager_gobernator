@@ -42,6 +42,10 @@ const authDb = asPlatformAdmin();
 // Estrategia JWT con provider de credenciales. El adaptador Postgres de Auth.js
 // se incorporará al añadir providers OAuth/email (H1); credenciales requiere JWT.
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Self-hosted (región UE) detrás de proxy: confiamos en el Host de la request
+  // para construir las URLs de callback. Sin esto, en producción (next start)
+  // Auth.js trata el host como no confiable y el login no establece sesión.
+  trustHost: true,
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
   providers: [

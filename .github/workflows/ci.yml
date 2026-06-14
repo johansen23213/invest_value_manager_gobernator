@@ -191,6 +191,8 @@ jobs:
       DATABASE_URL: postgresql://vetlla:vetlla_dev_password@localhost:5432/vetlla?schema=public
       APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
       AUTH_SECRET: ci-secret-not-for-production
+      # http explícito → cookies NO-Secure, la sesión persiste sobre http://localhost.
+      AUTH_URL: http://localhost:3000
       # Email y AI en modo consola/stub — sin dependencias externas en E2E.
       EMAIL_PROVIDER: console
       AI_PROVIDER: stub
