@@ -74,7 +74,25 @@ jobs:
         run: pnpm db:generate
 
       # -----------------------------------------------------------------------
-      # 5. Migraciones (rol OWNER)
+      # 5. Bootstrap del rol vetlla_app ANTES de migrate: las migraciones lo
+      #    referencian (GRANT/REVOKE) y en BD nueva aún no existe.
+      # -----------------------------------------------------------------------
+      - name: Bootstrap app role (before migrations reference it)
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: vetlla
+          PGPASSWORD: vetlla_dev_password
+          PGDATABASE: vetlla
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
+            -f packages/db/prisma/sql/app-role-bootstrap.sql
+
+      # -----------------------------------------------------------------------
+      # 5b. Migraciones (rol OWNER)
       # -----------------------------------------------------------------------
       - name: Apply database migrations
         run: pnpm --filter @vetlla/db migrate:deploy

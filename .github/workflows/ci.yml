@@ -55,6 +55,24 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      # Las migraciones referencian el rol vetlla_app (GRANT/REVOKE). En una BD
+      # nueva el rol no existe todavía, así que hay que crearlo ANTES de migrate
+      # (los grants sobre tablas van después, en app-role.sql). Sin esto,
+      # migrate:deploy falla con "role vetlla_app does not exist".
+      - name: Bootstrap app role (before migrations reference it)
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: vetlla
+          PGPASSWORD: vetlla_dev_password
+          PGDATABASE: vetlla
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 -v app_password="vetlla_app_ci_password" \
+            -f packages/db/prisma/sql/app-role-bootstrap.sql
+
       - name: Apply migrations
         run: pnpm --filter @vetlla/db migrate:deploy
 
