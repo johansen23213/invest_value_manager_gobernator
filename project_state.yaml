@@ -265,6 +265,39 @@ recobertura_post_epicas_ad:
     - { rank: 3, modulo: "Facturación básica — modelo Invoice + tarifas", rf: [RF-ECO-001..005], esfuerzo: L, razon: "Elimina sistema paralelo para cobros; se activa con Q-007" }
     - { rank: 4, modulo: "Alertas de valoración vencida + gráfico de escalas", rf: [RF-VAL-004..008], esfuerzo: S, razon: "Trabajo sobre datos existentes; diferencial clínico y base IA predictiva" }
 
+  bloque_a_progreso:
+    directiva_angel: "Ve con todo lo pendiente construirle ya (2026-06-14)"
+    estrategia_cio: >-
+      Construcción del Bloque A (todo lo construible-ya, sin bloqueo de Angel) en olas:
+      backend secuencial por olas para evitar conflictos en ficheros núcleo
+      (schema.prisma, _app.ts, rbac.ts, dsar-registry.ts, dictionaries.ts);
+      UI en paralelo por dominio. Cada ola: typecheck + tests + build + RLS en
+      Postgres + e2e parse, luego propagación feature->develop->release->main.
+    olas:
+      - id: BA-1
+        modulo: "MFA TOTP + bloqueo de login"
+        rf: [RNF-SEG-002, RNF-SEG-011]
+        estado: done
+        commit: 8bd47f6
+        notas: >-
+          totp.ts/mfa-recovery.ts reescritos con Web Crypto isomórfico (async) tras
+          detectar que node:crypto rompía el bundle de Next al ser alcanzable desde
+          auth.ts (mismo patrón que tokens.ts/visits.ts). MfaRecoveryCode con RLS+FORCE.
+          UI: /cuenta/seguridad + login en dos pasos.
+      - id: BA-2
+        modulo: "Notificaciones push Web Push/VAPID"
+        rf: [RF-NOT-001..005]
+        estado: done_backend
+        commit: 8bd47f6
+        pendiente_cliente: >-
+          Falta el service worker (handler 'push' + click->url) y la UI de
+          suscripción (toggle en ajustes). Backend listo: router push + envío
+          server-only con web-push (no-op sin claves VAPID) + enganche en
+          Announcement y ServiceRequest. Variables VAPID_* en .env.example.
+    verificacion_ba_1_2: >-
+      typecheck 5/5, web 557, db 401 (incl. aislamiento RLS de mfa_recovery_codes y
+      push_subscriptions), build OK, lint OK, e2e parse 49. Propagado a main (9e7a137).
+
 # --------------------------------------------------------------------------
 # Gap analysis Core Asistencial Completo (2026-06-13, Pau)
 # Motivado por decisión estratégica de Angel: competir con paridad de core
