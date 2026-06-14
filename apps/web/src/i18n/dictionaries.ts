@@ -1428,6 +1428,60 @@ const es: Record<string, string> = {
   'push.devices.empty': 'Sin dispositivos suscritos.',
   'push.devices.remove': 'Eliminar',
   'push.devices.removed': 'Dispositivo eliminado.',
+
+  // ---------------------------------------------------------------------------
+  // Valoraciones — alertas de vencimiento y evolución temporal (RF-VAL-004..008)
+  // ---------------------------------------------------------------------------
+  'nav.valoraciones': 'Valoraciones',
+
+  // Estados de vencimiento
+  'valoracion.status.al_dia':  'Al día',
+  'valoracion.status.proxima': 'Próxima a vencer',
+  'valoracion.status.vencida': 'Vencida',
+
+  // Panel de alertas de vencimiento
+  'valoracion.alerts.title':          'Alertas de valoración',
+  'valoracion.alerts.subtitle':       'Escalas vencidas o próximas a vencer por residente.',
+  'valoracion.alerts.empty.title':    'Todo al día',
+  'valoracion.alerts.empty.desc':     'No hay valoraciones vencidas ni próximas a vencer.',
+  'valoracion.alerts.filter.unit':    'Unidad',
+  'valoracion.alerts.filter.all':     'Todas las unidades',
+  'valoracion.alerts.col.resident':   'Residente',
+  'valoracion.alerts.col.scale':      'Escala',
+  'valoracion.alerts.col.lastDate':   'Última valoración',
+  'valoracion.alerts.col.dueDate':    'Fecha límite',
+  'valoracion.alerts.col.status':     'Estado',
+  'valoracion.alerts.col.actions':    'Acciones',
+  'valoracion.alerts.action.assess':  'Valorar ahora →',
+  'valoracion.alerts.daysOverdue':    '{days} días de retraso',
+  'valoracion.alerts.daysUntilDue':   'Vence en {days} días',
+  'valoracion.alerts.dueToday':       'Vence hoy',
+  'valoracion.alerts.cadence':        'Cadencia: cada {days} días',
+
+  // Dashboard — badge/resumen de alertas de valoración
+  'valoracion.dashboard.badge':       '{count, plural, one {# valoración pendiente} other {# valoraciones pendientes}}',
+  'valoracion.dashboard.overdue':     '{count} vencidas',
+  'valoracion.dashboard.proximas':    '{count} próximas',
+
+  // Gráfico de evolución temporal
+  'valoracion.evolution.title':       'Evolución de {scale}',
+  'valoracion.evolution.empty':       'Sin valoraciones registradas para esta escala.',
+  'valoracion.evolution.score':       'Puntuación',
+  'valoracion.evolution.date':        'Fecha',
+  'valoracion.evolution.cadence':     'Cadencia recomendada: {days} días',
+
+  // Nombres de escala (etiquetas para la UI)
+  'scale.BARTHEL':      'Barthel (ABVD)',
+  'scale.TINETTI':      'Tinetti (marcha y equilibrio)',
+  'scale.PFEIFFER':     'Pfeiffer (estado cognitivo)',
+  'scale.MEC_LOBO':     'MEC-Lobo (deterioro cognitivo)',
+  'scale.GDS_REISBERG': 'GDS-Reisberg (estadio demencia)',
+  'scale.NORTON':       'Norton (riesgo UPP)',
+  'scale.BRADEN':       'Braden (riesgo UPP)',
+  'scale.MNA':          'MNA (nutrición)',
+  'scale.PAINAD':       'PAINAD (dolor en demencia)',
+  'scale.DOWNTON':      'Downton (riesgo caídas)',
+  'scale.LAWTON_BRODY': 'Lawton-Brody (AIVD)',
 };
 
 const ca: Record<string, string> = {
@@ -2846,6 +2900,60 @@ const ca: Record<string, string> = {
   'push.devices.empty': 'Sense dispositius subscrits.',
   'push.devices.remove': 'Eliminar',
   'push.devices.removed': 'Dispositiu eliminat.',
+
+  // ---------------------------------------------------------------------------
+  // Valoracions — alertes de venciment i evolució temporal (RF-VAL-004..008)
+  // ---------------------------------------------------------------------------
+  'nav.valoraciones': 'Valoracions',
+
+  // Estats de venciment
+  'valoracion.status.al_dia':  'Al dia',
+  'valoracion.status.proxima': 'Propera a vèncer',
+  'valoracion.status.vencida': 'Vençuda',
+
+  // Panell d\'alertes de venciment
+  'valoracion.alerts.title':          'Alertes de valoració',
+  'valoracion.alerts.subtitle':       'Escales vençudes o properes a vèncer per resident.',
+  'valoracion.alerts.empty.title':    'Tot al dia',
+  'valoracion.alerts.empty.desc':     'No hi ha valoracions vençudes ni properes a vèncer.',
+  'valoracion.alerts.filter.unit':    'Unitat',
+  'valoracion.alerts.filter.all':     'Totes les unitats',
+  'valoracion.alerts.col.resident':   'Resident',
+  'valoracion.alerts.col.scale':      'Escala',
+  'valoracion.alerts.col.lastDate':   'Última valoració',
+  'valoracion.alerts.col.dueDate':    'Data límit',
+  'valoracion.alerts.col.status':     'Estat',
+  'valoracion.alerts.col.actions':    'Accions',
+  'valoracion.alerts.action.assess':  'Valorar ara →',
+  'valoracion.alerts.daysOverdue':    '{days} dies de retard',
+  'valoracion.alerts.daysUntilDue':   'Venç en {days} dies',
+  'valoracion.alerts.dueToday':       'Venç avui',
+  'valoracion.alerts.cadence':        'Cadència: cada {days} dies',
+
+  // Tauler — badge/resum d\'alertes de valoració
+  'valoracion.dashboard.badge':       '{count, plural, one {# valoració pendent} other {# valoracions pendents}}',
+  'valoracion.dashboard.overdue':     '{count} vençudes',
+  'valoracion.dashboard.proximas':    '{count} properes',
+
+  // Gràfic d\'evolució temporal
+  'valoracion.evolution.title':       'Evolució de {scale}',
+  'valoracion.evolution.empty':       'Sense valoracions registrades per a aquesta escala.',
+  'valoracion.evolution.score':       'Puntuació',
+  'valoracion.evolution.date':        'Data',
+  'valoracion.evolution.cadence':     'Cadència recomanada: {days} dies',
+
+  // Noms d\'escala (etiquetes per a la UI)
+  'scale.BARTHEL':      'Barthel (ABVD)',
+  'scale.TINETTI':      'Tinetti (marxa i equilibri)',
+  'scale.PFEIFFER':     'Pfeiffer (estat cognitiu)',
+  'scale.MEC_LOBO':     'MEC-Lobo (deteriorament cognitiu)',
+  'scale.GDS_REISBERG': 'GDS-Reisberg (estadi demència)',
+  'scale.NORTON':       'Norton (risc UPP)',
+  'scale.BRADEN':       'Braden (risc UPP)',
+  'scale.MNA':          'MNA (nutrició)',
+  'scale.PAINAD':       'PAINAD (dolor en demència)',
+  'scale.DOWNTON':      'Downton (risc caigudes)',
+  'scale.LAWTON_BRODY': 'Lawton-Brody (AIVD)',
 };
 
 export const DICTIONARIES: Record<Locale, Record<string, string>> = { es, ca };
