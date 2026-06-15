@@ -14,6 +14,12 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL es obligatoria'),
   AUTH_SECRET: z.string().min(1, 'AUTH_SECRET es obligatoria'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // SEC-C01: clave AES-256-GCM para cifrar el secreto TOTP en reposo.
+  // Debe ser de exactamente 32 bytes codificados en base64.
+  // Genera una con: openssl rand -base64 32
+  // KMS-ready (Q-SEC): cuando se integre KMS soberano UE, este campo queda obsoleto
+  // y getKey() en mfa-crypto.ts se sustituye por la llamada al KMS.
+  MFA_ENCRYPTION_KEY: z.string().min(1, 'MFA_ENCRYPTION_KEY es obligatoria (32 bytes en base64)'),
 });
 
 const parsed = schema.safeParse(process.env);
