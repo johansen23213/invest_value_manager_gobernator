@@ -112,10 +112,10 @@ test.describe('Comunicaciones — como familiar', () => {
       await expect(page.getByText('Confirmado.', { exact: true })).toBeVisible({ timeout: 10_000 });
       // Verificar el estado PERSISTIDO en servidor recargando (no dependemos del
       // timing de invalidación/refetch del cliente): tras el acuse, el comunicado
-      // muestra "Confirmado el …" y el botón de acuse ya no aparece.
+      // confirmado muestra "Confirmado el …". (No comprobamos count(0) de botones
+      // de acuse: puede haber otros comunicados del seed con acuse pendiente.)
       await page.reload();
       await expect(page.getByText(/confirmado el/i).first()).toBeVisible({ timeout: 10_000 });
-      await expect(page.getByText('Confirmar que lo he leído', { exact: true })).toHaveCount(0);
     } else {
       // Ya estaba confirmado en una sesión anterior — verificar que aparece "Confirmado"
       await expect(
