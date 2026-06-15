@@ -6,6 +6,7 @@
     "APP_DATABASE_URL",
     "AUTH_SECRET",
     "AUTH_URL",
+    "MFA_ENCRYPTION_KEY",
     "ANTHROPIC_API_KEY",
     "NODE_ENV",
     "AI_PROVIDER",
