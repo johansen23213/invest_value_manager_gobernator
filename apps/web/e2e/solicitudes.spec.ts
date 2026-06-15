@@ -123,7 +123,7 @@ test.describe('Solicitudes — como director', () => {
     await page.locator('#status-select').selectOption('EN_CURSO');
     await page.getByRole('button', { name: /guardar/i }).first().click();
 
-    // Toast de estado actualizado
-    await expect(page.getByText('Estado actualizado.')).toBeVisible({ timeout: 10_000 });
+    // Toast de estado actualizado (exact:true: el span aria-live dice "Notification …")
+    await expect(page.getByText('Estado actualizado.', { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 });

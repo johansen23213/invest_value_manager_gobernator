@@ -110,8 +110,12 @@ test.describe('Comunicaciones — como familiar', () => {
       // Toast de confirmación. exact:true para no coincidir con el span aria-live
       // de Radix ("Notification Confirmado.") destinado a lectores de pantalla.
       await expect(page.getByText('Confirmado.', { exact: true })).toBeVisible({ timeout: 10_000 });
-      // El botón de acuse desaparece o cambia tras confirmar
-      await expect(ackButton).not.toBeVisible({ timeout: 5_000 });
+      // Verificar el estado PERSISTIDO en servidor recargando (no dependemos del
+      // timing de invalidación/refetch del cliente): tras el acuse, el comunicado
+      // muestra "Confirmado el …" y el botón de acuse ya no aparece.
+      await page.reload();
+      await expect(page.getByText(/confirmado el/i).first()).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText('Confirmar que lo he leído', { exact: true })).toHaveCount(0);
     } else {
       // Ya estaba confirmado en una sesión anterior — verificar que aparece "Confirmado"
       await expect(
