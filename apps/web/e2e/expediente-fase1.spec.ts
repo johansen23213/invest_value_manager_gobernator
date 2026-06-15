@@ -42,7 +42,11 @@ async function goToDisfagiaResident(
   const rows = page.locator('table tbody tr');
   const count = await rows.count();
 
-  for (let i = 0; i < Math.min(count, 10); i++) {
+  // Escaneamos TODAS las filas (no solo 10): la lista /residentes no garantiza un
+  // orden determinista, así que el residente de disfagia puede caer en cualquier
+  // posición entre runs (BD fresca). Comprobamos los chips (no el nombre) para
+  // ignorar al homónimo idx=24 ("Dolores García Pérez" sin datos de disfagia).
+  for (let i = 0; i < count; i++) {
     const link = rows.nth(i).getByRole('link').first();
     await link.click();
 
@@ -64,9 +68,9 @@ async function goToDisfagiaResident(
     await page.waitForSelector('table tbody tr', { timeout: 10_000 });
   }
 
-  // Si no se encontró en los 10 primeros, fallar con mensaje claro
+  // Si no se encontró tras recorrer toda la lista, fallar con mensaje claro
   throw new Error(
-    'No se encontró el residente con disfagia (Dieta triturada) en los primeros 10 resultados. ' +
+    `No se encontró el residente con disfagia (Dieta triturada) tras recorrer ${count} residentes. ` +
       'Verifica que el seed se ha aplicado correctamente.',
   );
 }
@@ -77,6 +81,9 @@ async function goToDisfagiaResident(
 
 test.describe('Expediente Fase 1 — como sanitario', () => {
   test.beforeEach(async ({ page }) => {
+    // Recorrer hasta 28 expedientes (navegar dentro/fuera) puede pasar de los 45s
+    // por defecto; ampliamos el timeout para este flujo de búsqueda.
+    test.setTimeout(120_000);
     await loginAs(page, 'sanitario');
   });
 
