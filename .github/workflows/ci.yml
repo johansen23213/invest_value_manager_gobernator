@@ -36,6 +36,8 @@ jobs:
       # imagen oficial 'vetlla' es superusuario, así que la app NO debe usarlo.
       APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
       AUTH_SECRET: ci-secret-not-for-production
+      # SEC-C01: clave de cifrado del secreto TOTP (32 bytes base64). Solo CI.
+      MFA_ENCRYPTION_KEY: SkJEMW2L+kD/zh3+/L5ZTL2y9M3jjH3LWsA25kSi4ks=
 
     steps:
       - uses: actions/checkout@v4
@@ -191,6 +193,8 @@ jobs:
       DATABASE_URL: postgresql://vetlla:vetlla_dev_password@localhost:5432/vetlla?schema=public
       APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
       AUTH_SECRET: ci-secret-not-for-production
+      # SEC-C01: clave de cifrado del secreto TOTP (32 bytes base64). Solo CI.
+      MFA_ENCRYPTION_KEY: SkJEMW2L+kD/zh3+/L5ZTL2y9M3jjH3LWsA25kSi4ks=
       # http explícito → cookies NO-Secure, la sesión persiste sobre http://localhost.
       AUTH_URL: http://localhost:3000
       # Email y AI en modo consola/stub — sin dependencias externas en E2E.

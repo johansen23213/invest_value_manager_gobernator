@@ -36,6 +36,8 @@ jobs:
       # Rol de APP no propietario — runtime con RLS activo (ADR-0014)
       APP_DATABASE_URL: postgresql://vetlla_app:vetlla_app_ci_password@localhost:5432/vetlla?schema=public
       AUTH_SECRET: ci-secret-not-for-production
+      # SEC-C01: clave de cifrado del secreto TOTP (32 bytes base64). Solo CI.
+      MFA_ENCRYPTION_KEY: SkJEMW2L+kD/zh3+/L5ZTL2y9M3jjH3LWsA25kSi4ks=
       # http explícito: Auth.js infiere cookies NO-Secure (si fueran Secure no
       # viajarían sobre http://localhost y la sesión no persistiría → todo a /login).
       AUTH_URL: http://localhost:3000
