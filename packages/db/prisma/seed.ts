@@ -1,11 +1,16 @@
 import bcrypt from 'bcryptjs';
 import {
+  ActivityCategory,
+  ActivitySessionStatus,
+  AdmissionOrigin,
+  AdmissionStatus,
   AllergySeverity,
   AllergyType,
   AnnouncementAudience,
   AnnouncementCategory,
   AssessmentType,
   AssignmentStatus,
+  BillingUnit,
   CenterType,
   ConsentType,
   ContactRelation,
@@ -13,6 +18,8 @@ import {
   DeviceType,
   DietType,
   DischargeType,
+  EnrollmentStatus,
+  InvoiceStatus,
   LiquidTexture,
   MealType,
   MedicalNoteType,
@@ -21,6 +28,7 @@ import {
   MedicationType,
   NursingNoteCategory,
   NursingNoteShift,
+  PayerType,
   PlaceRegime,
   Prisma,
   RestraintType,
@@ -531,8 +539,109 @@ async function main() {
 
   const userCount = await seedUsers(tenant.id);
 
-  // Reinicia la estructura/residentes demo para que el seed sea idempotente.
+  // ---------------------------------------------------------------------------
+  // LIMPIEZA IDEMPOTENTE — orden FK estricto (hijo → padre).
+  //
+  // Regla: hay que borrar en orden inverso al de creación, siguiendo las FKs,
+  // ANTES de recrear los padres (Resident, Center). Si no se respeta el orden,
+  // la 2ª ejecución falla con FK violation al intentar borrar un padre que
+  // todavía tiene hijos.
+  //
+  // Árbol de dependencias relevante (solo las que bloquean si no se borran antes):
+  //
+  //   InvoiceLine ──FK──► Invoice ──FK(Restrict)──► Resident   ← el error original
+  //   ResidentBillingProfile ──FK──► Resident
+  //   Tariff ──FK──► Tenant  (sin residentId; se borra aparte)
+  //
+  //   ActivityEnrollment ──FK──► ActivitySession ──FK──► Activity (sin residentId)
+  //   ActivityEnrollment ──FK──► Resident
+  //
+  //   AdmissionRequest.residentId ──FK(SetNull)──► Resident  ← no bloquea, pero se limpia
+  //
+  //   AuditLog: no tiene FK de BD real a Resident; se limpia por tenantId.
+  //
+  //   Announcement.residentId ──FK(Cascade)──► Resident  (cascade, pero el deleteMany
+  //     de announcements ya estaba en el bloque COM; se mueve aquí para que ocurra antes)
+  //   MessageThread.residentId ──FK(Cascade)──► Resident  (ídem)
+  //
+  // Tablas que SÍ tienen onDelete:Cascade desde Resident y se borran automáticamente
+  // al borrar el residente en BD (no necesitan deleteMany explícito):
+  //   EmergencyContact, Allergy, Diagnosis, Assessment, CareRecord, Medication,
+  //   MedicationAdministration, CarePlan, CarePlanGoal, CarePlanReview,
+  //   ResidentDevice, Vaccine, WeightRecord, PressureUlcer (→ UPPCuring),
+  //   FallRecord, Restraint, ConsentRecord, LifeStory, ServiceRequest
+  //   (→ ServiceRequestComment), FamilyLink, Visit, NursingNote, MedicalNote,
+  //   DischargeRecord, SocialReport, WellbeingProfile, IntakeRecord,
+  //   AssistiveDevice, ResidentBelonging.
+  //
+  // PERO: `deleteMany` de Prisma NO dispara los onDelete cascades de la BD
+  // cuando el borrado lo inicia Prisma (no pasa por triggers de BD en el mismo
+  // sentido). Para las FKs con Restrict o las que Prisma no cascadea
+  // automáticamente por su propio cliente, hay que borrar manualmente en orden.
+  // ---------------------------------------------------------------------------
+
+  // 1. Nietos de Invoice (líneas de factura) — antes que Invoice
+  await db.invoiceLine.deleteMany({ where: { tenantId: tenant.id } });
+  // 2. Facturas — FK Restrict sobre Resident; deben irse antes que el residente
+  await db.invoice.deleteMany({ where: { tenantId: tenant.id } });
+  // 3. Perfiles de facturación del residente
+  await db.residentBillingProfile.deleteMany({ where: { tenantId: tenant.id } });
+  // 4. Tarifas del tenant (no dependen de Resident, pero se recrean → limpiar)
+  await db.tariff.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 5. Inscripciones a actividades (FK a Resident + FK a ActivitySession)
+  await db.activityEnrollment.deleteMany({ where: { tenantId: tenant.id } });
+  // 6. Sesiones de actividad (FK a Activity)
+  await db.activitySession.deleteMany({ where: { tenantId: tenant.id } });
+  // 7. Catálogo de actividades (sin residentId; se recrean cada vez)
+  await db.activity.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 8. Solicitudes de admisión (residentId SetNull — no bloquea, pero se limpian
+  //    antes de recrear centros a los que hacen referencia por centerId Restrict)
+  await db.admissionRequest.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 9. Comunicados y mensajería que referencian Resident (Cascade en BD,
+  //    pero se limpian aquí para no duplicar con los deleteMany de sus bloques)
+  await db.message.deleteMany({ where: { tenantId: tenant.id } });
+  await db.messageThread.deleteMany({ where: { tenantId: tenant.id } });
+  await db.announcementReceipt.deleteMany({ where: { tenantId: tenant.id } });
+  await db.announcement.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 10. Visitas y franjas (FK a Resident y a Center)
+  await db.visit.deleteMany({ where: { tenantId: tenant.id } });
+  await db.visitSlotConfig.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 11. Cuadrantes/turnos (FK a Center/Unit, sin residentId; se recrean)
+  await db.shiftHandover.deleteMany({ where: { tenantId: tenant.id } });
+  await db.shiftAssignment.deleteMany({ where: { tenantId: tenant.id } });
+  await db.shiftTemplate.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 12. Documentación clínica con FK a Resident
+  await db.nursingNote.deleteMany({ where: { tenantId: tenant.id } });
+  await db.medicalNote.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 13. Épica B — baja, informe social, bienestar
+  await db.dischargeRecord.deleteMany({ where: { tenantId: tenant.id } });
+  await db.socialReport.deleteMany({ where: { tenantId: tenant.id } });
+  await db.wellbeingProfile.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 14. Épica C — ingestas y menús
+  await db.intakeRecord.deleteMany({ where: { tenantId: tenant.id } });
+  await db.menuItem.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 15. Solicitudes de servicio del portal de familias (FK a Resident)
+  await db.serviceRequestComment.deleteMany({ where: { tenantId: tenant.id } });
+  await db.serviceRequest.deleteMany({ where: { tenantId: tenant.id } });
+
+  // 16. AuditLog: NO se borra. La tabla audit_logs es APPEND-ONLY por diseño
+  //     (REVOKE DELETE + trigger BEFORE DELETE, migración 20260612130000): ni el
+  //     owner puede borrar — un DELETE da "permission denied" (42501). No tiene FK
+  //     real a Resident/User, así que no bloquea el borrado de residentes. Las
+  //     entradas de ejemplo se crean con guard de conteo para no acumular.
+
+  // 17. Ahora sí: residentes (todos los hijos con Restrict ya están limpios)
   await db.resident.deleteMany({ where: { tenantId: tenant.id } });
+  // 18. Centros (y sus unidades/camas en cascade de BD)
   await db.center.deleteMany({ where: { tenantId: tenant.id } });
 
   const residencia = await seedCenter(tenant.id, 'Residencia Los Olivos', CenterType.RESIDENCIA, [
@@ -569,8 +678,7 @@ async function main() {
     });
 
     // Demo solicitudes para que el portal de familias tenga contenido
-    // (borramos primero para que el seed sea idempotente)
-    await db.serviceRequest.deleteMany({ where: { createdById: familiar.id } });
+    // (la limpieza ya se realizó al inicio de main() — no hay que repetirla)
 
     // Director demo para responder solicitudes
     const director = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
@@ -656,9 +764,7 @@ async function main() {
   const director = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
 
   if (director && familiar && firstResident) {
-    // Limpiar comunicados y hilos previos para idempotencia
-    await db.announcement.deleteMany({ where: { tenantId: tenant.id } });
-    await db.messageThread.deleteMany({ where: { tenantId: tenant.id } });
+    // La limpieza de announcements/messageThreads ya se realizó al inicio de main()
 
     // Obtener la primera unidad del tenant para el comunicado POR_UNIDAD
     const firstUnit = await db.unit.findFirst({
@@ -768,9 +874,7 @@ async function main() {
   // Seed de visitas (VIS-001..VIS-010)
   // ---------------------------------------------------------------------------
 
-  // Limpiar datos previos para idempotencia
-  await db.visit.deleteMany({ where: { tenantId: tenant.id } });
-  await db.visitSlotConfig.deleteMany({ where: { tenantId: tenant.id } });
+  // La limpieza de visitas ya se realizó al inicio de main()
 
   // Obtener la residencia (primer centro del tenant)
   const residenciaCenter = await db.center.findFirst({
@@ -895,9 +999,7 @@ async function main() {
   // Notas de enfermería + evolutivos médicos del residente demo
   // ---------------------------------------------------------------------------
 
-  // Limpieza idempotente
-  await db.nursingNote.deleteMany({ where: { tenantId: tenant.id } });
-  await db.medicalNote.deleteMany({ where: { tenantId: tenant.id } });
+  // La limpieza de notas clínicas ya se realizó al inicio de main()
 
   const sanitario = await db.user.findUnique({ where: { email: 'sanitario@demo.vetlla.dev' } });
   const auxiliar  = await db.user.findUnique({ where: { email: 'auxiliar@demo.vetlla.dev' } });
@@ -975,10 +1077,7 @@ async function main() {
   // Seed de Épica B — Exitus/Baja, Informe Social, Perfil de Bienestar ACP
   // ---------------------------------------------------------------------------
 
-  // Limpieza idempotente
-  await db.dischargeRecord.deleteMany({ where: { tenantId: tenant.id } });
-  await db.socialReport.deleteMany({ where: { tenantId: tenant.id } });
-  await db.wellbeingProfile.deleteMany({ where: { tenantId: tenant.id } });
+  // La limpieza de Épica B ya se realizó al inicio de main()
 
   // Necesitamos un residente para los datos demo; usamos los dos primeros
   const [firstDemoResident, secondDemoResident] = await Promise.all([
@@ -1080,9 +1179,7 @@ async function main() {
   // Seed de Épica C — Nutrición, Menús y Comedor
   // ---------------------------------------------------------------------------
 
-  // Limpieza idempotente
-  await db.intakeRecord.deleteMany({ where: { tenantId: tenant.id } });
-  await db.menuItem.deleteMany({ where: { tenantId: tenant.id } });
+  // La limpieza de Épica C ya se realizó al inicio de main()
 
   const residenciaSeed = await db.center.findFirst({
     where:   { tenantId: tenant.id, name: 'Residencia Los Olivos' },
@@ -1313,10 +1410,7 @@ async function main() {
   // Seed de Épica D — Cuadrantes/Turnos del personal + Cierre de turno firmado
   // ---------------------------------------------------------------------------
 
-  // Limpieza idempotente
-  await db.shiftHandover.deleteMany({ where: { tenantId: tenant.id } });
-  await db.shiftAssignment.deleteMany({ where: { tenantId: tenant.id } });
-  await db.shiftTemplate.deleteMany({ where: { tenantId: tenant.id } });
+  // La limpieza de Épica D ya se realizó al inicio de main()
 
   const seedDirector  = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
   const seedSanitario = await db.user.findUnique({ where: { email: 'sanitario@demo.vetlla.dev' } });
@@ -1498,6 +1592,825 @@ async function main() {
     });
 
     console.log(`  Épica D (Turnos): 3 plantillas (mañana/tarde/noche Planta 1) + 6 asignaciones (hoy/mañana con AUSENTE+SUSTITUIDO para demo) + 1 cierre de turno firmado (ayer mañana)`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed de Actividades (RF-ACT-001..012)
+  // Catálogo + sesiones (futuras y pasadas con asistencia) + inscripciones
+  // incluido el residente vinculado al familiar demo (/portal/actividades)
+  // ---------------------------------------------------------------------------
+
+  // La limpieza de actividades (inscripciones → sesiones → catálogo) ya se realizó al inicio de main()
+
+  const actResidencia = await db.center.findFirst({
+    where: { tenantId: tenant.id, name: 'Residencia Los Olivos' },
+    select: { id: true },
+  });
+  const actDirector = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+  const actAuxiliar = await db.user.findUnique({ where: { email: 'auxiliar@demo.vetlla.dev' } });
+
+  // Residente del familiar (primer residente por apellido) — ya se obtuvo como firstResident
+  const actFamiliarResident = await db.resident.findFirst({
+    where: { tenantId: tenant.id },
+    orderBy: { lastName: 'asc' },
+  });
+
+  // 4 residentes activos para inscripciones variadas
+  const actResidents = await db.resident.findMany({
+    where: { tenantId: tenant.id, status: ResidentStatus.ACTIVO },
+    orderBy: { lastName: 'asc' },
+    take: 5,
+  });
+
+  if (actResidencia && actDirector && actAuxiliar && actResidents.length >= 3) {
+    const centerId = actResidencia.id;
+    const now = new Date();
+
+    // --- Catálogo de actividades (5 categorías) ---
+    const actTallerMemoria = await db.activity.create({
+      data: {
+        tenantId:     tenant.id,
+        name:         'Taller de memoria',
+        description:  'Ejercicios de estimulación cognitiva: series numéricas, asociación de palabras, puzles y reminiscencia.',
+        category:     ActivityCategory.COGNITIVA,
+        location:     'Sala polivalente, Planta 1',
+        responsibleId: actAuxiliar.id,
+        maxCapacity:  12,
+        durationMin:  60,
+      },
+    });
+
+    const actGimnasia = await db.activity.create({
+      data: {
+        tenantId:     tenant.id,
+        name:         'Gimnasia de mantenimiento',
+        description:  'Ejercicios de movilidad articular, equilibrio y coordinación adaptados a cada nivel funcional.',
+        category:     ActivityCategory.FISICA,
+        location:     'Sala de fisioterapia',
+        responsibleId: actAuxiliar.id,
+        maxCapacity:  10,
+        durationMin:  45,
+      },
+    });
+
+    const actManualidades = await db.activity.create({
+      data: {
+        tenantId:     tenant.id,
+        name:         'Taller de manualidades',
+        description:  'Pintura en tela, papiroflexia y decoración. Estimulación de la motricidad fina y la creatividad.',
+        category:     ActivityCategory.CREATIVA,
+        location:     'Sala de actividades, Planta 2',
+        responsibleId: actAuxiliar.id,
+        maxCapacity:  8,
+        durationMin:  90,
+      },
+    });
+
+    const actTertulia = await db.activity.create({
+      data: {
+        tenantId:     tenant.id,
+        name:         'Tertulia y lectura',
+        description:  'Lectura en voz alta, comentario de noticias del día y debate guiado sobre temas de actualidad o historia.',
+        category:     ActivityCategory.SOCIAL,
+        location:     'Sala de estar, Planta 1',
+        responsibleId: actDirector.id,
+        maxCapacity:  15,
+        durationMin:  60,
+      },
+    });
+
+    const actExcursion = await db.activity.create({
+      data: {
+        tenantId:     tenant.id,
+        name:         'Salida al mercado municipal',
+        description:  'Excursión mensual al mercado local. Fomenta la autonomía, la orientación y el contacto con el entorno.',
+        category:     ActivityCategory.SALIDA,
+        location:     'Mercado Central de Valencia',
+        responsibleId: actDirector.id,
+        maxCapacity:  6,
+        durationMin:  120,
+      },
+    });
+
+    // --- Sesiones pasadas (REALIZADA) con asistencia registrada ---
+
+    // Taller memoria: sesión hace 7 días — REALIZADA
+    const pastMemoria = new Date(now);
+    pastMemoria.setDate(now.getDate() - 7);
+    pastMemoria.setHours(10, 0, 0, 0);
+    const pastMemoriaEnd = new Date(pastMemoria.getTime() + 60 * 60 * 1000);
+
+    const sesionMemoriaPasada = await db.activitySession.create({
+      data: {
+        tenantId:   tenant.id,
+        activityId: actTallerMemoria.id,
+        centerId,
+        startsAt:   pastMemoria,
+        endsAt:     pastMemoriaEnd,
+        status:     ActivitySessionStatus.REALIZADA,
+        notes:      'Sesión de reminiscencia con fotos de época. Muy buena participación.',
+      },
+    });
+
+    // Inscripciones con asistencia registrada (sesión pasada)
+    for (let i = 0; i < Math.min(3, actResidents.length); i++) {
+      const res = actResidents[i]!;
+      await db.activityEnrollment.create({
+        data: {
+          tenantId:    tenant.id,
+          sessionId:   sesionMemoriaPasada.id,
+          residentId:  res.id,
+          status:      EnrollmentStatus.INSCRITO,
+          attended:    i < 2, // primeros 2 asistieron, 3ro no
+          observation: i === 0 ? 'Muy participativa. Aportó anécdotas de su infancia.' : i === 1 ? 'Correcto. Se distrajo un poco al final.' : null,
+        },
+      });
+    }
+
+    // Residente del familiar: inscripción con asistencia en sesión pasada
+    if (actFamiliarResident && !actResidents.slice(0, 3).some((r: { id: string }) => r.id === actFamiliarResident.id)) {
+      await db.activityEnrollment.create({
+        data: {
+          tenantId:   tenant.id,
+          sessionId:  sesionMemoriaPasada.id,
+          residentId: actFamiliarResident.id,
+          status:     EnrollmentStatus.INSCRITO,
+          attended:   true,
+          observation: 'Participó activamente. Recordó con detalle su etapa profesional.',
+        },
+      });
+    }
+
+    // Gimnasia: sesión hace 3 días — REALIZADA
+    const pastGim = new Date(now);
+    pastGim.setDate(now.getDate() - 3);
+    pastGim.setHours(9, 0, 0, 0);
+    const pastGimEnd = new Date(pastGim.getTime() + 45 * 60 * 1000);
+
+    const sesionGimPasada = await db.activitySession.create({
+      data: {
+        tenantId:   tenant.id,
+        activityId: actGimnasia.id,
+        centerId,
+        startsAt:   pastGim,
+        endsAt:     pastGimEnd,
+        status:     ActivitySessionStatus.REALIZADA,
+        notes:      'Ejercicios de equilibrio y coordinación. Sin incidencias.',
+      },
+    });
+
+    for (let i = 0; i < Math.min(4, actResidents.length); i++) {
+      const res = actResidents[i]!;
+      await db.activityEnrollment.create({
+        data: {
+          tenantId:   tenant.id,
+          sessionId:  sesionGimPasada.id,
+          residentId: res.id,
+          status:     EnrollmentStatus.INSCRITO,
+          attended:   true,
+          observation: i === 0 ? 'Completó todos los ejercicios sin ayuda.' : null,
+        },
+      });
+    }
+
+    // --- Sesiones futuras (PROGRAMADA) con inscripciones pendientes ---
+
+    // Taller memoria: sesión mañana
+    const futureMem = new Date(now);
+    futureMem.setDate(now.getDate() + 1);
+    futureMem.setHours(10, 0, 0, 0);
+    const futureMemEnd = new Date(futureMem.getTime() + 60 * 60 * 1000);
+
+    const sesionMemoriaFutura = await db.activitySession.create({
+      data: {
+        tenantId:   tenant.id,
+        activityId: actTallerMemoria.id,
+        centerId,
+        startsAt:   futureMem,
+        endsAt:     futureMemEnd,
+        status:     ActivitySessionStatus.PROGRAMADA,
+      },
+    });
+
+    // Inscribir al residente del familiar (aparece en /portal/actividades)
+    if (actFamiliarResident) {
+      await db.activityEnrollment.create({
+        data: {
+          tenantId:   tenant.id,
+          sessionId:  sesionMemoriaFutura.id,
+          residentId: actFamiliarResident.id,
+          status:     EnrollmentStatus.INSCRITO,
+          attended:   null,
+        },
+      });
+    }
+
+    // Inscribir otros residentes a la sesión futura
+    for (let i = 0; i < Math.min(3, actResidents.length); i++) {
+      const res = actResidents[i]!;
+      if (actFamiliarResident && res.id === actFamiliarResident.id) continue;
+      await db.activityEnrollment.create({
+        data: {
+          tenantId:   tenant.id,
+          sessionId:  sesionMemoriaFutura.id,
+          residentId: res.id,
+          status:     EnrollmentStatus.INSCRITO,
+          attended:   null,
+        },
+      });
+    }
+
+    // Manualidades: sesión en 3 días
+    const futureManu = new Date(now);
+    futureManu.setDate(now.getDate() + 3);
+    futureManu.setHours(16, 0, 0, 0);
+    const futureManuEnd = new Date(futureManu.getTime() + 90 * 60 * 1000);
+
+    const sesionManuFutura = await db.activitySession.create({
+      data: {
+        tenantId:   tenant.id,
+        activityId: actManualidades.id,
+        centerId,
+        startsAt:   futureManu,
+        endsAt:     futureManuEnd,
+        status:     ActivitySessionStatus.PROGRAMADA,
+        notes:      'Se preparan centros de mesa para la celebración del mes.',
+      },
+    });
+
+    // Un residente en lista de espera (aforo cubierto)
+    if (actResidents.length >= 5) {
+      for (let i = 0; i < 4; i++) {
+        await db.activityEnrollment.create({
+          data: {
+            tenantId:   tenant.id,
+            sessionId:  sesionManuFutura.id,
+            residentId: actResidents[i]!.id,
+            status:     EnrollmentStatus.INSCRITO,
+            attended:   null,
+          },
+        });
+      }
+      // El 5º queda en lista de espera (maxCapacity=8, pero creamos este para demo)
+      await db.activityEnrollment.create({
+        data: {
+          tenantId:   tenant.id,
+          sessionId:  sesionManuFutura.id,
+          residentId: actResidents[4]!.id,
+          status:     EnrollmentStatus.LISTA_ESPERA,
+          attended:   null,
+        },
+      });
+    }
+
+    // Tertulia: sesión en 5 días
+    const futureTertulia = new Date(now);
+    futureTertulia.setDate(now.getDate() + 5);
+    futureTertulia.setHours(17, 0, 0, 0);
+    const futureTertuliaEnd = new Date(futureTertulia.getTime() + 60 * 60 * 1000);
+
+    await db.activitySession.create({
+      data: {
+        tenantId:   tenant.id,
+        activityId: actTertulia.id,
+        centerId,
+        startsAt:   futureTertulia,
+        endsAt:     futureTertuliaEnd,
+        status:     ActivitySessionStatus.PROGRAMADA,
+        notes:      'Tema: "Recuerdos de la Semana Santa en Valencia".',
+      },
+    });
+
+    // Excursión: sesión en 2 semanas
+    const futureExcursion = new Date(now);
+    futureExcursion.setDate(now.getDate() + 14);
+    futureExcursion.setHours(10, 0, 0, 0);
+    const futureExcursionEnd = new Date(futureExcursion.getTime() + 120 * 60 * 1000);
+
+    await db.activitySession.create({
+      data: {
+        tenantId:   tenant.id,
+        activityId: actExcursion.id,
+        centerId,
+        startsAt:   futureExcursion,
+        endsAt:     futureExcursionEnd,
+        status:     ActivitySessionStatus.PROGRAMADA,
+        notes:      'Excursión mensual de junio. Inscripción abierta. Plazas limitadas a 6.',
+      },
+    });
+
+    console.log(`  Actividades: 5 actividades en catálogo + 7 sesiones (2 pasadas REALIZADA + 5 futuras PROGRAMADA) + inscripciones con asistencia registrada, 1 en lista de espera, residente del familiar inscrito`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed de Facturación (RF-ECO-001..005)
+  // Tarifa, perfil de facturación, facturas (DRAFT, ISSUED, PAID) + líneas
+  // incluido el residente del familiar para /portal/facturas
+  // ---------------------------------------------------------------------------
+
+  // La limpieza de facturación (líneas → facturas → perfiles → tarifas) ya se realizó al inicio de main()
+
+  // Tarifa base: cuota mensual de plaza privada
+  const tariffBase = await db.tariff.create({
+    data: {
+      tenantId:   tenant.id,
+      code:       'CUOTA-RESID',
+      name:       'Cuota mensual residencia',
+      baseAmount: new Prisma.Decimal(2100.00),
+      unit:       BillingUnit.MENSUAL,
+      vatPct:     new Prisma.Decimal(0),
+      vatExempt:  true,
+      validFrom:  new Date('2026-01-01'),
+    },
+  });
+
+  // Tarifa módulo fisioterapia (diaria)
+  const tariffFisio = await db.tariff.create({
+    data: {
+      tenantId:   tenant.id,
+      code:       'MODULO-FISIO',
+      name:       'Módulo de fisioterapia individual',
+      baseAmount: new Prisma.Decimal(45.00),
+      unit:       BillingUnit.UNICO,
+      vatPct:     new Prisma.Decimal(0),
+      vatExempt:  true,
+      validFrom:  new Date('2026-01-01'),
+    },
+  });
+
+  // Obtener los primeros 4 residentes para facturas
+  const facResidents = await db.resident.findMany({
+    where: { tenantId: tenant.id, status: ResidentStatus.ACTIVO },
+    orderBy: { lastName: 'asc' },
+    take: 4,
+  });
+
+  // Residente del familiar
+  const facFamiliarResident = await db.resident.findFirst({
+    where: { tenantId: tenant.id },
+    orderBy: { lastName: 'asc' },
+  });
+
+  if (facResidents.length > 0) {
+    // Perfil de facturación para cada residente
+    for (let i = 0; i < facResidents.length; i++) {
+      const res = facResidents[i]!;
+      await db.residentBillingProfile.upsert({
+        where: { residentId: res.id },
+        update: {},
+        create: {
+          tenantId:       tenant.id,
+          residentId:     res.id,
+          tariffId:       tariffBase.id,
+          publicCopayPct: new Prisma.Decimal(i === 0 ? 30 : 0),  // residente 0 tiene copago público 30%
+          privatePct:     new Prisma.Decimal(i === 0 ? 70 : 100),
+          payerType:      PayerType.FAMILIAR,
+          payerName:      i === 0 ? 'Ana García (hija)' : `Familiar residente ${i + 1}`,
+          notes:          i === 0 ? 'Copago Dependencia Grado III aprobado. Domiciliación SEPA pendiente.' : null,
+        },
+      });
+    }
+
+    // Helper para crear factura con líneas directamente en BD (sin pasar por el router)
+    const createInvoiceWithLines = async (
+      residentId: string,
+      periodYear: number,
+      periodMonth: number, // 1-based
+      status: InvoiceStatus,
+      invoiceNumber: number | null,
+      lines: Array<{ description: string; quantity: number; unitPrice: number; tariffId?: string }>,
+    ) => {
+      const baseTotal = lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+      const pStart = new Date(periodYear, periodMonth - 1, 1);
+      const pEnd   = new Date(periodYear, periodMonth, 0); // último día del mes
+
+      return db.invoice.create({
+        data: {
+          tenantId:      tenant.id,
+          residentId,
+          series:        'A',
+          invoiceNumber: status !== InvoiceStatus.DRAFT ? invoiceNumber : null,
+          invoiceYear:   status !== InvoiceStatus.DRAFT ? periodYear : null,
+          periodStart:   pStart,
+          periodEnd:     pEnd,
+          status,
+          issuedAt:      status !== InvoiceStatus.DRAFT ? new Date(periodYear, periodMonth - 1, 5) : null,
+          paidAt:        status === InvoiceStatus.PAID   ? new Date(periodYear, periodMonth - 1, 20) : null,
+          payerType:     PayerType.FAMILIAR,
+          payerName:     'Familiar demo',
+          baseAmount:    new Prisma.Decimal(baseTotal),
+          vatAmount:     new Prisma.Decimal(0),
+          totalAmount:   new Prisma.Decimal(baseTotal),
+          dueAt:         new Date(periodYear, periodMonth - 1, 25),
+          lines: {
+            create: lines.map((l, idx) => ({
+              tenantId:    tenant.id,
+              tariffId:    l.tariffId ?? null,
+              description: l.description,
+              quantity:    new Prisma.Decimal(l.quantity),
+              unitPrice:   new Prisma.Decimal(l.unitPrice),
+              vatPct:      new Prisma.Decimal(0),
+              vatExempt:   true,
+              lineBase:    new Prisma.Decimal(l.quantity * l.unitPrice),
+              lineVat:     new Prisma.Decimal(0),
+              lineTotal:   new Prisma.Decimal(l.quantity * l.unitPrice),
+              sortOrder:   idx,
+            })),
+          },
+        },
+      });
+    };
+
+    // Facturas para los primeros residentes
+    if (facResidents[0]) {
+      // Residente 0 (con copago): factura PAID de abril 2026
+      await createInvoiceWithLines(facResidents[0].id, 2026, 4, InvoiceStatus.PAID, 1, [
+        { description: 'Cuota mensual residencia — 2026/04', quantity: 1, unitPrice: 1470.00, tariffId: tariffBase.id },
+        { description: 'Módulo fisioterapia individual (8 sesiones)', quantity: 8, unitPrice: 45.00, tariffId: tariffFisio.id },
+      ]);
+
+      // Residente 0: factura ISSUED de mayo 2026
+      await createInvoiceWithLines(facResidents[0].id, 2026, 5, InvoiceStatus.ISSUED, 2, [
+        { description: 'Cuota mensual residencia — 2026/05', quantity: 1, unitPrice: 1470.00, tariffId: tariffBase.id },
+      ]);
+    }
+
+    if (facResidents[1]) {
+      // Residente 1: factura PAID de mayo 2026
+      await createInvoiceWithLines(facResidents[1].id, 2026, 5, InvoiceStatus.PAID, 3, [
+        { description: 'Cuota mensual residencia — 2026/05', quantity: 1, unitPrice: 2100.00, tariffId: tariffBase.id },
+      ]);
+    }
+
+    if (facResidents[2]) {
+      // Residente 2: borrador de junio 2026 (DRAFT — pendiente de emisión)
+      await createInvoiceWithLines(facResidents[2].id, 2026, 6, InvoiceStatus.DRAFT, null, [
+        { description: 'Cuota mensual residencia — 2026/06', quantity: 1, unitPrice: 2100.00, tariffId: tariffBase.id },
+        { description: 'Suplemento habitación individual', quantity: 1, unitPrice: 150.00 },
+      ]);
+    }
+
+    // Factura para el residente del familiar (ISSUED — visible en /portal/facturas)
+    if (facFamiliarResident && !facResidents.slice(0, 3).some((r: { id: string }) => r.id === facFamiliarResident.id)) {
+      // Asegurar perfil de facturación si no existe
+      await db.residentBillingProfile.upsert({
+        where: { residentId: facFamiliarResident.id },
+        update: {},
+        create: {
+          tenantId:       tenant.id,
+          residentId:     facFamiliarResident.id,
+          tariffId:       tariffBase.id,
+          publicCopayPct: new Prisma.Decimal(30),
+          privatePct:     new Prisma.Decimal(70),
+          payerType:      PayerType.FAMILIAR,
+          payerName:      'Ana García (hija)',
+        },
+      });
+
+      await createInvoiceWithLines(facFamiliarResident.id, 2026, 5, InvoiceStatus.ISSUED, 4, [
+        { description: 'Cuota mensual residencia — 2026/05', quantity: 1, unitPrice: 1470.00, tariffId: tariffBase.id },
+      ]);
+
+      await createInvoiceWithLines(facFamiliarResident.id, 2026, 4, InvoiceStatus.PAID, 5, [
+        { description: 'Cuota mensual residencia — 2026/04', quantity: 1, unitPrice: 1470.00, tariffId: tariffBase.id },
+      ]);
+    }
+
+    console.log(`  Facturación: 2 tarifas + perfiles para 4 residentes + facturas (PAID×2, ISSUED×2, DRAFT×1) con líneas, incluyendo residente del familiar`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed de Admisiones (RF-ADM-001..007)
+  // Solicitudes en distintos estados del pipeline para /admisiones
+  // ---------------------------------------------------------------------------
+
+  // La limpieza de admisiones ya se realizó al inicio de main()
+
+  const admDirector = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+  const admResidencia = await db.center.findFirst({
+    where: { tenantId: tenant.id, name: 'Residencia Los Olivos' },
+    select: { id: true },
+  });
+
+  if (admDirector && admResidencia) {
+    const centerId = admResidencia.id;
+
+    const candidatos: Array<{
+      firstName: string;
+      lastName: string;
+      birthDate: Date;
+      status: AdmissionStatus;
+      priority: number;
+      dependencyGrade: DependencyGrade;
+      origin: AdmissionOrigin;
+      contactName: string;
+      contactPhone: string;
+      notes?: string;
+      expectedAdmissionDate?: Date;
+      outcomeReason?: string;
+    }> = [
+      {
+        firstName: 'Milagros',
+        lastName: 'Blanco Herrera',
+        birthDate: new Date(1940, 3, 12),
+        status: AdmissionStatus.LEAD,
+        priority: 2,
+        dependencyGrade: DependencyGrade.GRADO_II,
+        origin: AdmissionOrigin.INICIATIVA_PROPIA,
+        contactName: 'Roberto Blanco (hijo)',
+        contactPhone: '612345001',
+        notes: 'Familia interesada por información telefónica. Pendiente de concertar visita.',
+      },
+      {
+        firstName: 'Vicente',
+        lastName: 'Pardo Castellano',
+        birthDate: new Date(1936, 8, 23),
+        status: AdmissionStatus.WAITLIST,
+        priority: 1,
+        dependencyGrade: DependencyGrade.GRADO_III,
+        origin: AdmissionOrigin.DERIVACION_HOSPITAL,
+        contactName: 'Marta Pardo (hija)',
+        contactPhone: '612345002',
+        notes: 'Alta hospitalaria prevista para el 30 de junio. Necesita plaza urgente. Grado III reconocido.',
+        expectedAdmissionDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      },
+      {
+        firstName: 'Amparo',
+        lastName: 'Navarro Ferrer',
+        birthDate: new Date(1943, 1, 8),
+        status: AdmissionStatus.EVALUATION,
+        priority: 2,
+        dependencyGrade: DependencyGrade.GRADO_II,
+        origin: AdmissionOrigin.DERIVACION_SS,
+        contactName: 'Servicios Sociales Ajuntament de València',
+        contactPhone: '963456001',
+        notes: 'Visita al centro realizada el 5 de junio. Pendiente informe médico de su geriatra.',
+      },
+      {
+        firstName: 'Ramón',
+        lastName: 'Soler Ibáñez',
+        birthDate: new Date(1938, 6, 15),
+        status: AdmissionStatus.OFFERED,
+        priority: 1,
+        dependencyGrade: DependencyGrade.GRADO_III,
+        origin: AdmissionOrigin.TRASLADO_OTRO_CENTRO,
+        contactName: 'Carmen Soler (esposa)',
+        contactPhone: '612345003',
+        notes: 'Plaza ofrecida en Planta 2. Familia estudiando condiciones económicas. Respuesta esperada esta semana.',
+        expectedAdmissionDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      },
+      {
+        firstName: 'Francisca',
+        lastName: 'Ortega Molina',
+        birthDate: new Date(1942, 10, 3),
+        status: AdmissionStatus.REJECTED,
+        priority: 3,
+        dependencyGrade: DependencyGrade.GRADO_I,
+        origin: AdmissionOrigin.INICIATIVA_PROPIA,
+        contactName: 'Luis Ortega (hermano)',
+        contactPhone: '612345004',
+        notes: 'Valoración realizada el 1 de mayo.',
+        outcomeReason: 'Nivel de dependencia insuficiente para plaza en residencia. Se derivó a centro de día.',
+      },
+      {
+        firstName: 'Josefa',
+        lastName: 'Ruiz Torres',
+        birthDate: new Date(1935, 4, 20),
+        status: AdmissionStatus.WAITLIST,
+        priority: 2,
+        dependencyGrade: DependencyGrade.GRADO_II,
+        origin: AdmissionOrigin.INICIATIVA_PROPIA,
+        contactName: 'Antonio Ruiz (hijo)',
+        contactPhone: '612345005',
+        notes: 'Segunda solicitud. Estuvo en lista de espera en 2025. Actualiza documentación.',
+      },
+    ];
+
+    for (const c of candidatos) {
+      await db.admissionRequest.create({
+        data: {
+          tenantId:             tenant.id,
+          centerId,
+          firstName:            c.firstName,
+          lastName:             c.lastName,
+          birthDate:            c.birthDate,
+          status:               c.status,
+          priority:             c.priority,
+          dependencyGrade:      c.dependencyGrade,
+          placeRegime:          PlaceRegime.PRIVADA,
+          origin:               c.origin,
+          contactName:          c.contactName,
+          contactPhone:         c.contactPhone,
+          notes:                c.notes ?? null,
+          expectedAdmissionDate: c.expectedAdmissionDate ?? null,
+          outcomeReason:        c.outcomeReason ?? null,
+          createdById:          admDirector.id,
+          requestedAt:          new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+
+    console.log(`  Admisiones: ${candidatos.length} solicitudes (LEAD×1, WAITLIST×2, EVALUATION×1, OFFERED×1, REJECTED×1)`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed adicional de Comunicación (COM-012..COM-015)
+  // Añade comunicados extra y un segundo hilo para que las listas no estén vacías
+  // ---------------------------------------------------------------------------
+  // Nota: los comunicados y el hilo principal ya se crean en el bloque COM-001..011
+  // (con deleteMany previo que los limpia). Aquí añadimos más comunicados DENTRO
+  // del mismo bloque de limpieza. Para no reordenar código, simplemente re-obtenemos
+  // los usuarios y añadimos registros extra DESPUÉS de que el bloque COM-001..011
+  // ya los haya creado (que en este punto ya están en BD).
+
+  const comDir2 = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+  const comFam2 = await db.user.findUnique({ where: { email: 'familiar@demo.vetlla.dev' } });
+  const comFamRes2 = await db.resident.findFirst({
+    where: { tenantId: tenant.id },
+    orderBy: { lastName: 'asc' },
+  });
+
+  if (comDir2 && comFam2 && comFamRes2) {
+    // Comunicado de salud (nutrición) — idempotente por título exacto
+    const existingMenuAnn = await db.announcement.findFirst({
+      where: { tenantId: tenant.id, title: 'Nuevo menú de verano a partir del 1 de julio' },
+    });
+    if (!existingMenuAnn) {
+      await db.announcement.create({
+        data: {
+          tenantId:    tenant.id,
+          authorId:    comDir2.id,
+          title:       'Nuevo menú de verano a partir del 1 de julio',
+          body:        [
+            'Estimadas familias,',
+            '',
+            'Os informamos de que a partir del próximo 1 de julio incorporamos el menú de verano,',
+            'con platos más frescos y mayor variedad de ensaladas y frutas de temporada.',
+            '',
+            'El menú completo estará disponible en el tablón de la entrada y en este portal.',
+            '',
+            'Gracias por vuestra confianza. El equipo de Nutrición.',
+          ].join('\n'),
+          category:    AnnouncementCategory.GENERAL,
+          audience:    AnnouncementAudience.TODO_EL_CENTRO,
+          requiresAck: false,
+        },
+      });
+
+      await db.announcement.create({
+        data: {
+          tenantId:    tenant.id,
+          authorId:    comDir2.id,
+          title:       'Fiesta de verano — sábado 28 de junio',
+          body:        [
+            'Estimadas familias,',
+            '',
+            'El próximo sábado 28 de junio celebramos nuestra Fiesta de Verano en el jardín del centro.',
+            'Habrá actuación musical en directo, merienda especial y juegos para todos.',
+            '',
+            'Las visitas ese día estarán abiertas de 11:00 a 19:00 sin restricción de aforo.',
+            '',
+            'Os esperamos a todos. ¡Será una tarde especial!',
+          ].join('\n'),
+          category:    AnnouncementCategory.GENERAL,
+          audience:    AnnouncementAudience.TODO_EL_CENTRO,
+          requiresAck: false,
+        },
+      });
+    }
+
+    // Segundo hilo de mensajería (si no existe ya más de 1)
+    const existingThreads = await db.messageThread.count({ where: { tenantId: tenant.id } });
+    if (existingThreads < 2) {
+      const thread2 = await db.messageThread.create({
+        data: {
+          tenantId:      tenant.id,
+          residentId:    comFamRes2.id,
+          subject:       'Fotos de la excursión al mercado',
+          category:      MessageThreadCategory.BIENESTAR,
+          createdById:   comFam2.id,
+          lastMessageAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      await db.message.create({
+        data: {
+          tenantId:       tenant.id,
+          threadId:       thread2.id,
+          authorId:       comFam2.id,
+          body:           '¿Tienen fotos de la excursión al mercado de la semana pasada? Mi madre me comentó que se lo pasó muy bien.',
+          readByFamilyAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      await db.message.create({
+        data: {
+          tenantId:      tenant.id,
+          threadId:      thread2.id,
+          authorId:      comDir2.id,
+          body:          'Por supuesto. Le enviamos las fotos por email en las próximas horas. ¡Su madre estuvo estupenda! Se apuntó a todos los juegos del mercado.',
+          readByStaffAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      await db.messageThread.update({
+        where: { id: thread2.id },
+        data:  { lastMessageAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+      });
+    }
+
+    console.log(`  Comunicación extra: +2 comunicados de centro (menú verano + fiesta) + 1 hilo adicional`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed de AuditLog (entradas de ejemplo para /auditoria)
+  // ---------------------------------------------------------------------------
+
+  // audit_logs es APPEND-ONLY (no se puede borrar), así que la idempotencia se
+  // logra con un guard de conteo: solo se siembran las entradas de ejemplo si la
+  // tabla está vacía para este tenant (BD fresca de CI). En re-seeds locales no se
+  // duplican. El seed no genera AuditLog por otras vías (escribe vía Prisma directo).
+  {
+    const auditCount = await db.auditLog.count({ where: { tenantId: tenant.id } });
+    const auditDir = await db.user.findUnique({ where: { email: 'direccion@demo.vetlla.dev' } });
+    const auditSan = await db.user.findUnique({ where: { email: 'sanitario@demo.vetlla.dev' } });
+    const auditAux = await db.user.findUnique({ where: { email: 'auxiliar@demo.vetlla.dev' } });
+    const auditRes = await db.resident.findFirst({
+      where: { tenantId: tenant.id },
+      orderBy: { lastName: 'asc' },
+    });
+
+    if (auditCount === 0 && auditDir && auditSan && auditAux && auditRes) {
+      const auditEntries = [
+        {
+          actorId:    auditSan.id,
+          actorEmail: auditSan.email,
+          action:     'RECORD',
+          entity:     'MedicationAdministration',
+          entityId:   auditRes.id,
+          summary:    `Administración registrada: Paracetamol 1g — ${auditRes.firstName} ${auditRes.lastName} (08:00)`,
+        },
+        {
+          actorId:    auditAux.id,
+          actorEmail: auditAux.email,
+          action:     'CREATE',
+          entity:     'CareRecord',
+          entityId:   auditRes.id,
+          summary:    `Registro de atención directa: higiene completa — ${auditRes.firstName} ${auditRes.lastName}`,
+        },
+        {
+          actorId:    auditDir.id,
+          actorEmail: auditDir.email,
+          action:     'ISSUE',
+          entity:     'Invoice',
+          entityId:   null,
+          summary:    'Factura emitida: A-2026-2 (1.470,00 EUR)',
+        },
+        {
+          actorId:    auditSan.id,
+          actorEmail: auditSan.email,
+          action:     'CREATE',
+          entity:     'Assessment',
+          entityId:   auditRes.id,
+          summary:    `Escala Barthel registrada: 60 puntos — ${auditRes.firstName} ${auditRes.lastName}`,
+        },
+        {
+          actorId:    auditDir.id,
+          actorEmail: auditDir.email,
+          action:     'ADMISSION_TRANSITION',
+          entity:     'AdmissionRequest',
+          entityId:   null,
+          summary:    'Solicitud de admisión Ramón Soler Ibáñez: EVALUATION → OFFERED',
+          metadata:   { from: 'EVALUATION', to: 'OFFERED' } as unknown as Prisma.InputJsonValue,
+        },
+        {
+          actorId:    auditAux.id,
+          actorEmail: auditAux.email,
+          action:     'RECORD',
+          entity:     'ActivityEnrollment',
+          entityId:   null,
+          summary:    `Asistencia registrada: asistió — Taller de memoria (${auditRes.firstName} ${auditRes.lastName})`,
+        },
+      ];
+
+      for (const entry of auditEntries) {
+        await db.auditLog.create({
+          data: {
+            tenantId:   tenant.id,
+            actorId:    entry.actorId,
+            actorEmail: entry.actorEmail,
+            action:     entry.action,
+            entity:     entry.entity,
+            entityId:   entry.entityId ?? null,
+            summary:    entry.summary,
+            metadata:   entry.metadata ?? Prisma.DbNull,
+            createdAt:  new Date(Date.now() - Math.floor(Math.random() * 3) * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+
+      console.log(`  AuditLog: ${auditEntries.length} entradas de ejemplo para /auditoria`);
+    }
   }
 
   console.log(`Seed OK.`);
