@@ -56,7 +56,9 @@ test.describe('Visión 360 — como sanitario', () => {
     // Acotamos al tabpanel activo: el banner de alergias de la cabecera queda fuera.
     await page.getByRole('tab', { name: 'Salud' }).click();
     const salud = page.getByRole('tabpanel');
-    await expect(salud.getByText('Alergias')).toBeVisible();
+    // Strict mode: el tabpanel tiene un <h2>Alergias</h2> y también un <p> o span
+    // con "Alergias" como etiqueta. Acotamos al heading para unicidad.
+    await expect(salud.getByRole('heading', { name: 'Alergias' })).toBeVisible();
     await expect(salud.getByText('Escalas')).toBeVisible();
     await expect(salud.getByText('Diagnósticos')).toBeVisible();
 

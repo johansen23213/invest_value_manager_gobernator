@@ -93,9 +93,13 @@ test.describe('Comunicaciones — como familiar', () => {
       page.getByText('Bienvenidos al portal de familias de Vetlla').first(),
     ).toBeVisible({ timeout: 10_000 });
 
-    // El botón de acuse de recibo debe aparecer (requiresAck=true en el seed)
+    // El botón de acuse de recibo debe aparecer (requiresAck=true en el seed).
+    // El botón lleva aria-label con el título del comunicado (a11y), por lo que
+    // getByRole('button', { name: 'Confirmar que lo he leído' }) no lo encuentra
+    // (el accessible name es el aria-label, no el texto visible). Usamos
+    // getByText para el contenido visible del botón.
     const ackButton = page
-      .getByRole('button', { name: 'Confirmar que lo he leído' })
+      .getByText('Confirmar que lo he leído', { exact: true })
       .first();
 
     // Solo intentar confirmar si el botón está visible (el seed puede haberse aplicado
@@ -103,8 +107,9 @@ test.describe('Comunicaciones — como familiar', () => {
     const ackVisible = await ackButton.isVisible().catch(() => false);
     if (ackVisible) {
       await ackButton.click();
-      // Toast de confirmación
-      await expect(page.getByText('Confirmado.')).toBeVisible({ timeout: 10_000 });
+      // Toast de confirmación. exact:true para no coincidir con el span aria-live
+      // de Radix ("Notification Confirmado.") destinado a lectores de pantalla.
+      await expect(page.getByText('Confirmado.', { exact: true })).toBeVisible({ timeout: 10_000 });
       // El botón de acuse desaparece o cambia tras confirmar
       await expect(ackButton).not.toBeVisible({ timeout: 5_000 });
     } else {
@@ -135,7 +140,8 @@ test.describe('Comunicaciones — como familiar', () => {
     // Enviar
     await page.getByRole('button', { name: 'Enviar' }).click();
 
-    // Toast de éxito
-    await expect(page.getByText('Mensaje enviado.')).toBeVisible({ timeout: 10_000 });
+    // Toast de éxito. exact:true para no coincidir con el span aria-live de Radix
+    // que anuncia "Notification Mensaje enviado." para lectores de pantalla (a11y).
+    await expect(page.getByText('Mensaje enviado.', { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 });

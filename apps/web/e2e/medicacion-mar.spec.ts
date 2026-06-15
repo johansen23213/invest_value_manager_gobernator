@@ -88,9 +88,11 @@ test.describe('MAR — como sanitario', () => {
     const headingText = await heading.textContent();
     expect(headingText?.trim().length).toBeGreaterThan(0);
 
-    // Debe haber una fecha formateada (al menos el año actual)
-    const year = new Date().getFullYear().toString();
-    await expect(header).toContainText(year);
+    // La cabecera sticky muestra nombre, fecha de nacimiento (no la fecha de HOY),
+    // grado de dependencia, centro y plaza — no incluye la fecha actual del día.
+    // El criterio M-03 solo exige que el nombre sea visible (verificado arriba).
+    // Verificamos que hay al menos un dato de identificación además del nombre.
+    await expect(header.getByRole('paragraph').first()).toBeVisible();
   });
 
   test('M-02 — estados de dosis llevan texto además de color', async ({ page }) => {
