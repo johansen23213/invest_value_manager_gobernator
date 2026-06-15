@@ -14,13 +14,12 @@
  *   tiene MFA activo y no envía `totp`, se rechaza con error "MFA_REQUIRED". Si lo envía
  *   pero es incorrecto, se rechaza con "MFA_INVALID". Acepta también recovery code.
  *
- * Nota de seguridad:
- *   El secreto TOTP se guarda en texto en la BD (mfa_secret).
- *   TODO Q-SEC: cifrar en reposo cuando se integre KMS EU-soberano (ADR pendiente).
- *   El riesgo es mitigado por:
- *     - Acceso a BD solo desde el rol vetlla_app (sin acceso directo externo).
- *     - El secreto solo se usa server-side.
- *     - La columna no se serializa en el cliente (selects explícitos en todos los endpoints).
+ * Nota de seguridad (SEC-C01 — resuelto):
+ *   El secreto TOTP se cifra en reposo con AES-256-GCM antes de persistirlo en BD.
+ *   La clave viene de MFA_ENCRYPTION_KEY (env.ts). Ver apps/web/src/lib/mfa-crypto.ts.
+ *   KMS-ready (Q-SEC, bloqueado por Angel): la fuente de clave es sustituible por KMS
+ *   soberano UE sin cambiar la interfaz ni el formato en BD.
+ *   El secreto solo se usa server-side y nunca se serializa en el cliente.
  */
 
 import { z } from 'zod';
@@ -30,6 +29,7 @@ import { asPlatformAdmin } from '@vetlla/db';
 import { createTRPCRouter, protectedProcedure } from '@/server/trpc';
 import { generateTotpSecret, buildOtpauthUrl, verifyTotp } from '@/lib/totp';
 import { generateRecoveryCodes, findRecoveryCodeHash } from '@/lib/mfa-recovery';
+import { encryptSecret, decryptSecret } from '@/lib/mfa-crypto';
 
 // Cliente cross-tenant para leer/escribir en users (igual que auth.ts).
 // La tabla users no tiene RLS propia; el acceso a los campos MFA del propio
@@ -40,14 +40,19 @@ const authDb = asPlatformAdmin();
 // Helpers internos
 // ---------------------------------------------------------------------------
 
-/** Comprueba TOTP o recovery code. Devuelve el tipo de factor usado o lanza TRPCError. */
+/**
+ * Comprueba TOTP o recovery code. Devuelve el tipo de factor usado o lanza TRPCError.
+ * @param encryptedSecret  Secreto cifrado tal como está almacenado en BD (SEC-C01).
+ */
 async function verifySecondFactor(
   userId: string,
-  mfaSecret: string,
+  encryptedSecret: string,
   opts: { totp?: string; recoveryCode?: string },
 ): Promise<'totp' | 'recovery'> {
   if (opts.totp) {
-    if (!(await verifyTotp(mfaSecret, opts.totp))) {
+    // SEC-C01: descifrar antes de verificar. verifyTotp espera el secreto en claro (base32).
+    const plainSecret = await decryptSecret(encryptedSecret);
+    if (!(await verifyTotp(plainSecret, opts.totp))) {
       throw new TRPCError({ code: 'UNAUTHORIZED', message: 'MFA_INVALID' });
     }
     return 'totp';
@@ -114,10 +119,14 @@ export const mfaRouter = createTRPCRouter({
 
     const secret = generateTotpSecret();
 
-    // Persiste el secreto pendiente (mfaEnabledAt sigue null hasta confirm).
+    // SEC-C01: cifra el secreto TOTP antes de persistirlo en BD.
+    // El plain se usa para construir el otpauthUrl y luego se descarta.
+    const encryptedSecret = await encryptSecret(secret);
+
+    // Persiste el secreto cifrado pendiente (mfaEnabledAt sigue null hasta confirm).
     await authDb.user.update({
       where: { id: userId },
-      data: { mfaSecret: secret },
+      data: { mfaSecret: encryptedSecret },
     });
 
     return {
@@ -152,7 +161,10 @@ export const mfaRouter = createTRPCRouter({
         throw new TRPCError({ code: 'CONFLICT', message: 'MFA ya está activo.' });
       }
 
-      if (!(await verifyTotp(user.mfaSecret, input.code))) {
+      // SEC-C01: descifrar el secreto antes de verificar el código TOTP.
+      const plainSecret = await decryptSecret(user.mfaSecret);
+
+      if (!(await verifyTotp(plainSecret, input.code))) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'MFA_INVALID' });
       }
 
@@ -306,7 +318,9 @@ export const mfaRouter = createTRPCRouter({
         throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'MFA no está activo.' });
       }
 
-      if (!(await verifyTotp(user.mfaSecret, input.totp))) {
+      // SEC-C01: descifrar el secreto antes de verificar el código TOTP.
+      const plainSecret = await decryptSecret(user.mfaSecret);
+      if (!(await verifyTotp(plainSecret, input.totp))) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'MFA_INVALID' });
       }
 
