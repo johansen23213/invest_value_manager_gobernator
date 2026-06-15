@@ -6,6 +6,7 @@ import { credentialsSchema } from '@/lib/auth-schema';
 import { verifyTotp } from '@/lib/totp';
 import { findRecoveryCodeHash } from '@/lib/mfa-recovery';
 import { isLocked, registerFailure, resetLockout } from '@/lib/login-lockout';
+import { decryptSecret } from '@/lib/mfa-crypto'; // SEC-C01: descifrar secreto TOTP en reposo
 import './env'; // valida el entorno al cargar la capa de auth
 
 // La autenticación es una operación previa al tenant (lookup por email único,
@@ -158,10 +159,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (totp) {
             try {
-              mfaOk = await verifyTotp(user.mfaSecret, totp);
+              // SEC-C01: descifrar el secreto antes de verificar. La BD almacena el
+              // secreto cifrado con AES-256-GCM (ver lib/mfa-crypto.ts).
+              const plainSecret = await decryptSecret(user.mfaSecret);
+              mfaOk = await verifyTotp(plainSecret, totp);
             } catch {
-              // El secreto almacenado en BD es siempre válido (base32 de generateTotpSecret).
-              // En caso de corrupción de datos, tratamos el código como inválido.
+              // Descifrado fallido (clave cambiada o dato corrupto) o secreto inválido.
+              // Tratamos el código como inválido; el usuario deberá hacer re-enrolment.
               mfaOk = false;
             }
           } else if (recoveryCode) {
