@@ -59,8 +59,8 @@ test.describe('Visión 360 — como sanitario', () => {
     // Strict mode: el tabpanel tiene un <h2>Alergias</h2> y también un <p> o span
     // con "Alergias" como etiqueta. Acotamos al heading para unicidad.
     await expect(salud.getByRole('heading', { name: 'Alergias' })).toBeVisible();
-    await expect(salud.getByText('Escalas')).toBeVisible();
-    await expect(salud.getByText('Diagnósticos')).toBeVisible();
+    await expect(salud.getByRole('heading', { name: 'Escalas' })).toBeVisible();
+    await expect(salud.getByRole('heading', { name: 'Diagnósticos' })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Atención' }).click();
     const atencion = page.getByRole('tabpanel');
