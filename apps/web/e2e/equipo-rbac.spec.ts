@@ -102,8 +102,12 @@ test.describe('Equipo — como director', () => {
       await expect(cannotSection.first()).toBeVisible();
     }
 
-    // Cerrar el dialog
-    await page.getByRole('button', { name: /cerrar/i }).click();
+    // Cerrar el dialog. El botón "Cerrar" puede quedar fuera del viewport cuando
+    // la tarjeta de capacidades es larga. scrollIntoViewIfNeeded() garantiza que
+    // el botón sea clickable antes de hacer click.
+    const closeBtn = page.getByRole('button', { name: /cerrar/i });
+    await closeBtn.scrollIntoViewIfNeeded();
+    await closeBtn.click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 

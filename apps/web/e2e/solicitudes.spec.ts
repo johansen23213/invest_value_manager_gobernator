@@ -115,8 +115,9 @@ test.describe('Solicitudes — como director', () => {
     // Enviar comentario
     await page.getByRole('button', { name: 'Enviar' }).click();
 
-    // Toast de éxito
-    await expect(page.getByText('Comentario enviado.')).toBeVisible({ timeout: 10_000 });
+    // Toast de éxito. exact:true para no coincidir con el span aria-live de Radix
+    // que anuncia "Notification Comentario enviado." para lectores de pantalla.
+    await expect(page.getByText('Comentario enviado.', { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Cambiar estado a EN_CURSO (válido desde RECIBIDA)
     await page.locator('#status-select').selectOption('EN_CURSO');
