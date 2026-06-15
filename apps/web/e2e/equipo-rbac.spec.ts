@@ -102,12 +102,10 @@ test.describe('Equipo — como director', () => {
       await expect(cannotSection.first()).toBeVisible();
     }
 
-    // Cerrar el dialog. El botón "Cerrar" puede quedar fuera del viewport cuando
-    // la tarjeta de capacidades es larga. scrollIntoViewIfNeeded() garantiza que
-    // el botón sea clickable antes de hacer click.
-    const closeBtn = page.getByRole('button', { name: /cerrar/i });
-    await closeBtn.scrollIntoViewIfNeeded();
-    await closeBtn.click();
+    // Cerrar el dialog con Escape: el botón "Cerrar" puede quedar fuera del viewport
+    // en diálogos largos y scrollIntoViewIfNeeded no siempre lo trae (portal Radix).
+    // Escape es el cierre robusto y además verifica el comportamiento de teclado (a11y).
+    await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
